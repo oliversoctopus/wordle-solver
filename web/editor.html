@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rewriting the Wordle solver</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="editor.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='2' fill='%23c9b458'/></svg>">
+</head>
+<body class="editing">
+
+<header>
+  <h1>Rewriting <span>the page</span></h1>
+  <div class="head-actions">
+    <input type="search" id="filter" placeholder="Find a phrase" autocomplete="off" spellcheck="false">
+    <button id="revert-all" class="ghost">Undo every change</button>
+    <button id="apply" class="ghost" disabled>Write into the code</button>
+    <button id="save" class="primary" disabled>Save</button>
+  </div>
+</header>
+
+<p id="bar">
+  <span id="tally">Reading the page…</span>
+  <span id="note"></span>
+</p>
+
+<main class="editor">
+  <section id="list" aria-label="Everything the page says"></section>
+
+  <aside class="preview">
+    <div class="preview-head">
+      <span>The page itself</span>
+      <span class="preview-actions">
+        <button id="preview-solve" class="ghost small">Solver</button>
+        <button id="preview-play" class="ghost small">Game</button>
+        <button id="preview-reload" class="ghost small">Reload</button>
+      </span>
+    </div>
+    <iframe id="preview" src="/" title="The page as it stands"></iframe>
+  </aside>
+</main>
+
+<script src="editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,1057 @@
+/* The page: a board you fill in, and whatever the solver makes of it.
+ *
+ * All the thinking happens on the server.  The page keeps an editable copy of
+ * the board -- every row, not just the one being typed, since an earlier row
+ * can be corrected in place -- and sends the whole thing back whenever it is
+ * submitted.  The reply is the board as the solver accepted it, and the
+ * editable copy is rebuilt from that, so the two cannot drift apart.
+ */
+
+const MAX_GUESSES = 6;
+const TILES = "NYG";
+
+const $ = (id) => document.getElementById(id);
+const board = $("board");
+
+let view = "solve";                // "solve" (the assistant) or "play" (a game)
+let state = null;                  // the last board the server accepted
+let rows = [];                     // the editable copy: [{letters, pattern}]
+let busy = false;
+let started = false;               // the first board has landed and the veil is down
+let pending = null;                // one request held back while another runs
+
+/* Set when a setting changes on the side that is not showing; that side is
+   rebuilt when it is next looked at, not behind your back. */
+let staleBoard = false;
+let staleGame = false;
+
+/* play mode: the answer stays on the server, so all the page has is the rows
+   it has been told about and whatever it has asked the solver */
+let game = null;
+let draft = { letters: ["", "", "", "", ""], col: 0, atEnd: false };
+let hint = null;
+
+/* Where the keys land.  ``atEnd`` marks the cursor as sitting past the last
+   letter rather than on it, which is the difference between typing to correct
+   the fifth tile and typing to start the word again. */
+let cursor = { row: 0, col: 0, atEnd: false };
+
+const emptyRow = () => ({ letters: ["", "", "", "", ""], pattern: [0, 0, 0, 0, 0] });
+
+/* ------------------------------------------------------------------- api */
+
+async function api(path, body) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body || {}),
+  });
+  const payload = await response.json().catch(() => ({ error: "Bad reply from the server" }));
+  if (!response.ok) throw new Error(payload.error || `Request failed (${response.status})`);
+  return payload;
+}
+
+/** One request at a time; a second made meanwhile is held, not dropped.
+    ``describe`` runs once the page is idle, since it may itself ask for
+    something.  Returns whether the request went through. */
+async function request(path, body, apply, describe) {
+  if (busy) {
+    pending = { path, body, apply, describe };
+    return false;
+  }
+  busy = true;
+  renderLocal();
+  let ok = false;
+  try {
+    apply(await api(path, body));
+    ok = true;
+  } catch (err) {
+    say(err.message, "bad");
+  } finally {
+    busy = false;
+    renderLocal();
+  }
+  if (ok) {
+    if (describe) describe();
+    else clearMessage();
+  }
+  if (pending) {
+    const next = pending;
+    pending = null;
+    await request(next.path, next.body, next.apply, next.describe);
+  }
+  return ok;
+}
+
+const send = (path, body, describe) => request(path, body, applyState, describe);
+
+/* --------------------------------------------------------------- the board */
+
+function applyState(next) {
+  state = next;
+  rows = state.rows.map((row) => ({
+    letters: row.word.split(""),
+    pattern: row.pattern.split("").map((tile) => TILES.indexOf(tile)),
+  }));
+  if (!state.over && rows.length < MAX_GUESSES) rows.push(emptyRow());
+  cursor = { row: Math.max(0, rows.length - 1), col: 0, atEnd: false };
+  renderPanel();
+  renderKeyboard();   // depends only on the rows the solver has accepted
+  renderLocal();
+}
+
+const rowFilled = (row) => row.letters.filter(Boolean).length;
+const rowWord = (row) => row.letters.join("");
+
+/** Rows the server has not seen in their present state. */
+function dirtyRows() {
+  const dirty = new Set();
+  for (let r = 0; r < rows.length; r++) {
+    const sent = state && state.rows[r];
+    if (!sent) {
+      if (rowFilled(rows[r])) dirty.add(r);
+      continue;
+    }
+    const pattern = rows[r].pattern.map((p) => TILES[p]).join("");
+    if (rowWord(rows[r]) !== sent.word || pattern !== sent.pattern) dirty.add(r);
+  }
+  return dirty;
+}
+
+function suggestion() {
+  return state && state.recommendation ? state.recommendation.word : "";
+}
+
+/* ---------------------------------------------------------------- editing */
+
+/* A color belongs to the letter under it, so clearing one clears both. */
+function clearTile(row, col) {
+  row.letters[col] = "";
+  row.pattern[col] = 0;
+}
+
+function moveTo(row, col) {
+  if (!rows.length) return;
+  cursor = {
+    row: Math.min(Math.max(row, 0), rows.length - 1),
+    col: Math.min(Math.max(col, 0), 4),
+    atEnd: false,   // moving there means editing that tile, not appending
+  };
+  renderLocal();
+}
+
+function typeLetter(letter) {
+  if (busy || !rows.length) return;
+  const row = rows[cursor.row];
+
+  // at the end of a full word this replaces the last letter, as any full box
+  // does; a changed letter loses the color that described the old one
+  if (row.letters[cursor.col] !== letter) row.pattern[cursor.col] = 0;
+  row.letters[cursor.col] = letter;
+  if (cursor.col < 4) cursor.col += 1;
+  else cursor.atEnd = true;
+  clearMessage();
+  renderLocal();
+}
+
+function backspace() {
+  if (busy || !rows.length) return;
+  const row = rows[cursor.row];
+  if (cursor.atEnd) clearTile(row, 4);
+  else if (row.letters[cursor.col]) clearTile(row, cursor.col);
+  else if (cursor.col > 0) {
+    cursor.col -= 1;
+    clearTile(row, cursor.col);
+  }
+  // leftwards only, so the first letters can go without the last ones
+  cursor.atEnd = false;
+  clearMessage();
+  renderLocal();
+}
+
+/** gray -> yellow -> green -> gray, on whichever tile is selected. */
+function cycle(row = cursor.row, col = cursor.col) {
+  if (busy || !rows.length) return;
+  cursor = { row, col, atEnd: false };
+  // an empty tile has no color to change
+  if (!rows[row].letters[col]) return renderLocal();
+  rows[row].pattern[col] = (rows[row].pattern[col] + 1) % 3;
+  clearMessage();
+  renderLocal();
+  const tile = board.children[row].children[col];
+  tile.classList.add("pop");
+  setTimeout(() => tile.classList.remove("pop"), 90);
+}
+
+function fill(word) {
+  if (busy || !rows.length) return;
+  const row = rows[cursor.row];
+  row.letters = word.toLowerCase().split("");
+  row.pattern = [0, 0, 0, 0, 0];   // the colors described the word being replaced
+  cursor.col = 0;
+  cursor.atEnd = false;
+  clearMessage();
+  renderLocal();
+}
+
+/** The suggestion always goes in the row being played, wherever the cursor
+    happens to have wandered off to. */
+function acceptSuggestion() {
+  if (!suggestion() || !rows.length) return;
+  cursor = { row: rows.length - 1, col: 0, atEnd: false };
+  fill(suggestion());
+}
+
+/** Send every row that has been written in.  A row is all or nothing. */
+function submit() {
+  if (busy || !state) return;
+  const dirty = dirtyRows();
+  const last = rows[rows.length - 1];
+  if (dirty.size === 0) {
+    if (state.over) return;   // nothing left to send, and nothing to suggest
+    if (last && rowFilled(last) === 0) return acceptSuggestion();
+  }
+
+  const payload = [];
+  for (let r = 0; r < rows.length; r++) {
+    const filled = rowFilled(rows[r]);
+    // a gap with words under it means a word was played there, so it has to be
+    // filled in; an empty row with nothing under it is just not a guess
+    if (filled === 0) {
+      if (rows.some((row, below) => below > r && rowFilled(row))) {
+        return say(`Row ${r + 1} is empty`, "bad");
+      }
+      continue;
+    }
+    if (filled < 5) return say(`Row ${r + 1} needs all five letters`, "bad");
+    payload.push({ word: rowWord(rows[r]), pattern: rows[r].pattern });
+  }
+  // an emptied board is still worth sending while the solver holds rows
+  if (payload.length === 0 && state.rows.length === 0) return;
+
+  send("/api/board", { session: state.session, rows: payload }, () => {
+    if (state.solved) say(`Solved in ${state.rows.length}.`, "good");
+    else if (state.over) say("Out of guesses.", "bad");
+    else clearMessage();
+  });
+}
+
+/** Empty the row the cursor is on, leaving its place free.  Local until Enter,
+    like every other edit.  On the row being typed it means the last filled one. */
+function deleteRow() {
+  if (busy || !rows.length) return;
+  const played = rows.reduce((last, row, r) => (rowFilled(row) ? r : last), -1);
+  if (played < 0) return;
+  const target = Math.min(cursor.row, played);
+  if (rowFilled(rows[target]) === 0) return;   // already a gap
+
+  rows[target] = emptyRow();
+  cursor = { row: target, col: 0, atEnd: false };
+  clearMessage();
+  renderLocal();
+}
+
+/* -------------------------------------------------------------- messages */
+
+function say(text, kind) {
+  const node = $("message");
+  node.textContent = text;
+  node.className = "message" + (kind ? " " + kind : "");
+  node.hidden = false;
+}
+
+function clearMessage() {
+  $("message").hidden = true;
+}
+
+/* --------------------------------------------------------------- drawing */
+
+function makeTile() {
+  const tile = document.createElement("button");
+  tile.type = "button";
+  tile.className = "tile";
+  tile.tabIndex = -1;
+  return tile;
+}
+
+function renderBoard() {
+  return view === "play" ? renderPlayBoard() : renderSolveBoard();
+}
+
+function renderSolveBoard() {
+  board.textContent = "";
+  const dirty = dirtyRows();
+  const ghost = rows.length && rowFilled(rows[rows.length - 1]) === 0 ? suggestion() : "";
+  const ghostRow = ghost ? rows.length - 1 : -1;
+
+  for (let r = 0; r < MAX_GUESSES; r++) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const live = r < rows.length;
+    if (live) row.classList.add("editable");
+    if (dirty.has(r)) row.classList.add("dirty");
+
+    for (let c = 0; c < 5; c++) {
+      const tile = makeTile();
+      if (live) {
+        const letter = rows[r].letters[c];
+        if (letter) {
+          tile.textContent = letter;
+          tile.classList.add("filled", "t-" + TILES[rows[r].pattern[c]]);
+          tile.title = "Click to change the color";
+          tile.addEventListener("click", () => cycle(r, c));
+        } else if (r === ghostRow) {
+          tile.textContent = ghost[c];
+          tile.classList.add("ghost");
+          tile.title = "The solver's suggestion; press Enter to take it";
+          tile.addEventListener("click", acceptSuggestion);
+        } else {
+          tile.addEventListener("click", () => moveTo(r, c));
+        }
+        if (r === cursor.row && c === cursor.col) tile.classList.add("cursor");
+      }
+      row.appendChild(tile);
+    }
+    board.appendChild(row);
+  }
+}
+
+/* In play mode the colors are the server's to give, so a row is either one it
+   has scored or the one being typed -- there is nothing to click. */
+function renderPlayBoard() {
+  board.textContent = "";
+  const played = game ? game.rows.length : 0;
+  const typing = game && !game.over ? played : -1;
+  const ghost = hint && draft.letters.every((letter) => !letter) ? hint.word : "";
+
+  for (let r = 0; r < MAX_GUESSES; r++) {
+    const row = document.createElement("div");
+    row.className = "row";
+
+    for (let c = 0; c < 5; c++) {
+      const tile = makeTile();
+      if (r < played) {
+        tile.textContent = game.rows[r].word[c];
+        tile.classList.add("t-" + game.rows[r].pattern[c]);
+      } else if (r === typing) {
+        const letter = draft.letters[c];
+        const place = () => { draft.col = c; draft.atEnd = false; renderLocal(); };
+        if (letter) {
+          tile.textContent = letter;
+          tile.classList.add("filled");
+          tile.addEventListener("click", place);
+        } else if (ghost) {
+          tile.textContent = ghost[c];
+          tile.classList.add("ghost");
+          tile.title = "The solver's pick; press Enter to take it";
+          tile.addEventListener("click", () => takeHint(c));
+        } else {
+          tile.addEventListener("click", place);
+        }
+        if (c === draft.col) tile.classList.add("cursor");
+      }
+      row.appendChild(tile);
+    }
+    board.appendChild(row);
+  }
+}
+
+function playType(letter) {
+  if (busy || !game || game.over) return;
+  // as in the solver: at the end of a finished word, the last letter is the
+  // one that gets replaced, rather than the whole word being thrown away
+  draft.letters[draft.col] = letter;
+  if (draft.col < 4) draft.col += 1;
+  else draft.atEnd = true;
+  clearMessage();
+  renderLocal();
+}
+
+function playBackspace() {
+  if (busy || !game || game.over) return;
+  if (draft.atEnd) draft.letters[4] = "";
+  else if (draft.letters[draft.col]) draft.letters[draft.col] = "";
+  else if (draft.col > 0) {
+    draft.col -= 1;
+    draft.letters[draft.col] = "";
+  }
+  draft.atEnd = false;
+  clearMessage();
+  renderLocal();
+}
+
+function clearDraft() {
+  draft = { letters: ["", "", "", "", ""], col: 0, atEnd: false };
+}
+
+/** Take the solver's pick; a clicked ghost tile says where to carry on from. */
+function takeHint(col = 0) {
+  if (!hint) return;
+  draft = { letters: hint.word.split(""), col, atEnd: false };
+  clearMessage();
+  renderLocal();
+}
+
+function applyGame(next) {
+  game = next;
+  clearDraft();
+  hint = null;
+  renderPlayPanel();
+  renderKeyboard();
+  renderLocal();
+}
+
+function playGuess() {
+  if (busy || !game || game.over) return;
+
+  // enter on an empty row plays the solver's pick outright, as answering the
+  // terminal game's prompt with a bare enter does
+  if (draft.letters.every((letter) => !letter)) {
+    if (!hint) return;
+    takeHint();
+  }
+  if (!draft.letters.every(Boolean)) return say("A guess is five letters", "bad");
+
+  request("/api/game/guess", { session: game.session, word: draft.letters.join("") },
+          applyGame, () => {
+    if (game.solved) say(`Solved in ${game.rows.length}.`, "good");
+    else if (game.over) say(`Out of guesses. The answer was ${game.answer.toUpperCase()}.`, "bad");
+    else {
+      clearMessage();
+      if ($("opt-assist").checked) askHint();
+    }
+  });
+}
+
+function askHint() {
+  if (busy || !game || game.over) return;
+  // the mode and the shape of f go with the request rather than being fixed
+  // when the game was dealt, so changing either just re-asks
+  request("/api/game/hint",
+          { session: game.session, mode: $("opt-mode").value, form: $("opt-form").value || null },
+          (payload) => {
+    hint = payload;
+    renderPlayPanel();
+    renderLocal();
+  });
+}
+
+/** The hint button is a toggle: press it again and the answer goes away. */
+function toggleHint() {
+  if (!hint) return askHint();
+  hint = null;
+  renderPlayPanel();
+  renderLocal();
+}
+
+function giveUp() {
+  if (busy || !game || game.over) return;
+  request("/api/game/reveal", { session: game.session }, applyGame,
+          () => say(`The answer was ${game.answer.toUpperCase()}.`, "bad"));
+}
+
+function newGame() {
+  staleGame = false;
+  return request("/api/game/new",
+                 { ...settings(), answer: $("opt-answer").value.trim() },
+                 applyGame,
+                 // assist covers the first guess too, not just the ones after
+                 () => { if ($("opt-assist").checked) askHint(); });
+}
+
+function renderPlayPanel() {
+  if (!game) return;
+  $("game-turn").textContent = game.over
+    ? `${game.rows.length} / ${game.max_guesses}`
+    : `${game.turn} / ${game.max_guesses}`;
+
+  const headline = $("game-headline");
+  if (game.solved) headline.textContent = `Solved in ${game.rows.length}`;
+  else if (game.over) headline.textContent = game.answer;
+  else headline.textContent = `${game.guesses_left} left`;
+
+  $("game-source").textContent = game.over
+    ? `The answer was ${game.answer.toUpperCase()} — ${game.source}.`
+    : `The answer is ${game.source}.`;
+
+  $("hint-card").hidden = !hint;
+  if (hint) {
+    $("hint-word").textContent = hint.word;
+    $("hint-score").textContent =
+      `${hint.score.toFixed(4)} ${hint.score_label} · ` +
+      `${hint.candidates_left.toLocaleString()} candidate${hint.candidates_left === 1 ? "" : "s"} left`;
+    const tag = $("hint-tag");
+    tag.hidden = false;
+    tag.className = "tag" + (hint.exact ? " exact" : "");
+    tag.textContent = hint.exact ? "Exact" : (hint.mode === "entropy" ? "Greedy" : "Estimated");
+  }
+
+  $("share-card").hidden = !game.share;
+  if (game.share) $("share-grid").textContent = game.share;
+}
+
+const KEY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+
+function letterStates() {
+  const rank = { N: 0, Y: 1, G: 2 };
+  const best = {};
+  const source = view === "play" ? (game ? game.rows : []) : (state ? state.rows : []);
+  for (const row of source) {
+    for (let i = 0; i < 5; i++) {
+      const letter = row.word[i], tile = row.pattern[i];
+      if (!(letter in best) || rank[tile] > rank[best[letter]]) best[letter] = tile;
+    }
+  }
+  return best;
+}
+
+function renderKeyboard() {
+  const node = $("keyboard");
+  node.textContent = "";
+  const best = letterStates();
+
+  KEY_ROWS.forEach((letters, index) => {
+    const row = document.createElement("div");
+    row.className = "kb-row";
+    if (index === 2) row.appendChild(makeKey("enter", "wide", onEnter));
+    for (const letter of letters) {
+      row.appendChild(makeKey(letter, best[letter] ? "t-" + best[letter] : "",
+                              () => onLetter(letter)));
+    }
+    if (index === 2) row.appendChild(makeKey("del", "wide", onBackspace));
+    node.appendChild(row);
+  });
+}
+
+function makeKey(label, className, onClick) {
+  const key = document.createElement("button");
+  key.type = "button";
+  key.className = "key " + className;
+  key.textContent = label;
+  key.tabIndex = -1;
+  key.addEventListener("click", (event) => { event.currentTarget.blur(); onClick(); });
+  return key;
+}
+
+function renderHintLine() {
+  const line = $("hint");
+  if (busy) return void (line.textContent = "Thinking…");
+
+  if (view === "play") {
+    if (!game) return void (line.textContent = " ");
+    if (game.over) {
+      line.textContent = game.solved
+        ? `Solved in ${game.rows.length}. Start a new game to play again.`
+        : `The answer was ${game.answer.toUpperCase()}. Start a new game to play again.`;
+    } else if (draft.letters.every((letter) => !letter) && hint) {
+      line.textContent = "Enter takes the solver's pick, or type your own";
+    } else {
+      line.textContent = "Type a word and press Enter";
+    }
+    return;
+  }
+
+  if (!state) return;
+  if (state.over) return void (line.textContent = "Start a new board to solve another one.");
+
+  const dirty = dirtyRows();
+  const here = rows[cursor.row];
+  if (dirty.size) {
+    line.textContent = dirty.size === 1 && dirty.has(rows.length - 1)
+      ? "Space colors the selected tile · Enter submits"
+      : "Edited — Enter re-runs the solver from the first changed row";
+  } else if (!here || rowFilled(here) === 0) {
+    line.textContent = "Type the word you played";
+  } else {
+    line.textContent = "Space colors the selected tile, enter submits the word";
+  }
+}
+
+function renderLocal() {
+  renderBoard();
+  renderHintLine();
+
+  if (view === "play") {
+    const live = game && !game.over && !busy;
+    const typed = draft.letters.filter(Boolean).length;
+    $("guess").disabled = !live || (typed === 0 && !hint);
+    $("guess").textContent = typed === 0 && hint ? "Play suggestion" : "Guess";
+    $("hint-btn").disabled = !live;
+    $("hint-btn").textContent = hint ? "Hide hint" : "Hint";
+    $("giveup").disabled = !live;
+    return;
+  }
+
+  // a finished board can still be corrected, so the button offers the edit
+  const edited = dirtyRows().size > 0;
+  const ready = rows.length > 0 && rowFilled(rows[rows.length - 1]) === 5;
+  const canSubmit = edited || Boolean(state && !state.over && ready);
+  const canTake = Boolean(state && !state.over && !edited && !ready && suggestion());
+  $("accept").disabled = busy || !state || !(canSubmit || canTake);
+  $("accept").textContent = canSubmit ? "Submit" : "Use suggestion";
+  // it clears whatever row has something in it, played or still being typed
+  $("undo").disabled = busy || !rows.some((row) => rowFilled(row) > 0);
+}
+
+/* ----------------------------------------------------------------- panel */
+
+const fmtScore = (score) => score.toFixed(4);
+
+function renderPanel() {
+  if (!state) return;
+  const rec = state.recommendation;
+
+  if (state.solved) {
+    $("rec-word").textContent = "Solved";
+    $("rec-score").textContent =
+      `In ${state.rows.length} guess${state.rows.length === 1 ? "" : "es"}`;
+    $("rec-note").hidden = true;
+    $("rec-tag").hidden = true;
+  } else if (state.over) {
+    $("rec-word").textContent = "Out of guesses";
+    $("rec-score").textContent =
+      `${state.candidates_left} word${state.candidates_left === 1 ? "" : "s"} were still possible`;
+    $("rec-note").hidden = true;
+    $("rec-tag").hidden = true;
+  } else if (rec) {
+    $("rec-word").textContent = rec.word;
+    let line = `${fmtScore(rec.score)} ${state.score_label}`;
+    if (state.elapsed_ms >= 200) line += `  ·  ${(state.elapsed_ms / 1000).toFixed(1)} s`;
+    $("rec-score").textContent = line;
+
+    const tag = $("rec-tag");
+    tag.hidden = false;
+    tag.className = "tag" + (rec.exact ? " exact" : "");
+    tag.textContent = rec.exact ? "Exact" : (state.mode === "entropy" ? "Greedy" : "Estimated");
+
+    let note = "";
+    if (state.candidates_left === 1) note = "The only word left.";
+    else if (!rec.possible) note = "Cannot be the answer itself. It is played purely to split what is left.";
+    else if (state.guesses_left === 1) note = `Last guess: a ${(rec.win_probability * 100).toFixed(1)}% chance of being right.`;
+    else if (rec.win_probability > 0) note = `A ${(rec.win_probability * 100).toFixed(1)}% chance of being the answer outright.`;
+    $("rec-note").textContent = note;
+    $("rec-note").hidden = !note;
+  }
+
+  const alts = state.alternatives || [];
+  $("alt-card").hidden = alts.length === 0;
+  const list = $("alternatives");
+  list.textContent = "";
+  for (const alt of alts) {
+    const item = document.createElement("li");
+    const word = document.createElement("span");
+    word.className = "word";
+    word.textContent = alt.word;
+    const score = document.createElement("span");
+    score.className = "score";
+    score.textContent = fmtScore(alt.score);
+    item.append(word, score);
+    item.title = "Put this word in the selected row";
+    item.addEventListener("click", () => fill(alt.word));
+    list.appendChild(item);
+  }
+
+  $("cand-count").textContent = state.candidates_left.toLocaleString();
+  $("cand-sub").textContent = state.effective_size !== undefined
+    ? `Effective size ${state.effective_size.toFixed(1)} once the prior is taken into account`
+    : "";
+
+  const chips = $("candidates");
+  chips.textContent = "";
+  for (const word of state.possible_answers) {
+    const chip = document.createElement("li");
+    chip.textContent = word;
+    chip.title = "Put this word in the selected row";
+    chip.addEventListener("click", () => fill(word));
+    chips.appendChild(chip);
+  }
+  const hidden = state.candidates_left - state.possible_answers.length;
+  if (hidden > 0) {
+    const more = document.createElement("li");
+    more.className = "more";
+    more.textContent = `+${hidden.toLocaleString()} more`;
+    chips.appendChild(more);
+  }
+
+  renderTechnical();
+}
+
+/* --------------------------------------------- technical details, expanded */
+
+const PERCENT = (p) => `${(p * 100).toFixed(0)}%`;
+
+function priorFacts() {
+  const prior = state.prior;
+  return [
+    {
+      key: "repeat",
+      name: "Repeat prior",
+      value: prior.repeat ? `On: p = ${prior.repeat_prob.toFixed(2)}` : "Off",
+      why: prior.repeat
+        ? `<p>The editor sometimes reuses a word that has already been an answer.
+             With this on, <b>all</b> the words already used share
+             ${PERCENT(prior.repeat_prob)} of the probability between them, instead
+             of each getting the same share as an unused word.</p>
+           <p>The ${PERCENT(prior.repeat_prob)} is set for the current regime:
+             repeats run at about 10% since Wordle #1690, but about 1% across the
+             whole record, because nothing repeated at all before 2026. Judging it
+             against all history would set it roughly ten times too low.</p>`
+        : `<p>Off: a word that has already been an answer is treated as no less
+             likely to come up again than one that never has. Every word competes
+             on equal terms, subject to the curation prior.</p>`,
+    },
+    {
+      key: "curation",
+      name: "Curation prior",
+      value: prior.curation ? `On: p = ${prior.noncurated_prob.toFixed(2)}` : "Off",
+      why: prior.curation
+        ? `<p>Most answers are drawn from the curated 2022 list. With this on,
+             words outside that list share ${PERCENT(prior.noncurated_prob)} of
+             whatever probability is left <b>after</b> the repeat step.</p>
+           <p>So it is a conditional probability — off-list <em>given not a
+             repeat</em> — and has to be measured with that denominator. On that
+             basis off-list answers run at about 9% since Wordle #1690, against
+             2.4% across the whole record.</p>`
+        : `<p>Off: no distinction is drawn between the curated 2022 answer list
+             and the rest of the valid words. All ~13k are equally eligible,
+             subject to the repeat prior.</p>`,
+    },
+  ];
+}
+
+function modeFact() {
+  if (state.mode === "entropy") {
+    return {
+      key: "mode",
+      name: "Mode",
+      value: "Most information gained",
+      why: `<p>Each guess is scored by the information its feedback is expected to
+              reveal, in bits, over the feedback patterns <i>r</i> it can come
+              back as. Higher is better.</p>
+            <p class="equation"><i>H</i>(<i>g</i>) <span class="op">=</span>
+              <span class="op">−</span> Σ<sub>r</sub> <i>p</i><sub>r</sub>
+              <span class="op">·</span> log<sub>2</sub> <i>p</i><sub>r</sub></p>
+            <p>The most informative guess is the one whose feedback is hardest to
+              predict, because that is the one splitting the candidates most
+              evenly. It is <b>greedy</b>: it never looks past the split it makes
+              right now, which is why it is kept as a clean baseline rather than
+              as the strong policy.</p>`,
+    };
+  }
+  return {
+    key: "mode",
+    name: "Mode",
+    value: "Fewest expected guesses",
+    why: `<p>Each guess is scored by the total number of guesses it is expected to
+            cost, itself included:</p>
+          <p class="equation"><i>E</i>(<i>g</i>) <span class="op">=</span> 1
+            <span class="op">+</span> Σ<sub>r</sub> <i>p</i><sub>r</sub>
+            <span class="op">·</span> <i>f</i>(<i>n</i><sub>r</sub>)</p>
+          <p>over every feedback pattern <i>r</i> except all-green.
+            <i>p</i><sub>r</sub> is the chance the feedback comes back as <i>r</i>,
+            <i>n</i><sub>r</sub> is the effective number of candidates still
+            standing if it does, and <i>f</i> estimates how many further guesses
+            that position needs. Lower is better.</p>
+          <p>Where few enough candidates remain, <i>f</i> is not consulted at all:
+            the guess comes from an exact search over the remaining words, and its
+            score is a true value rather than an estimate. That is what the
+            <b>exact</b> tag on a recommendation means.</p>`,
+  };
+}
+
+/** 'sqrt(x)' and friends, as something worth reading. */
+function prettyTerm(label) {
+  const log2n = 'log<sub>2</sub><i>n</i>';
+  const hinge = label.match(/^\(x-([\d.]+)\)\+$/);
+  if (hinge) return `max(0, ${log2n} − ${hinge[1]})`;
+  return {
+    "1": "",
+    "x": log2n,
+    "x^2": `(${log2n})<sup>2</sup>`,
+    "x^3": `(${log2n})<sup>3</sup>`,
+    "1-1/n": "(1 − 1/<i>n</i>)",
+    "log2(1+x)": `log<sub>2</sub>(1 + ${log2n})`,
+    "sqrt(x)": `√(${log2n})`,
+  }[label] ?? label;
+}
+
+function equationHTML(est) {
+  const parts = [`<i>f</i>(<i>n</i>) <span class="op">=</span> `];
+  if (est.base) parts.push(`1 <span class="op">+</span> `);
+
+  est.terms.forEach((term, index) => {
+    const magnitude = Math.abs(term.coefficient).toFixed(4);
+    const sign = term.coefficient < 0 ? "−" : "+";
+    if (index > 0 || est.base) parts.push(`<span class="op">${sign}</span> `);
+    else if (sign === "−") parts.push(`<span class="op">−</span> `);
+
+    const symbol = prettyTerm(term.label);
+    parts.push(`<span class="coef">${magnitude}</span>`);
+    if (symbol) parts.push(` <span class="op">·</span> <span class="var">${symbol}</span>`);
+    parts.push(" ");
+  });
+  return `<div class="equation">${parts.join("")}</div>`;
+}
+
+function estimatorFact() {
+  const est = state.estimator;
+  if (!est) return null;
+  const samples = est.samples;
+  const table = `<table class="samples">
+      <tr><th><i>n</i></th>${samples.map((s) => `<th>${s.n}</th>`).join("")}</tr>
+      <tr><td><i>f</i>(<i>n</i>)</td>${samples.map((s) => `<td>${s.f.toFixed(2)}</td>`).join("")}</tr>
+    </table>`;
+
+  return {
+    key: "estimator",
+    name: "f(n)",
+    value: est.form,
+    why: `${equationHTML(est)} <p><i>f</i>(<i>n</i>) estimates how many guesses are still needed from a position whose candidate set has <b>effective size</b> <i>n</i> = 2<sup><i>H</i></sup>, where <i>H</i> is the entropy in bits of the candidates under the prior. With a uniform prior that is simply how many candidates are left; as the prior concentrates on a few of them it shrinks toward 1.</p> ${table} <p>The coefficients are fitted by policy iteration. We play many games with the current <i>f</i>, record what each position actually cost, refit, and repeat. <i>f</i> must be part of the <b>${est.form}</b> family (${est.description}), where x is log_2(n). The result is floored at 1, since one more guess is always needed.</p>`,
+  };
+}
+
+function renderTechnical() {
+  const body = $("tech-body");
+  const wasOpen = new Set(
+    [...body.querySelectorAll("details.fact[open]")].map((node) => node.dataset.key));
+  body.textContent = "";
+
+  const facts = [...priorFacts(), modeFact(), estimatorFact()].filter(Boolean);
+  for (const fact of facts) {
+    const details = document.createElement("details");
+    details.className = "fact";
+    details.dataset.key = fact.key;
+    if (wasOpen.has(fact.key)) details.open = true;
+
+    const summary = document.createElement("summary");
+    const name = document.createElement("span");
+    name.className = "fact-name";
+    name.textContent = fact.name;
+    const value = document.createElement("span");
+    value.className = "fact-value";
+    value.textContent = fact.value;
+    const why = document.createElement("span");
+    why.className = "why";
+    why.textContent = "?";
+    why.title = "What this means";
+    summary.append(name, value, why);
+
+    const explanation = document.createElement("div");
+    explanation.className = "fact-why";
+    explanation.innerHTML = fact.why;   // fixed copy, plus numbers from the server
+
+    details.append(summary, explanation);
+    body.appendChild(details);
+  }
+}
+
+/* --------------------------------------------------------------- settings */
+
+function settings() {
+  return {
+    repeat: $("opt-repeat").checked,
+    curation: $("opt-curation").checked,
+    mode: $("opt-mode").value,
+    form: $("opt-form").value || null,
+    top: 5,
+  };
+}
+
+function newBoard() {
+  staleBoard = false;
+  return send("/api/new", settings());
+}
+
+/** Whichever of the two the page is showing, start it again. */
+function restart() {
+  return view === "play" ? newGame() : newBoard();
+}
+
+/* ------------------------------------------------------------------- views */
+
+/* The switch is labeled with where it goes, not where you are. */
+const OTHER_VIEW = { solve: "play", play: "solve" };
+const VIEW_LABEL = { solve: "Solve a Wordle", play: "Play Wordle" };
+
+function setView(next) {
+  view = next;
+  const other = OTHER_VIEW[next];
+
+  $("solve-panel").hidden = next !== "solve";
+  $("play-panel").hidden = next !== "play";
+  $("solve-controls").hidden = next !== "solve";
+  $("play-controls").hidden = next !== "play";
+  $("solve-keys").hidden = next !== "solve";
+  $("play-keys").hidden = next !== "play";
+  $("answer-setting").hidden = next !== "play";
+
+  $("view-toggle").textContent = VIEW_LABEL[other];
+  $("view-toggle").title = `Switch to ${VIEW_LABEL[other]}`;
+  $("reset").textContent = next === "play" ? "New game" : "New board";
+  $("settings-note").textContent = next === "play"
+    ? "The priors decide what the answer is, so changing one deals a new game; "
+      + "the mode and f only shape what the hint suggests."
+    : "Changing any of these starts a fresh board.";
+
+  clearMessage();
+
+  // drawn before anything is asked for, so the view is never left empty
+  if (started) {
+    if (next === "play") {
+      if (!game || staleGame) newGame();
+      else renderPlayPanel();
+    } else {
+      if (staleBoard) newBoard();
+      else renderPanel();
+    }
+  }
+  renderKeyboard();
+  renderLocal();
+}
+
+/* --------------------------------------------------- keys, whichever view */
+
+const onLetter = (letter) => (view === "play" ? playType(letter) : typeLetter(letter));
+const onBackspace = () => (view === "play" ? playBackspace() : backspace());
+const onEnter = () => (view === "play" ? playGuess() : submit());
+
+function onArrow(dRow, dCol) {
+  if (view === "play") {
+    if (dCol) {
+      draft.col = Math.min(Math.max(draft.col + dCol, 0), 4);
+      draft.atEnd = false;
+      renderLocal();
+    }
+    return;   // there is nothing above the row you are on in a game
+  }
+  moveTo(cursor.row + dRow, cursor.col + dCol);
+}
+
+/* ------------------------------------------------------------------ start */
+
+/* space and the arrows would scroll the page or press whatever button was last
+   clicked, so they are taken over -- but only while nothing that legitimately
+   wants them has focus. */
+const KEEPS_KEYS = "input, select, textarea, summary, a, [contenteditable]";
+
+function wire() {
+  $("settings-toggle").addEventListener("click", (event) => {
+    const panel = $("settings");
+    panel.hidden = !panel.hidden;
+    event.currentTarget.setAttribute("aria-expanded", String(!panel.hidden));
+  });
+  const onClick = (id, action) => $(id).addEventListener("click", (event) => {
+    event.currentTarget.blur();
+    action();
+  });
+
+  onClick("view-toggle", () => setView(OTHER_VIEW[view]));
+  onClick("reset", restart);
+  onClick("undo", deleteRow);
+  // submit falls back to taking the suggestion when there is nothing to send
+  onClick("accept", submit);
+  onClick("guess", playGuess);
+  onClick("hint-btn", toggleHint);
+  onClick("giveup", giveUp);
+  onClick("copy-share", copyShare);
+
+  // the priors decide what the answer is, so changing one has to deal again
+  for (const id of ["opt-repeat", "opt-curation"]) {
+    $(id).addEventListener("change", () => {
+      staleBoard = staleGame = true;
+      restart();
+    });
+  }
+  // the mode and f only decide what the solver would play, which in a game is
+  // just the hint -- no reason to throw the game away over it
+  for (const id of ["opt-mode", "opt-form"]) {
+    $(id).addEventListener("change", () => {
+      staleBoard = true;
+      if (view !== "play") return newBoard();
+      if (hint) askHint();
+    });
+  }
+  $("opt-answer").addEventListener("change", () => {
+    staleGame = true;
+    if (view === "play") newGame();
+  });
+  $("opt-assist").addEventListener("change", (event) => {
+    if (event.target.checked && view === "play" && !hint) askHint();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.target.matches?.(KEEPS_KEYS)) return;
+
+    switch (event.key) {
+      case "Enter":      event.preventDefault(); onEnter(); break;
+      case "Backspace":  event.preventDefault(); onBackspace(); break;
+      case " ":          event.preventDefault(); if (view === "solve") cycle(); break;
+      case "ArrowLeft":  event.preventDefault(); onArrow(0, -1); break;
+      case "ArrowRight": event.preventDefault(); onArrow(0, 1); break;
+      case "ArrowUp":    event.preventDefault(); onArrow(-1, 0); break;
+      case "ArrowDown":  event.preventDefault(); onArrow(1, 0); break;
+      default:
+        if (/^[a-zA-Z]$/.test(event.key)) onLetter(event.key.toLowerCase());
+    }
+  });
+}
+
+async function copyShare() {
+  if (!game || !game.share) return;
+  try {
+    await navigator.clipboard.writeText(game.share);
+    say("Copied.", "good");
+  } catch (err) {
+    say("Error: Could not reach the clipboard.", "bad");
+  }
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForSolver() {
+  for (;;) {
+    let status;
+    try {
+      status = await (await fetch("/api/status")).json();
+    } catch (err) {
+      $("veil-text").textContent = "Lost the server; is it still running?";
+      await sleep(2000);
+      continue;
+    }
+    if (status.error) {
+      $("veil-text").textContent = status.error;
+      return null;
+    }
+    $("veil-text").textContent = status.progress;
+    if (status.ready) return status;
+    await sleep(400);
+  }
+}
+
+async function start() {
+  wire();
+  setView("solve");
+  const status = await waitForSolver();
+  if (!status) return;
+
+  const forms = $("opt-form");
+  for (const name of status.forms) {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name + (name === status.default_form ? " (default)" : "");
+    forms.appendChild(option);
+  }
+
+  // the veil stays up until there is a board behind it
+  while (!(await send("/api/new", settings()))) {
+    $("veil-text").textContent = "Could not start a board. Trying again…";
+    await sleep(1500);
+  }
+  started = true;
+  $("veil").hidden = true;
+  // whichever side was asked for while this was still starting up
+  setView(view);
+}
+
+start();

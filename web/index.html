@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wordle solver</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='2' fill='%236aaa64'/></svg>">
+</head>
+<body>
+
+<header>
+  <h1>Wordle <span>solver</span></h1>
+  <div class="head-actions">
+    <button id="settings-toggle" class="ghost" aria-expanded="true" aria-controls="settings">Settings</button>
+    <button id="view-toggle" class="ghost switcher">Play Wordle</button>
+    <button id="reset" class="ghost">New board</button>
+  </div>
+</header>
+
+<!-- open to begin with: these are the game's options as much as the solver's,
+     and behind a button nobody finds them -->
+<section id="settings">
+  <div class="settings-grid">
+
+    <div class="setting">
+      <label class="switch">
+        <input type="checkbox" id="opt-repeat" checked>
+        <span class="track"><span class="knob"></span></span>
+        <span class="switch-name">Repeat prior</span>
+      </label>
+      <p class="setting-why">Assume the editor rarely reuses a word that has already been a Wordle
+      answer. Makes already-used words less likely.</p>
+    </div>
+
+    <div class="setting">
+      <label class="switch">
+        <input type="checkbox" id="opt-curation" checked>
+        <span class="track"><span class="knob"></span></span>
+        <span class="switch-name">Curation prior</span>
+      </label>
+      <p class="setting-why">Assume most answers come from the curated 2022 list of answer words.
+      Makes words outside this list less likely to be answers.</p>
+    </div>
+
+    <div class="setting">
+      <label class="field" for="opt-mode"><span class="switch-name">Mode</span>
+        <select id="opt-mode">
+          <option value="expected">Fewest expected guesses</option>
+          <option value="entropy">Most information gained</option>
+        </select>
+      </label>
+      <p class="setting-why">What a guess is scored on: the total guesses it is
+        expected to cost, or the bits it is expected to reveal right now.</p>
+    </div>
+
+    <div class="setting">
+      <label class="field" for="opt-form"><span class="switch-name">Shape of f</span>
+        <select id="opt-form"><option value="">Whatever is cached</option></select>
+      </label>
+      <p class="setting-why">The family of curves f(n) is fitted within. Only
+        used by the expected-guesses mode.</p>
+    </div>
+
+    <div class="setting" id="answer-setting" hidden>
+      <label class="field" for="opt-answer"><span class="switch-name">Answer</span>
+        <input type="text" id="opt-answer" maxlength="5" autocomplete="off"
+               spellcheck="false" placeholder="Random">
+      </label>
+      <p class="setting-why">Play against a word you choose. Leave it empty to have one drawn at
+      random (subject to priors).</p>
+    </div>
+
+  </div>
+  <p class="note" id="settings-note">Changing any of these starts a fresh board.</p>
+</section>
+
+<main>
+  <section class="board-pane">
+    <div id="board" aria-label="board"></div>
+
+    <p id="hint">&nbsp;</p>
+    <p id="message" class="message" hidden></p>
+
+    <div id="keyboard" aria-label="letters used so far"></div>
+
+    <div class="controls" id="solve-controls">
+      <button id="accept" class="primary">Use suggestion</button>
+      <button id="undo" class="ghost" title="Empty the row the cursor is on, leaving its place free for another word">Delete row</button>
+    </div>
+
+    <div class="controls" id="play-controls" hidden>
+      <button id="guess" class="primary">Guess</button>
+      <button id="hint-btn" class="ghost">Hint</button>
+      <button id="giveup" class="ghost">Reveal answer</button>
+    </div>
+
+    <details id="keys-help">
+      <summary>Keys</summary>
+      <dl class="keys" id="solve-keys">
+        <dt>A&ndash;Z</dt><dd>Write a letter into the selected tile</dd>
+        <dt>&larr; &rarr;</dt><dd>Move along the row</dd>
+        <dt>&uarr; &darr;</dt><dd>Move between rows</dd>
+        <dt>Space</dt><dd>Change the selected tile's color: gray &rarr; yellow
+          &rarr; green</dd>
+        <dt>Enter</dt><dd>On an empty row, take the solver's suggestion; otherwise, submit the
+        word you entered</dd>
+        <dt>Backspace</dt><dd>Delete a letter</dd>
+      </dl>
+      <dl class="keys" id="play-keys" hidden>
+        <dt>A&ndash;Z</dt><dd>Write a letter</dd>
+        <dt>&larr; &rarr;</dt><dd>Move along the row</dd>
+        <dt>Enter</dt><dd>Guess the word. On an empty row, play the solver's pick when it is showing.</dd>
+        <dt>Backspace</dt><dd>Delete a letter</dd>
+      </dl>
+    </details>
+  </section>
+
+  <aside class="panel" id="solve-panel">
+    <div class="card" id="rec-card">
+      <div class="card-head">
+        <h2>Next guess</h2>
+        <span class="tag" id="rec-tag" hidden></span>
+      </div>
+      <p class="rec-word" id="rec-word">&mdash;</p>
+      <p class="rec-score" id="rec-score"></p>
+      <p class="rec-note" id="rec-note" hidden></p>
+    </div>
+
+    <div class="card" id="alt-card" hidden>
+      <h2>Alternatives</h2>
+      <ol id="alternatives" class="rows"></ol>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Still possible</h2>
+        <span class="tag" id="cand-count">&mdash;</span>
+      </div>
+      <p class="sub" id="cand-sub"></p>
+      <ul id="candidates" class="chips"></ul>
+    </div>
+
+    <details class="card" id="tech-card">
+      <summary><h2>Advanced</h2><span class="chev" aria-hidden="true"></span></summary>
+      <div id="tech-body"></div>
+    </details>
+  </aside>
+
+  <aside class="panel" id="play-panel" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>Game</h2>
+        <span class="tag" id="game-turn">1 / 6</span>
+      </div>
+      <p class="rec-word" id="game-headline">&mdash;</p>
+      <p class="sub" id="game-source"></p>
+      <label class="switch assist">
+        <input type="checkbox" id="opt-assist">
+        <span class="track"><span class="knob"></span></span>
+        <span class="switch-name">Assist</span>
+      </label>
+      <p class="setting-why">Ask the solver every turn, without pressing Hint. On an empty row, Enter
+      submits the solver's recommendation.</p>
+    </div>
+
+    <div class="card" id="hint-card" hidden>
+      <div class="card-head">
+        <h2>Solver's pick</h2>
+        <span class="tag" id="hint-tag" hidden></span>
+      </div>
+      <p class="rec-word" id="hint-word">&mdash;</p>
+      <p class="rec-score" id="hint-score"></p>
+    </div>
+
+    <div class="card" id="share-card" hidden>
+      <div class="card-head">
+        <h2>Share</h2>
+        <button id="copy-share" class="ghost small">Copy</button>
+      </div>
+      <pre class="share-grid" id="share-grid"></pre>
+    </div>
+  </aside>
+</main>
+
+<div id="veil">
+  <div class="veil-inner">
+    <div class="spinner"></div>
+    <p id="veil-text">Starting up</p>
+    <p class="sub">The 167 MB feedback table and the numba kernels load once.</p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

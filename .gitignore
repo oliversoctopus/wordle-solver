@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+
+# 167 MB, and feedback_table.py rebuilds it from the two word lists.  The rest
+# of data/derived/ is a few hundred KB of index maps and is kept: they are what
+# make the table readable, and they cost nothing to store.
+data/derived/feedback_table.npy

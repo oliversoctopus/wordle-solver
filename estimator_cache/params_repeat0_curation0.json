@@ -1,0 +1,24 @@
+{
+    "slug": "repeat0_curation0",
+    "prior": {
+        "repeat": false,
+        "curation": false,
+        "repeat_prob": null,
+        "noncurated_prob": null,
+        "repeat_shape": null,
+        "curation_shape": null
+    },
+    "form": "sqrt",
+    "form_expression": "a + b*x + c*sqrt(x)",
+    "terms": [
+        "1",
+        "x",
+        "sqrt(x)"
+    ],
+    "params": [
+        0.7203591672184015,
+        0.009531040403109037,
+        0.8405675290143964
+    ],
+    "fitted_at": "2026-08-10 14:37:26"
+}

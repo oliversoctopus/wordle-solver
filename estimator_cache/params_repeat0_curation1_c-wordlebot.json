@@ -1,0 +1,155 @@
+{
+    "slug": "repeat0_curation1_c-wordlebot",
+    "prior": {
+        "repeat": false,
+        "curation": true,
+        "repeat_prob": null,
+        "noncurated_prob": 0.1,
+        "repeat_shape": null,
+        "curation_shape": "wordlebot"
+    },
+    "form": "cubic",
+    "form_expression": "a + b*x + c*x^2 + d*x^3",
+    "terms": [
+        "1",
+        "x",
+        "x^2",
+        "x^3"
+    ],
+    "params": [
+        0.9844031133423764,
+        0.5382144490278338,
+        -0.06540222034436123,
+        0.003412499081073093
+    ],
+    "fitted_at": "2026-08-10 14:04:53",
+    "n_games": 2000,
+    "seed": 0,
+    "iterations": 6,
+    "converged": true,
+    "terms_used": 4,
+    "entropy_baseline_mean_guesses": 3.7945,
+    "best_train_mean_guesses": 3.4855,
+    "mean_guesses_last_eval": 3.4865,
+    "fit_rmse": 0.5328818457288339,
+    "holdout": {
+        "games": 1000,
+        "mean_guesses_solved": 3.484,
+        "mean_guesses_penalized": 3.484,
+        "solve_rate": 1.0,
+        "distribution": {
+            "2": 27,
+            "3": 522,
+            "4": 397,
+            "5": 48,
+            "6": 6
+        }
+    },
+    "opening_word": "reast",
+    "opening_expected_guesses": 3.51628064967042,
+    "history": [
+        {
+            "label": "entropy seed",
+            "mean_guesses": 3.7945,
+            "policy_params": null,
+            "fitted_params": [
+                1.6291193797645644,
+                0.2603602562458727,
+                -0.00906352012351207,
+                0.0
+            ],
+            "terms_used": 3,
+            "seconds": 0.9732456000056118
+        },
+        {
+            "label": "iter 1",
+            "mean_guesses": 3.518,
+            "policy_params": [
+                1.6291193797645644,
+                0.2603602562458727,
+                -0.00906352012351207,
+                0.0
+            ],
+            "fitted_params": [
+                0.9844031133423764,
+                0.5382144490278338,
+                -0.06540222034436123,
+                0.003412499081073093
+            ],
+            "terms_used": 4,
+            "seconds": 1.013805800001137
+        },
+        {
+            "label": "iter 2",
+            "mean_guesses": 3.4855,
+            "policy_params": [
+                0.9844031133423764,
+                0.5382144490278338,
+                -0.06540222034436123,
+                0.003412499081073093
+            ],
+            "fitted_params": [
+                0.9859081053056037,
+                0.5096011774959648,
+                -0.05935552151342891,
+                0.0030520037599520273
+            ],
+            "terms_used": 4,
+            "seconds": 1.027502299984917
+        },
+        {
+            "label": "iter 3",
+            "mean_guesses": 3.4855,
+            "policy_params": [
+                0.9859081053056037,
+                0.5096011774959648,
+                -0.05935552151342891,
+                0.0030520037599520273
+            ],
+            "fitted_params": [
+                0.9861464805703217,
+                0.5068304333400997,
+                -0.058125987634011396,
+                0.0029314489183827398
+            ],
+            "terms_used": 4,
+            "seconds": 1.0167315000435337
+        },
+        {
+            "label": "iter 4",
+            "mean_guesses": 3.4865,
+            "policy_params": [
+                0.9861464805703217,
+                0.5068304333400997,
+                -0.058125987634011396,
+                0.0029314489183827398
+            ],
+            "fitted_params": [
+                0.9858961877745402,
+                0.5081865610045209,
+                -0.05832899282562979,
+                0.00293536435031053
+            ],
+            "terms_used": 4,
+            "seconds": 1.0260545000201091
+        },
+        {
+            "label": "iter 5",
+            "mean_guesses": 3.4865,
+            "policy_params": [
+                0.9858961877745402,
+                0.5081865610045209,
+                -0.05832899282562979,
+                0.00293536435031053
+            ],
+            "fitted_params": [
+                0.9856154207590805,
+                0.5081241358874429,
+                -0.058279210633159766,
+                0.002930525304599346
+            ],
+            "terms_used": 4,
+            "seconds": 1.0318345000268891
+        }
+    ]
+}

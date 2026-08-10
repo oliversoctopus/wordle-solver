@@ -1,0 +1,143 @@
+{
+    "slug": "repeat1_curation1_r-binned_c-wordlebot",
+    "prior": {
+        "repeat": true,
+        "curation": true,
+        "repeat_prob": 0.1,
+        "noncurated_prob": 0.1,
+        "repeat_shape": "binned",
+        "curation_shape": "wordlebot"
+    },
+    "form": "saturating",
+    "form_expression": "a + b*x + c*log2(1+x)",
+    "terms": [
+        "1",
+        "x",
+        "log2(1+x)"
+    ],
+    "params": [
+        0.8687670845568239,
+        0.026341733447736104,
+        0.5282133561098783
+    ],
+    "fitted_at": "2026-08-10 13:41:15",
+    "n_games": 2000,
+    "seed": 0,
+    "iterations": 6,
+    "converged": false,
+    "terms_used": 3,
+    "entropy_baseline_mean_guesses": 3.68,
+    "best_train_mean_guesses": 3.0965,
+    "mean_guesses_last_eval": 3.0975,
+    "fit_rmse": 0.5410430600896949,
+    "holdout": {
+        "games": 1000,
+        "mean_guesses_solved": 3.050150451354062,
+        "mean_guesses_penalized": 3.062,
+        "solve_rate": 0.997,
+        "distribution": {
+            "2": 133,
+            "3": 705,
+            "4": 139,
+            "5": 16,
+            "6": 4,
+            "7": 3
+        }
+    },
+    "opening_word": "salet",
+    "opening_expected_guesses": 3.1883568792298056,
+    "history": [
+        {
+            "label": "entropy seed",
+            "mean_guesses": 3.68,
+            "policy_params": null,
+            "fitted_params": [
+                1.7546919446589984,
+                0.12486487779747327,
+                0.1776687721857585
+            ],
+            "terms_used": 3,
+            "seconds": 0.9388949000276625
+        },
+        {
+            "label": "iter 1",
+            "mean_guesses": 3.189,
+            "policy_params": [
+                1.7546919446589984,
+                0.12486487779747327,
+                0.1776687721857585
+            ],
+            "fitted_params": [
+                0.8687670845568239,
+                0.026341733447736104,
+                0.5282133561098783
+            ],
+            "terms_used": 3,
+            "seconds": 0.9746950000990182
+        },
+        {
+            "label": "iter 2",
+            "mean_guesses": 3.0965,
+            "policy_params": [
+                0.8687670845568239,
+                0.026341733447736104,
+                0.5282133561098783
+            ],
+            "fitted_params": [
+                0.900498301343166,
+                0.02143263830018327,
+                0.48374608722793677
+            ],
+            "terms_used": 3,
+            "seconds": 0.9387866000179201
+        },
+        {
+            "label": "iter 3",
+            "mean_guesses": 3.0975,
+            "policy_params": [
+                0.900498301343166,
+                0.02143263830018327,
+                0.48374608722793677
+            ],
+            "fitted_params": [
+                0.9025586584268449,
+                0.02366654199660534,
+                0.4792121404695931
+            ],
+            "terms_used": 3,
+            "seconds": 0.9477912998991087
+        },
+        {
+            "label": "iter 4",
+            "mean_guesses": 3.098,
+            "policy_params": [
+                0.9025586584268449,
+                0.02366654199660534,
+                0.4792121404695931
+            ],
+            "fitted_params": [
+                0.9018420946923446,
+                0.021254478546392064,
+                0.4846550532377664
+            ],
+            "terms_used": 3,
+            "seconds": 0.9433154000435024
+        },
+        {
+            "label": "iter 5",
+            "mean_guesses": 3.0975,
+            "policy_params": [
+                0.9018420946923446,
+                0.021254478546392064,
+                0.4846550532377664
+            ],
+            "fitted_params": [
+                0.9025586584268449,
+                0.02366654199660534,
+                0.4792121404695931
+            ],
+            "terms_used": 3,
+            "seconds": 0.9395232000388205
+        }
+    ]
+}

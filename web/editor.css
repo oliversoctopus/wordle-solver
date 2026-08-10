@@ -1,0 +1,189 @@
+/* The rewriting page: a list of everything the site says, and the site. */
+
+body.editing { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+header input[type="search"] {
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 10px;
+  width: 15em;
+  max-width: 40vw;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+#bar {
+  margin: 0;
+  padding: 8px 20px;
+  font-size: 13px;
+  color: var(--ink-dim);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+
+#bar.saved { color: #fff; background: var(--green); }
+#bar.problem { color: #fff; background: #c0392b; }
+#note { opacity: 0.85; }
+
+main.editor {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) minmax(420px, 46%);
+  gap: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  /* the solver's own `main` sets `start`, which would leave both columns as
+     tall as their contents -- here they are meant to fill the window and do
+     their own scrolling */
+  align-items: stretch;
+}
+
+/* min-height:0 lets a grid item shrink below its content and scroll instead of
+   pushing the row taller; auto is the default and would defeat the overflow */
+#list { overflow-y: auto; min-height: 0; padding: 10px 20px 60px; }
+
+/* --- one string ---------------------------------------------------------- */
+
+.file-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0 -20px 6px;
+  padding: 10px 20px 6px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-weight: 600;
+}
+
+.file-head:not(:first-child) { margin-top: 18px; }
+.file-head .count { float: right; letter-spacing: 0; text-transform: none; opacity: 0.7; }
+
+.item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin: 0 0 8px;
+  background: var(--surface);
+}
+
+.item.changed { border-color: var(--yellow); }
+.item.edited { border-left: 3px solid var(--green); }
+.item.invalid { border-color: #c0392b; }
+
+.where {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 11.5px;
+  color: var(--ink-dim);
+  margin-bottom: 5px;
+  font-family: ui-monospace, Consolas, "Courier New", monospace;
+}
+
+.where .spot { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.where .badge {
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 7px;
+  font-family: inherit;
+}
+
+.badge.unseen {
+  color: var(--yellow);
+  border-color: var(--yellow);
+  font-family: inherit;
+}
+
+.where button {
+  flex: none;
+  padding: 1px 7px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+
+.item textarea {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.45;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  resize: vertical;
+  min-height: 2.6em;
+}
+
+.item textarea:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.was {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--ink-dim);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.was b { color: var(--ink); font-weight: 600; }
+.problem-line { margin: 5px 0 0; font-size: 12px; color: #c0392b; }
+
+.slots { margin: 4px 0 0; font-size: 11.5px; color: var(--ink-dim); }
+.slots code {
+  font-family: ui-monospace, Consolas, "Courier New", monospace;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+.empty { color: var(--ink-dim); font-size: 13px; padding: 20px 0; }
+
+/* --- the live page ------------------------------------------------------- */
+
+.preview {
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+}
+
+.preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-weight: 600;
+}
+
+.preview-actions { display: flex; gap: 6px; }
+
+/* an iframe with no height of its own falls back to 150px, which is where the
+   short box came from */
+#preview { flex: 1; min-height: 0; height: 100%; width: 100%; border: 0; background: var(--bg); }
+
+@media (max-width: 900px) {
+  body.editing { overflow: auto; height: auto; }
+  main.editor { grid-template-columns: 1fr; }
+  .preview { border-left: 0; border-top: 1px solid var(--line); height: 70vh; }
+}

@@ -1,0 +1,140 @@
+[
+  {
+    "applied": "20260809-221039",
+    "changes": [
+      {
+        "file": "web/index.html",
+        "line": 32,
+        "context": "#settings <div>",
+        "was": "Assume the editor sometimes reuses a word that has already been an answer, so already-used words are less likely than the rest.",
+        "now": "Assume the editor rarely reuses a word that has already been a Wordle answer. Makes already-used words less likely."
+      },
+      {
+        "file": "web/index.html",
+        "line": 43,
+        "context": "#settings <div>",
+        "was": "Assume most answers come from the curated 2022 list, so words outside it are less likely than words on it.",
+        "now": "Assume most answers come from the curated 2022 list of answer words. Makes words outside this list less likely to be answers."
+      },
+      {
+        "file": "web/index.html",
+        "line": 71,
+        "context": "#answer-setting <div>",
+        "was": "Play against a word you choose instead of one drawn at random &mdash; the quickest way to set the solver a position you have in mind. Leave it empty to have one dealt.",
+        "now": "Play against a word you choose. Leave it empty to have one drawn at random (subject to priors)."
+      },
+      {
+        "file": "web/index.html",
+        "line": 105,
+        "context": "#solve-keys <dl>",
+        "was": "Move between rows &mdash; go back up to fix an earlier guess without deleting the rows under it",
+        "now": "Move between rows"
+      },
+      {
+        "file": "web/index.html",
+        "line": 109,
+        "context": "#solve-keys <dl>",
+        "was": "On an empty row, take the solver's suggestion; otherwise submit the board",
+        "now": "On an empty row, take the solver's suggestion; otherwise, submit the word you entered"
+      },
+      {
+        "file": "web/index.html",
+        "line": 111,
+        "context": "#solve-keys <dl>",
+        "was": "Rub out a letter",
+        "now": "Delete a letter"
+      },
+      {
+        "file": "web/index.html",
+        "line": 116,
+        "context": "#play-keys <dl>",
+        "was": "Guess the word &mdash; or, on an empty row, play the solver's pick when it is showing",
+        "now": "Guess the word. On an empty row, play the solver's pick when it is showing."
+      },
+      {
+        "file": "web/index.html",
+        "line": 118,
+        "context": "#play-keys <dl>",
+        "was": "Rub out a letter",
+        "now": "Delete a letter"
+      },
+      {
+        "file": "web/index.html",
+        "line": 149,
+        "context": "#tech-card <summary>",
+        "was": "Technical details",
+        "now": "Advanced"
+      },
+      {
+        "file": "web/index.html",
+        "line": 167,
+        "context": "#play-panel <div>",
+        "was": "Ask the solver every turn, without pressing Hint. On an empty row, Enter takes its pick.",
+        "now": "Ask the solver every turn, without pressing Hint. On an empty row, Enter submits the solver's recommendation."
+      },
+      {
+        "file": "web/app.js",
+        "line": 386,
+        "context": "playGuess()",
+        "was": "Out of guesses — it was ${game.answer.toUpperCase()}.",
+        "now": "Out of guesses. The answer was ${game.answer.toUpperCase()}."
+      },
+      {
+        "file": "web/app.js",
+        "line": 512,
+        "context": "renderHintLine()",
+        "was": "Enter takes the solver's pick · or type your own",
+        "now": "Enter takes the solver's pick, or type your own"
+      },
+      {
+        "file": "web/app.js",
+        "line": 528,
+        "context": "renderHintLine()",
+        "was": "Type the word you played · Enter takes the suggestion",
+        "now": "Type the word you played"
+      },
+      {
+        "file": "web/app.js",
+        "line": 530,
+        "context": "renderHintLine()",
+        "was": "Space colours the selected tile · Enter submits",
+        "now": "Space colors the selected tile, enter submits the word"
+      },
+      {
+        "file": "web/app.js",
+        "line": 589,
+        "context": "renderPanel()",
+        "was": "Cannot be the answer itself — it is played purely to split what is left.",
+        "now": "Cannot be the answer itself. It is played purely to split what is left."
+      },
+      {
+        "file": "web/app.js",
+        "line": 649,
+        "context": "priorFacts()",
+        "was": "On · p = ${prior.repeat_prob.toFixed(2)}",
+        "now": "On: p = ${prior.repeat_prob.toFixed(2)}"
+      },
+      {
+        "file": "web/app.js",
+        "line": 666,
+        "context": "priorFacts()",
+        "was": "On · p = ${prior.noncurated_prob.toFixed(2)}",
+        "now": "On: p = ${prior.noncurated_prob.toFixed(2)}"
+      },
+      {
+        "file": "web/app.js",
+        "line": 769,
+        "context": "estimatorFact()",
+        "was": "${equationHTML(est)} <p><i>f</i>(<i>n</i>) estimates how many guesses are still needed from a position whose candidate set has <b>effective size</b> <i>n</i> = 2<sup><i>H</i></sup>, where <i>H</i> is the entropy in bits of the candidates under the prior. With a uniform prior that is simply how many candidates are left; as the prior concentrates on a few of them it shrinks toward 1.</p> ${table} <p>The coefficients are fitted by policy iteration — play many games with the current <i>f</i>, record what each position actually cost, refit, repeat — over the <b>${est.form}</b> family (${est.description}). The result is floored at 1, since one more guess is always needed.</p>",
+        "now": "${equationHTML(est)} <p><i>f</i>(<i>n</i>) estimates how many guesses are still needed from a position whose candidate set has <b>effective size</b> <i>n</i> = 2<sup><i>H</i></sup>, where <i>H</i> is the entropy in bits of the candidates under the prior. With a uniform prior that is simply how many candidates are left; as the prior concentrates on a few of them it shrinks toward 1.</p> ${table} <p>The coefficients are fitted by policy iteration. We play many games with the current <i>f</i>, record what each position actually cost, refit, and repeat. <i>f</i> must be part of the <b>${est.form}</b> family (${est.description}), where x is log_2(n). The result is floored at 1, since one more guess is always needed.</p>"
+      },
+      {
+        "file": "web/app.js",
+        "line": 963,
+        "context": "copyShare()",
+        "was": "Could not reach the clipboard — select the grid and copy it.",
+        "now": "Error: Could not reach the clipboard."
+      }
+    ]
+  }
+]

@@ -1,0 +1,4 @@
+# LF in the repo and LF on checkout, on every platform.  Without this, Windows'
+# default core.autocrlf rewrites every line of every file and a one-line edit
+# arrives as a whole-file diff -- the exact failure CLAUDE.md warns about.
+* text=auto eol=lf
