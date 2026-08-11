@@ -361,36 +361,59 @@ At `t = 0.35`, relative to the flat weight it replaces:
 Every word on the left is a real off-list answer; every word on the right is one
 of the words behind a recorded loss in §10.
 
-### 4.5 Why the two shapes interact
+### 4.5 Do the two shapes need each other?
 
-This is the part that is easy to get wrong. The project got it wrong first, and
-then got the *reason* wrong too.
+**The claim this section used to make is dead, so start with that.** These shapes
+were adopted because they looked *superadditive*: the WordleBot shape measured a
+wash on its own, the binned repeat shape close to nothing on its own, and the
+pair far more than the sum — which is a strong reason to ship two things
+together rather than one. Recomputed on current data (§4.6) they are −0.044,
+−0.022 and −0.064, against a sum of −0.066. **Additive, within noise.** The
+effect that justified the pairing is not there.
 
-When these shapes were adopted, the WordleBot shape measured **a wash** on its
-own, the binned repeat shape close to nothing on its own, and the pair far more
-than the sum of the two — which is what justified shipping them together. On
-current data that superadditivity is gone: −0.044, −0.022 and −0.064 against a
-sum of −0.066, additive within noise (§4.6). The pair is still the best
-configuration and still ships; the argument for *why* it had to be a pair no
-longer holds up.
+What is left is a mechanism, and it is worth keeping for a specific reason: it
+makes a prediction, and the arithmetic behind it is checkable even where the
+guess counts are not.
 
-What follows is the mechanism, and that part is intact — it is still the right
-account of how the two sides interfere, and it is what the repeat-arm penalty in
-§4.6 is. It is simply no longer evidence that either shape needs the other. The
-reason is arithmetic about who competes with whom.
+The arithmetic. Concentrating the off-list mass onto its ~870 effective words
+gives each about **1.0×10⁻⁴**, where a used word under flat repeat mass has
+0.10/1,858 = **5.4×10⁻⁵**. So sharpening the curation side alone promotes any
+off-list word above any past answer, nearly two to one. On average that is not
+far wrong — the observed rates say an off-list word deserves ≈9.1×10⁻⁵ and a
+used word ≈6.0×10⁻⁵, a ratio of 1.5 — but it is wrong *word by word*, because
+flat repeat mass spreads evenly over 1,858 words when 19 of the 21 repeats came
+from the first 300. The solver stops attending to `cigar` and attends to ~870
+off-list candidates instead, and when the answer *is* `cigar`, it pays.
 
-Concentrating the off-list mass onto ~850 words gives each about **1×10⁻⁴**,
-where a used word under the flat repeat shape has **5.4×10⁻⁵**. Sharpening one
-side therefore makes off-list words outrank past answers roughly two to one.
-That is about right *on average* — the observed rates say an off-list word
-deserves 0.079/850 ≈ 9.3×10⁻⁵ and a used word 0.111/1,858 ≈ 6.0×10⁻⁵ — but it is
-wrong word by word, because the repeat mass is still spread evenly over 1,858
-words when the repeats cluster in the first 300. The solver stops paying
-attention to `cigar` and starts paying attention to 841 off-list candidates, and
-when the answer *is* `cigar` it pays for it.
+The prediction that follows has two halves, and the data treats them very
+differently:
 
-Flat repeat mass is a harmless approximation only while the curation side is
-flat too. Sharpen one and the other becomes the binding error.
+* **Sharpening curation alone should cost something on repeats.** It does:
+  `wordlebot` alone is **+0.143 ± 0.078** on the repeat arm — and the two rows
+  containing `wordlebot` are the only ones that lose ground there at all. About
+  1.8σ: suggestive, not settled.
+* **Adding the binned repeat shape should relieve that cost.** Here the data has
+  nothing to say. The pair scores **+0.095 ± 0.228** on the same arm: better than
+  +0.143, by a fifth of its own error bar.
+
+That second interval is the whole problem, and it is not fixable by being
+cleverer. Twenty-one repeat events carry ±0.17–0.23 whatever you do with them.
+Getting to ±0.05, enough to call a 0.1-guess repair, needs about sixteen times
+the events — some 340 repeats, which at the regime's 11.1% rate is roughly 3,000
+puzzles, or eight years of Wordle.
+
+So the honest status is: **a reason to expect interference, not evidence of it.**
+Sharpening one side does make the other's flatness the larger error in the
+weights — that part is arithmetic. Whether that costs measurable guesses, and
+whether the second shape buys them back, is a question twenty-one events cannot
+answer.
+
+None of which is an argument against shipping both, because the pairing never
+needed the interaction to justify it. Each shape is independently the better
+model of the two on its own group, by a margin the prequential scoring *can*
+resolve: +1.14 ± 0.21 nats per event for `binned` (§4.2), −6.46 against −9.27 for
+`wordlebot` (§4.3). Both halves beat flat at their own job. That is enough, and
+it is a smaller claim than the one this section used to make.
 
 ### 4.6 Measuring any of this without fooling yourself
 
@@ -429,12 +452,11 @@ unused**, blended at the current regime's own mixture of 11.1% / 7.9% / 81.1%:
 | `binned` + `frequency` | −0.286 ± 0.184 | −0.522 ± 0.145 | −0.002 ± 0.018 | **−0.074 ± 0.028** |
 | `binned` + `wordlebot` | +0.095 ± 0.228 | −0.826 ± 0.150 | −0.012 ± 0.018 | **−0.064 ± 0.032** |
 
-The positive repeat-arm entries in the `wordlebot` rows are §4.5 happening,
-though far less violently than when this was first measured: that row's repeat
-penalty was **+0.611** and its blend a wash at +0.009, which is what made the
-pair look worth much more than the sum of its parts. It no longer does — the
-two shapes now blend to −0.064 against a sum of −0.066. The pair is still the
-best row; the superadditivity that justified it is not in the current numbers.
+The repeat column is where §4.5 lives, and it has softened a great deal since
+this was first measured: `wordlebot` alone carried a **+0.611** repeat penalty
+then, against +0.143 here, and blended to a wash at +0.009. That penalty is what
+made the pair look worth so much more than its parts. §4.5 has what survives of
+the argument and what does not.
 
 Unlike the table in §4, **these columns are comparable across rows**: every row
 is scored against the same real answers, so the blend is a genuine paired

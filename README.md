@@ -282,10 +282,11 @@ over the flat spread the two priors used on their own.
   instead, which is slightly weaker but needs no vendored list.
 * `--repeat-shape uniform`, `--curation-shape uniform` give the flat spread back.
 
-The shapes are only worth having **together**: see *Shaping the two priors*
-below. The shape is part of the cache key, because the best form of `f` depends
-on it — `sqrt` is right for the uniform shapes and picks the wrong opening word
-for the sharpened ones.
+Each shape is worth having on its own terms, and the two are **additive within
+noise** — they were adopted on a superadditivity that current data does not show;
+see *Shaping the two priors* below. The shape is part of the cache key, because
+the best form of `f` depends on it — `sqrt` is right for the uniform shapes and
+picks the wrong opening word for the sharpened ones.
 
 ### Both defaults describe a regime six months old
 
