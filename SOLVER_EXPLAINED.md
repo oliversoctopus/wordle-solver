@@ -253,10 +253,10 @@ boundary, and a boundary is a parameter that has to be tuned on the same 21
 events you are trying to predict. Scored prequentially — each repeat predicted
 from the ones before it only, so no parameter ever sees the event it is scored
 on — flat gives a log-likelihood of **−157.1** over the 21 events and the binned
-histogram gives **−133.1**, about **+1.14 nats per event**. Tuned-window
-variants all score worse, and so does an age-based shape whose rate is refit as
-the events arrive: it lands at −143.1, between the two, because twenty-odd
-events cannot pin the rate down.
+histogram gives **−133.1**, about **+1.14 nats per event**. The best of sixteen
+tuned windows reaches only −143.6, and an age-based shape whose rate is refit as
+the events arrive lands at −150.1: twenty-odd events cannot pin a rate down, and
+a window has a boundary that must be tuned on the very events it predicts.
 
 In practice `cigar` ends up with about **6×** the flat repeat weight, and words
 that first appeared late fall below it.

@@ -192,6 +192,7 @@ every core, so two requests at once would only make both slower.
 | `answer_like.py` | one-off: builds `answer_like.json`, the score behind `--curation-shape frequency` |
 | `solutions.py` | brings `solutions.json` up to date from the NYT, one request per day since the last |
 | `word_lists.py` | one-off: refetches `wordles.json` and `nonwordles.json` upstream |
+| `analysis/` | the measurement scripts behind every number in the prior sections below |
 
 The last three verify against the file they would write and do nothing unless
 passed `--write`, since each one rewrites something the solver reads.
@@ -272,11 +273,18 @@ only, so no parameter ever sees the point it is scored on:
 | uniform over used (current) | −157.1 | — |
 | binned, width 200, α = 0.5 | −133.1 | **+24.0** |
 | binned, width 200, α = 1.0 | −135.9 | +21.2 |
+| best of 16 window variants (last K ∈ 3/5/8/all, ±25…±200) | −143.6 | +13.5 |
 
-The winner is a Laplace-smoothed histogram over fixed bins, which has no window
-boundary to tune, at +1.14 ± 0.21 nats per event (5.4σ, winning 17 of 21). Scored
-in-sample the same comparison claims +1.50, so overfitting inflates it ~31%
-without manufacturing it.
+The winner is a Laplace-smoothed histogram over fixed bins, at +1.14 ± 0.21 nats
+per event (5.4σ, winning 17 of 21). Scored in-sample the same comparison claims
++1.50, so overfitting inflates it ~31% without manufacturing it.
+
+The window row is the point of the exercise. A window has a boundary, a boundary
+is a parameter, and it has to be tuned on the same events it is then scored
+against — so even the best of sixteen tuned windows lands 10 nats behind a
+histogram with nothing to tune. (A window needs a third knob besides `K` and the
+half-width: how much mass to leave outside. With a hard cutoff a single repeat
+landing outside costs ~7 nats, which is `sandy` and `smile` all over again.)
 
 An age-based shape — weight rising with time since last use, rather than binned
 by where in the answer order the word first appeared — is the obvious rival and
@@ -295,14 +303,18 @@ nearly cancel: −0.143 ± 0.173 on the 21 repeat answers against −0.012 ± 0.
 the other 169, and repeats are only a ninth of games.
 
 The paired sd is 0.36 guesses, so resolving a 0.02-guess effect at 2σ needs
-~1,300 regime games at one per day, which is why this sat unshipped. Whether the
-source window is drifting forward is likewise unresolved, and the evidence for
-it has weakened: the rank correlation between repeat order and source index was
-+0.46 (p = 0.04) over the first 18 events and is +0.30 (p = 0.18) over all 21,
-because all three of the newest repeats came from early in the answer order.
-The replay lag is 4.36 years on average with an sd of 0.83, and 19 of 21 events
-sit between 4.4 and 5.1 years, so a static window and a fixed lag remain
-indistinguishable here.
+~1,300 regime games at one per day, which is why this sat unshipped.
+
+Whether the source window is drifting forward is likewise unresolved, and the
+evidence has weakened. The drift rate is how far the source moves per puzzle, so
+**0 is a static window and 1.0 is a fixed replay lag** — one puzzle a day means a
+constant lag drags the source forward one position a day. Over the first 18
+events it was +0.55 ± 1.56, an interval covering both; over all 21 it is
+−0.10 ± 1.15, which has collapsed onto the static reading while still excluding
+nothing. The rank correlation between repeat order and source index fell the
+same way, +0.46 (p = 0.04) to +0.30 (p = 0.18), because all three of the newest
+repeats came from early in the answer order. The replay lag averages 4.36 years
+with an sd of 0.83, and 18 of 21 events sit between 4.4 and 5.1 years.
 
 ## Shaping the two priors
 

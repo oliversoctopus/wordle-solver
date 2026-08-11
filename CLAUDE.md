@@ -70,6 +70,7 @@ are not written for concurrent use.
 | `answer_like.py` | builds `answer_like.json`, the answer-like scores |
 | `solutions.py` | brings `solutions.json` up to date from the NYT |
 | `word_lists.py` | refetches `wordles.json` and `nonwordles.json` |
+| `analysis/` | the scripts behind every measured number in the two documents |
 
 ## Where the data comes from
 
@@ -132,6 +133,19 @@ the code* bakes them into the source and logs the phrases to
 **`wording_history.json` is a record of the past.** Its `was:` fields quote what
 the code used to say. Do not sweep it with a project-wide rewrite — that makes it
 false. It was deliberately left British when everything else was converted.
+
+## Numbers in the documents
+
+Every measured claim about the priors is reproduced by a script in `analysis/`,
+and the claims move with `solutions.json` — rerun after `solutions.py --write`,
+and refit before rerunning `analysis/replay.py` or it measures a stale policy
+against fresh answers. Nothing warns you: the estimator cache is keyed on the
+`PriorConfig` alone, so a fit made against a shorter answer log loads silently.
+
+`analysis/repeat_shapes.py --events 18` is the method check. It scores only the
+first 18 repeats and should print what the README carried before 2026-08-10 —
+uniform −134.5, binned −116.1. If that still holds, a number that moved moved
+because the data did, not because the analysis drifted.
 
 ## Testing
 
