@@ -16,11 +16,10 @@ switched off, in which case that split is simply not made:
     repeat=0 curation=0   uniform over all words
 
 Each group also has a *shape*: how its mass is spread over its members.  Both
-default to the sharpened shape, which is worth -0.091 +- 0.032 guesses; passing
-``uniform`` gives the flat spread the two priors used on their own.  The
-sharpened shapes are only worth having together -- see README -- because
-concentrating the curation mass is what makes the flat repeat mass the binding
-error.
+default to the sharpened shape, worth -0.064 +- 0.032 guesses together; passing
+``uniform`` gives the flat spread the two priors used on their own.  They were
+adopted as a pair because together they measured far better than the sum of
+their parts; on current data they measure merely additive -- see README.
 """
 
 import json

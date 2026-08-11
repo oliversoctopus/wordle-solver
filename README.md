@@ -215,7 +215,7 @@ remainder — so `--noncurated-prob` is *conditional on not being a repeat*, and
 must be measured with that denominator.
 
 Each group also has a **shape**, which is how its mass is spread over its
-members. The defaults are the sharpened shapes, worth −0.091 ± 0.032 guesses
+members. The defaults are the sharpened shapes, worth −0.064 ± 0.032 guesses
 over the flat spread the two priors used on their own.
 
 * `--repeat-shape binned` (default) weights a past answer by where it first
@@ -234,100 +234,123 @@ for the sharpened ones.
 
 ### Both defaults describe a regime six months old
 
-Measured over the 1,866 answers in `solutions.json`, through Wordle #1866
-(2026-07-28). The puzzle number is `days_since_launch + 1`; the `id` field is
+Measured over the 1,879 answers in `solutions.json`, through Wordle #1879
+(2026-08-10). The puzzle number is `days_since_launch + 1`; the `id` field is
 an NYT internal key and stops matching after #506.
 
 | window | puzzles | repeat rate | off-list \| not a repeat |
 | --- | --- | --- | --- |
 | 2021–2025 | 1,657 | 0.00% | 1.75% |
-| **since Wordle #1690 (2026-02-02)** | **177** | **10.2%** | **8.8%** |
-| last 50 | 50 | 8.0% | 10.9% |
-| all time | 1,866 | 1.0% | 2.4% |
+| **since Wordle #1690 (2026-02-02)** | **190** | **11.1%** | **8.9%** |
+| last 50 | 50 | 12.0% | 11.4% |
+| all time | 1,879 | 1.1% | 2.5% |
 
 Both defaults of 0.10 are right for the current regime and roughly 10× and 4×
 too high against the full record. Nothing was ever off-list before 2023, and
 `cigar` on 2026-02-02 was the first repeat in Wordle's history; every repeat
-since falls in the last 177 puzzles, about one in ten.
+since falls in the last 190 puzzles, a little over one in nine.
 
-The two moves started together because the curated pool is running out: 1,803
-of the 2,309 curated words are used, 506 remain, and fresh ones are consumed at
-~324/year — about 1.6 years left. Going off-list and recycling old answers are
+The two moves started together because the curated pool is running out: 1,812
+of the 2,309 curated words are used, 497 remain, and fresh ones are consumed at
+~334/year — about 1.5 years left. Going off-list and recycling old answers are
 the same editorial response to the same constraint, so extrapolating both
 upward is defensible, and 0.10 is the forward-looking number rather than the
 historical one.
 
 ### Sharpening the repeat prior
 
-By default `build_weights` spreads the repeat mass uniformly over all 1,848 used
-words, but the reuse is not uniform: 16 of the 18 repeats came from Wordle
-#1–#297 (median #123), with only `sandy` (#1227) and `smile` (#831) outside — an
-11% outlier rate, too high to zero out.
+By default `build_weights` spreads the repeat mass uniformly over all 1,858 used
+words, but the reuse is not uniform: 19 of the 21 repeats came from Wordle
+#1–#297 (median #116), with only `sandy` (#1227) and `smile` (#831) outside — a
+10% outlier rate, too high to zero out.
 
 Scored prequentially — each model predicts repeat *i* from repeats 1…*i−1*
-only, so no parameter ever sees the point it is scored on — every alternative
-beats uniform:
+only, so no parameter ever sees the point it is scored on:
 
-| model | logL over 18 events | vs. uniform |
+| model | logL over 21 events | vs. uniform |
 | --- | --- | --- |
-| uniform over used (current) | −134.5 | — |
-| binned, width 200, α = 0.5 | −116.1 | **+18.5** |
-| binned, width 200, α = 1.0 | −118.3 | +16.2 |
-| 16 window variants (last K ∈ 3/5/8/all, ±25…±200) | −124 … −129 | +5.7 … +10.3 |
+| uniform over used (current) | −157.1 | — |
+| binned, width 200, α = 0.5 | −133.1 | **+24.0** |
+| binned, width 200, α = 1.0 | −135.9 | +21.2 |
 
 The winner is a Laplace-smoothed histogram over fixed bins, which has no window
-boundary to tune, at +1.03 ± 0.23 nats per event (4.4σ, winning 14 of 18). Scored
-in-sample the same comparison claimed +1.29, so overfitting inflated it ~20%
+boundary to tune, at +1.14 ± 0.21 nats per event (5.4σ, winning 17 of 21). Scored
+in-sample the same comparison claims +1.50, so overfitting inflates it ~31%
 without manufacturing it.
 
-On its own it changes nothing that matters. Replaying all 177 real puzzles of
-the current regime, rebuilding the prior from strictly earlier puzzles each day,
-the binned prior scores 3.1977 against uniform's 3.1921 — a paired **+0.0056 ±
-0.0294**, with 27 games changing length, 13 better and 14 worse. The subgroups
-cancel: −0.222 ± 0.191 on the 18 repeat answers against +0.031 ± 0.024 on the
-other 159, and repeats are only a tenth of games.
+An age-based shape — weight rising with time since last use, rather than binned
+by where in the answer order the word first appeared — is the obvious rival and
+does not beat this. Refitting its rate prequentially scores −143.1, worse than
+binned and barely better than uniform; the rate is unstable on twenty-odd
+events. A rate fixed at 2/year reaches −131.6, but only when chosen with
+hindsight on the same events, and it wins by piling mass on the oldest words and
+then paying for it on `sandy` (−11.93 against binned's −8.43) and `smile`. The
+Laplace floor is what makes binned survive its outliers.
 
-The paired sd is 0.39 guesses, so resolving a 0.02-guess effect at 2σ needs
-~1,500 regime games at one per day, which is why this sat unshipped. Whether the
-source window is drifting forward is likewise unresolved: the rank correlation
-between repeat order and source index is +0.52 (p = 0.04), but the fitted drift
-rate is 0.52 ± 0.39, so a static window and a fixed ~4.55-year replay lag both
-sit inside the interval.
+On its own it changes nothing that matters. Replaying all 190 real puzzles of
+the current regime, rebuilding the prior from strictly earlier puzzles each day,
+the binned prior scores 3.2211 against uniform's 3.2474 — a paired **−0.0263 ±
+0.0263**, with 19 games changing length, 11 better and 8 worse. The subgroups
+nearly cancel: −0.143 ± 0.173 on the 21 repeat answers against −0.012 ± 0.021 on
+the other 169, and repeats are only a ninth of games.
+
+The paired sd is 0.36 guesses, so resolving a 0.02-guess effect at 2σ needs
+~1,300 regime games at one per day, which is why this sat unshipped. Whether the
+source window is drifting forward is likewise unresolved, and the evidence for
+it has weakened: the rank correlation between repeat order and source index was
++0.46 (p = 0.04) over the first 18 events and is +0.30 (p = 0.18) over all 21,
+because all three of the newest repeats came from early in the answer order.
+The replay lag is 4.36 years on average with an sd of 0.83, and 19 of 21 events
+sit between 4.4 and 5.1 years, so a static window and a fixed lag remain
+indistinguishable here.
 
 ## Shaping the two priors
 
-Sharpening the curation prior is what makes the repeat prior worth having, and
-the two are now shipped as shapes rather than left out.
+Both shapes are worth having, and are shipped rather than left out. They were
+originally adopted because they looked *superadditive* — worth much more
+together than apart. On current data they no longer do; see the note under the
+table.
 
 Weighting off-list words instead of flatly is a large modeling gain on its own.
 Scored prequentially over the off-list answers, uniform is −9.27 nats per event;
-an answer-like score fitted against the curated list as positives is −8.08; and
-WordleBot's published weights, validated against a 2023 snapshot that predates
-41 of the 45 events, are −7.05, with the effective support falling from 10,638
-words to 1,160.
+an answer-like score fitted against the curated list as positives is −8.14 at the
+shipped `t` = 0.35; and WordleBot's published weights, validated against a 2023
+snapshot that predates 42 of the 46 events, are −6.46, with the effective
+support falling from 10,638 words to 911.
 
-That does not convert into guesses by itself. Measured on three arms — the 18
-real repeats and 45 off-list answers with the prior rebuilt as of each puzzle,
-plus the 506 still-unused curated words — blended at the regime's own mixture of
-10.2% / 7.9% / 81.9%:
+That does not convert into guesses by itself. Measured on three arms — the 21
+real repeats and 46 off-list answers with the prior rebuilt as of each puzzle,
+plus the 497 still-unused curated words — blended at the regime's own mixture of
+11.1% / 7.9% / 81.1%:
 
 | shapes | repeat | off-list | fresh | blended |
 | --- | --- | --- | --- | --- |
-| curation `wordlebot` alone | **+0.611 ± 0.244** | −0.667 ± 0.146 | +0.000 ± 0.012 | +0.009 ± 0.029 |
-| repeat `binned` alone | −0.222 ± 0.191 | −0.044 ± 0.055 | +0.006 ± 0.014 | −0.021 ± 0.023 |
-| `binned` + `frequency` | −0.111 ± 0.179 | −0.311 ± 0.122 | −0.040 ± 0.028 | **−0.068 ± 0.031** |
-| `binned` + `wordlebot` | +0.000 ± 0.198 | −0.756 ± 0.120 | −0.038 ± 0.028 | **−0.091 ± 0.032** |
+| curation `wordlebot` alone | +0.143 ± 0.078 | −0.978 ± 0.105 | +0.022 ± 0.028 | −0.044 ± 0.025 |
+| repeat `binned` alone | −0.143 ± 0.173 | −0.022 ± 0.049 | −0.006 ± 0.016 | −0.022 ± 0.024 |
+| `binned` + `frequency` | −0.286 ± 0.184 | −0.522 ± 0.145 | −0.002 ± 0.018 | **−0.074 ± 0.028** |
+| `binned` + `wordlebot` | +0.095 ± 0.228 | −0.826 ± 0.150 | −0.012 ± 0.018 | **−0.064 ± 0.032** |
 
 Concentrating the off-list mass on ~850 words gives each about 1e-4 against a
 used word's 5.4e-5, so past answers stop competing for the solver's attention —
-hence the +0.611 penalty on repeat answers. Spreading the repeat mass uniformly
-is only harmless while the curation side is flat. Fix both and the penalty goes
-away while the off-list gain stays.
+hence the residual penalty `wordlebot` alone still carries on the repeat arm.
 
-Two things this measurement needs, both of which hid the effect earlier. The
-form of `f` must be refitted per shape, or `sqrt` flips the opening word to
-`raise`, which is worse by 0.034 ± 0.028 on its own. And the blend must include
-a repeat arm; without one `wordlebot` alone scores −0.053 and looks shippable.
+**The superadditivity is gone.** These shapes were adopted because `wordlebot`
+alone blended to +0.009 (a wash), `binned` alone to −0.021, and the pair to
+−0.091 — far more than the sum. Recomputed here they are −0.044, −0.022 and
+−0.064, against a sum of −0.066: additive, within noise. The pair is still the
+best row and still worth shipping; the *reason* given for shipping it no longer
+holds.
+
+Two caveats before reading much into the change. These numbers come from a
+solver whose estimator was refitted afterwards, and every configuration's
+winning form moved, so they are not comparable like-for-like with the published
+ones — the policy changed, not just the data. And `frequency` (−0.074 ± 0.028)
+and `wordlebot` (−0.064 ± 0.032) now sit well inside each other's intervals, so
+the shipped default of `wordlebot` is no longer measurably the better of the two.
+
+One thing this measurement still needs: the form of `f` must be refitted per
+shape, or `sqrt` flips the opening word to `raise`, which is worse by
+0.034 ± 0.028 on its own.
 
 ## Choosing a guess
 

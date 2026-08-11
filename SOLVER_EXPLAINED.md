@@ -176,7 +176,7 @@ improvement in the project.
 `priors.py:195` models the editor as a two-step process:
 
 1. With probability **0.10**, reuse a word that has already been an answer
-   (among the ~1,848 used ones).
+   (among the ~1,858 used ones).
 2. Otherwise pick an unused word, which is **off** the curated list with
    probability **0.10**.
 
@@ -187,10 +187,10 @@ question, and §4.1 onward is about getting that wrong and then right.
 
 Those two 0.10s look aggressive against Wordle's full history, and the reason
 they aren't is a regime change: measured over the **current editorial regime
-(Wordle #1690 onward, from 2026-02-02)**, the repeat rate is 10.2% and the
-off-list rate is 8.8%. Over all 1,866 puzzles they'd be 1.0% and 2.4% — roughly
-10× and 4× lower. The reason is mechanical: 1,803 of 2,309 curated words are used
-up, ~324 are consumed a year, so the pool empties in about 1.6 years, and both
+(Wordle #1690 onward, from 2026-02-02)**, the repeat rate is 11.1% and the
+off-list rate is 8.9%. Over all 1,879 puzzles they'd be 1.1% and 2.5% — roughly
+10× and 4× lower. The reason is mechanical: 1,812 of 2,309 curated words are used
+up, ~334 are consumed a year, so the pool empties in about 1.5 years, and both
 repeats and off-list picks are the editor's response to that.
 
 Note the conditioning: the off-list probability is *conditional on not being a
@@ -231,8 +231,8 @@ the original design; both are now sharpened.
 
 ### 4.2 Sharpening the repeat group
 
-There are 18 repeats in Wordle's history, and they are not drawn from the used
-pool evenly. Sixteen come from Wordle #1–#297 (median #123); only `sandy`
+There are 21 repeats in Wordle's history, and they are not drawn from the used
+pool evenly. Nineteen come from Wordle #1–#297 (median #116); only `sandy`
 (#1227) and `smile` (#831) sit outside that window. The editor appears to be
 replaying the *beginning* of the run.
 
@@ -249,12 +249,14 @@ entirely — it is the "maybe next time" term, and it is why no word's weight ev
 reaches zero.
 
 Fixed bins rather than a sliding window is deliberate: a window needs a
-boundary, and a boundary is a parameter that has to be tuned on the same 18
+boundary, and a boundary is a parameter that has to be tuned on the same 21
 events you are trying to predict. Scored prequentially — each repeat predicted
 from the ones before it only, so no parameter ever sees the event it is scored
-on — flat gives a log-likelihood of **−134.5** over the 18 events and the binned
-histogram gives **−116.1**, about **+1.03 nats per event**. Sixteen tuned-window
-variants all score worse than the binned one.
+on — flat gives a log-likelihood of **−157.1** over the 21 events and the binned
+histogram gives **−133.1**, about **+1.14 nats per event**. Tuned-window
+variants all score worse, and so does an age-based shape whose rate is refit as
+the events arrive: it lands at −143.1, between the two, because twenty-odd
+events cannot pin the rate down.
 
 In practice `cigar` ends up with about **6×** the flat repeat weight, and words
 that first appeared late fall below it.
@@ -279,7 +281,7 @@ published a list that does: **WordleBot**, the NYT's own solver, carries a
 per-word weight, scraped and published at
 `wordletools.azurewebsites.net/weightedbottles`. It is 3,209 words with weights
 from 0.226% to 58% (2,110 of them pinned at the 58% cap). Of those, 3,194 are
-words this solver can guess: 2,302 curated, **892 not**, and all 45 off-list
+words this solver can guess: 2,302 curated, **892 not**, and all 46 off-list
 answers to date among them.
 
 That last fact proves nothing on its own — a list that absorbed answers after
@@ -304,24 +306,24 @@ over everything else. The hedge is not decoration — the snapshot missed 2 of 4
 so 5% is the measured miss rate, and it is what stops a `loris` from being a
 blindside.
 
-Scored prequentially on those 41 post-snapshot events, in nats per event:
+Scored prequentially on those 42 post-snapshot events, in nats per event, each
+shape at the constant that actually ships:
 
-| shape | per event | effective support | at |
-| --- | --- | --- | --- |
-| uniform | −9.27 | 10,638 | — |
-| answer-like frequency (§4.4) | −8.08 | 3,245 | `t` = 0.5 |
-| **WordleBot, 5% hedge** | **−7.05** | **1,160** | 10% hedge |
+| shape | per event | effective support |
+| --- | --- | --- |
+| uniform | −9.27 | 10,638 |
+| answer-like frequency (§4.4), `t` = 0.35 | −8.13 | 4,857 |
+| **WordleBot, 5% hedge** | **−6.46** | **911** |
 
 "Effective support" is `2^H` from §5 applied to the prior itself: how many
-equally likely words the shape is really spreading over.
+equally likely words the shape is really spreading over. `answer_like.py` prints
+the middle row's on every run.
 
-The support column is each shape at the constant it was *fitted* at, which is
-not the one that ships. At the shipped `FREQ_TEMPERATURE = 0.35` the answer-like
-shape spreads over 4,857 rather than 3,245 — flatter than its fitted `t`, so
-wider. At the shipped `OFFLIST_HEDGE = 0.05` the WordleBot shape spreads over
-911 rather than 1,160 — half the mass kept outside the list, so narrower. The
-gap runs the opposite way in each row. `answer_like.py` prints the first of
-these on every run.
+Restricting to post-snapshot events barely matters — over all 46 off-list events
+WordleBot scores −6.46 as well, so it is not winning by having quietly absorbed
+the early ones. An earlier version of this table reported −8.08 / 3,245 and
+−7.05 / 1,160, which were each shape at its *fitted* constant (`t` = 0.5 and a
+10% hedge) rather than its shipped one.
 
 ### 4.4 The fallback: guessing what is answer-like
 
@@ -385,8 +387,8 @@ Concentrating the off-list mass onto ~850 words gives each about **1×10⁻⁴**
 where a used word under the flat repeat shape has **5.4×10⁻⁵**. Sharpening one
 side therefore makes off-list words outrank past answers roughly two to one.
 That is about right *on average* — the observed rates say an off-list word
-deserves 0.079/850 ≈ 9.3×10⁻⁵ and a used word 0.102/1,866 ≈ 5.5×10⁻⁵ — but it is
-wrong word by word, because the repeat mass is still spread evenly over 1,866
+deserves 0.079/850 ≈ 9.3×10⁻⁵ and a used word 0.111/1,858 ≈ 6.0×10⁻⁵ — but it is
+wrong word by word, because the repeat mass is still spread evenly over 1,858
 words when the repeats cluster in the first 300. The solver stops paying
 attention to `cigar` and starts paying attention to 841 off-list candidates, and
 when the answer *is* `cigar` it pays for it.
@@ -411,30 +413,36 @@ and so does one-ply lookahead. This is why the shape is part of the cache key.
 **The evaluation needs three arms, one of them repeats.** A shape can only be
 judged on answers that actually happened, never on answers sampled from its own
 belief — a prior scored against its own prior is grading its own homework, and
-that swing is larger than the effect being measured. The three arms are the **18
-real repeats** and the **45 off-list answers**, each replayed with the prior
-rebuilt from strictly earlier puzzles, plus the **506 curated words still
-unused**, blended at the current regime's own mixture of 10.2% / 7.9% / 81.9%:
+that swing is larger than the effect being measured. The three arms are the **21
+real repeats** and the **46 off-list answers**, each replayed with the prior
+rebuilt from strictly earlier puzzles, plus the **497 curated words still
+unused**, blended at the current regime's own mixture of 11.1% / 7.9% / 81.1%:
 
-| shapes | repeat (18) | off-list (45) | fresh (506) | blended |
+| shapes | repeat (21) | off-list (46) | fresh (497) | blended |
 | --- | --- | --- | --- | --- |
-| curation `wordlebot` alone | **+0.611 ± 0.244** | −0.667 ± 0.146 | +0.000 ± 0.012 | +0.009 ± 0.029 |
-| repeat `binned` alone | −0.222 ± 0.191 | −0.044 ± 0.055 | +0.006 ± 0.014 | −0.021 ± 0.023 |
-| `binned` + `frequency` | −0.111 ± 0.179 | −0.311 ± 0.122 | −0.040 ± 0.028 | **−0.068 ± 0.031** |
-| `binned` + `wordlebot` | +0.000 ± 0.198 | −0.756 ± 0.120 | −0.038 ± 0.028 | **−0.091 ± 0.032** |
+| curation `wordlebot` alone | +0.143 ± 0.078 | −0.978 ± 0.105 | +0.022 ± 0.028 | −0.044 ± 0.025 |
+| repeat `binned` alone | −0.143 ± 0.173 | −0.022 ± 0.049 | −0.006 ± 0.016 | −0.022 ± 0.024 |
+| `binned` + `frequency` | −0.286 ± 0.184 | −0.522 ± 0.145 | −0.002 ± 0.018 | **−0.074 ± 0.028** |
+| `binned` + `wordlebot` | +0.095 ± 0.228 | −0.826 ± 0.150 | −0.012 ± 0.018 | **−0.064 ± 0.032** |
 
-The `+0.611` in the top row is §4.5 happening. Drop the repeat arm from the
-blend and that row reads −0.053, which looks shippable and is not.
+The positive repeat-arm entries in the `wordlebot` rows are §4.5 happening,
+though far less violently than when this was first measured: that row's repeat
+penalty was **+0.611** and its blend a wash at +0.009, which is what made the
+pair look worth much more than the sum of its parts. It no longer does — the
+two shapes now blend to −0.064 against a sum of −0.066. The pair is still the
+best row; the superadditivity that justified it is not in the current numbers.
 
 Unlike the table in §4, **these columns are comparable across rows**: every row
 is scored against the same real answers, so the blend is a genuine paired
 comparison rather than each prior being asked how it fares in a world of its own
-devising.
+devising. They are *not* comparable to the figures above, which came from a
+solver whose estimator has since been refitted — every configuration's winning
+form moved, so the policy changed underneath the measurement as well as the data.
 
-The honest caveat is the repeat arm's width. Eighteen events carry ±0.19–0.24,
+The honest caveat is the repeat arm's width. Twenty-one events carry ±0.17–0.23,
 which makes it the loosest term in every blend and leaves `binned + frequency`
-and `binned + wordlebot` less than one sigma apart. The choice between them
-rests more on whether you want a vendored scrape in the repo than on the
+and `binned + wordlebot` well inside one sigma of each other. The choice between
+them rests more on whether you want a vendored scrape in the repo than on the
 measurement.
 
 ## 5. Effective size: making a weighted set have a "count"
@@ -787,9 +795,9 @@ The same result holds four separate times in this project: deep exact search
 0.0294, despite being 4.4σ better as a prior). The solver has been
 **decision-limited, not valuation-limited**, for a while.
 
-The shapes of §4 are the exception that sharpens the rule. The repeat shape
-really is worth nothing alone, and the WordleBot shape alone is a wash — but
-together they are worth −0.091 ± 0.032. The difference is what kind of change
+The shapes of §4 are the exception that sharpens the rule. Each is worth little
+alone — −0.022 ± 0.024 and −0.044 ± 0.025 — and together they are worth
+−0.064 ± 0.032. The difference is what kind of change
 they are. Lookahead and deeper search estimate a *fixed* quantity more
 accurately, and accuracy was never the binding constraint. A prior changes the
 quantity being optimized: which words are plausible answers at all. That is a
