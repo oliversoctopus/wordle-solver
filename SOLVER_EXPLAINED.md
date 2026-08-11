@@ -306,6 +306,17 @@ over everything else. The hedge is not decoration — the snapshot missed 2 of 4
 so 5% is the measured miss rate, and it is what stops a `loris` from being a
 blindside.
 
+**The 5% stays flat, and that is deliberate.** Weighting it by answer-likeness
+(§4.4) is the obvious refinement and it fails on the population that matters.
+Scored over all 46 off-list answers as though the hedge had had to cover them it
+looks strong, +1.32 nats/event at a median 3.95× the flat share — but those are
+words WordleBot *does* list. The hedge only fires on a word the list is missing,
+and a word is missing because it is odd: `loris` sits at the 53rd percentile of
+answer-likeness and would get **0.32×** the flat share, `kefir` at the 87th and
+would get 2.36×. Over the only two events that have ever needed it, shaping the
+hedge is worth −0.13 nats. Flat is the honest expression of not knowing which
+word the list is short of. `analysis/curation_shapes.py` prints this.
+
 Scored prequentially on those 42 post-snapshot events, in nats per event, each
 shape at the constant that actually ships:
 
@@ -438,6 +449,12 @@ comparison rather than each prior being asked how it fares in a world of its own
 devising. They are *not* comparable to the figures above, which came from a
 solver whose estimator has since been refitted — every configuration's winning
 form moved, so the policy changed underneath the measurement as well as the data.
+
+The first three rows cannot be recomputed from what the repo now carries: they
+need fits for the uniform shapes, which are gone, and a prior with no fit no
+longer plays. `analysis/replay.py` measures the surviving contrast directly,
+`frequency` against `wordlebot`, and gets **−0.010 ± 0.025** blended — the same
+distance the two bottom rows are apart, reached without the baseline in between.
 
 The honest caveat is the repeat arm's width. Twenty-one events carry ±0.17–0.23,
 which makes it the loosest term in every blend and leaves `binned + frequency`
@@ -578,6 +595,13 @@ curvature adds only **0.041**. Together 0.5037, which is the measured
 entropy-to-best gap. Nearly all of the improvement over a standard entropy solver
 is the free discount for guessing a word that might be the answer; the fitted
 curve's shape contributes under a tenth of it.
+
+Under the shipped shapes the same decomposition comes out 0.561 for the bonus
+and 0.040 for curvature, of a 0.601 gap — a bigger bonus against a sharper
+prior, curvature worth the same as ever. The one thing that does not carry over
+is which forms are locally linear enough to fall on entropy's side: refitted
+against the sharpened prior, `spline` picks `salet` and wins the comparison
+outright. See README *Results*.
 
 And the actual fitted curve for the default prior is:
 
@@ -764,6 +788,10 @@ each turn:
     show guess, read feedback, filter candidates
 ```
 
+Every line that says 12,947 is the free choice of guess. Hard mode replaces that
+pool with the candidate set itself and leaves the rest of the dispatch alone; see
+README *Hard mode*, including why `f` is still the one fitted for free play.
+
 The heuristic `E(g,S)` is genuinely a **fallback** — it only runs where the game
 is too wide to solve outright. Result with both priors on and the flat shapes,
 30,000 unseen answers: **3.1841 mean guesses, 99.96% solve rate**, opening word
@@ -819,12 +847,12 @@ In reading order:
 | file | what it establishes |
 | --- | --- |
 | `wordle_data.py` | the feedback rule and the precomputed table (§1) |
-| `priors.py:195` | the weight vector over answers (§4) |
-| `priors.py:133` | the repeat shape, binned by first appearance (§4.2) |
-| `priors.py:169` | the curation shapes, WordleBot and frequency (§4.3, §4.4) |
+| `priors.py:221` | the weight vector over answers (§4) |
+| `priors.py:153` | the repeat shape, binned by first appearance (§4.2) |
+| `priors.py:196` | the curation shapes, WordleBot and frequency (§4.3, §4.4) |
 | `kernels.py:87` | the entropy scorer (§3) |
 | `kernels.py:160` | the expected-guesses scorer (§6) |
 | `estimator.py` | `f`, its functional forms, and the monotonicity guard (§6) |
 | `train.py:86` | policy iteration (§7) |
 | `exact.py` | the endgame search, and the loss penalty (§8, §9) |
-| `solver.py:176` | the dispatch deciding which of the above runs (§11) |
+| `solver.py:196` | the dispatch deciding which of the above runs (§11) |

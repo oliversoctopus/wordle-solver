@@ -36,16 +36,20 @@ import webbrowser
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import numpy as np
+
 import estimator
+import kernels
 import wording
 from exact import DEFAULT_MAX_BRANCH
-from priors import PriorConfig
+from priors import PriorConfig, regime_stats
 from solver import (DEFAULT_BEAM_WIDTH, DEFAULT_EXACT_MAX, DEFAULT_LOSS_PENALTY,
                     ENTROPY, EXPECTED, MODES, WordleSolver)
 # the terminal game's answer-drawing and emoji grid, so both front ends deal
 # the same answers and print the same thing at the end
 from wordle_game import TILE_BLOCK, pick_random_answer
-from wordle_data import WIN_PATTERN, load_data, num_to_feedback, score_guess
+from wordle_data import (FEEDBACK_TABLE_PATH, WIN_PATTERN, load_data,
+                         num_to_feedback, score_guess)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "web")
@@ -53,9 +57,16 @@ STATIC_DIR = os.path.join(HERE, "web")
 MAX_GUESSES = 6
 MAX_SESSIONS = 200          # oldest are dropped; a session is a few dozen bytes
 MAX_LISTED_CANDIDATES = 80  # possible answers sent to the page, likeliest first
+MAX_LISTED_MATCHES = 120    # words the finder lists, best first by its sort
 MAX_BODY = 64 * 1024
 
 TILE_VALS = {"N": 0, "Y": 1, "G": 2}
+
+# how the word finder can order what it found, and which way round each runs.
+# The names are the page's, as the two mode names are: this end only decides
+# what they mean.
+FINDER_SORTS = {"left": 1, "bits": -1, "weight": -1, "alpha": 1}
+DEFAULT_SORT = "left"
 
 # every string the page and this file say, and whatever /editor has
 # rewritten them to
@@ -66,10 +77,19 @@ class SolverError(Exception):
     """Something the user can fix, reported as a 400 with this message."""
 
 
+def table_size():
+    """How big the feedback table on disk actually is, rather than how big it
+    was when the sentence naming it was written."""
+    try:
+        return f"{int(os.path.getsize(FEEDBACK_TABLE_PATH) / 1e6)} MB"
+    except OSError:
+        return "the table"
+
+
 # --------------------------------------------------------------------- solvers
 
 class SolverPool:
-    """Solvers, one per (prior, mode, form), built on demand and kept.
+    """Solvers, one per (prior, mode, form, hard), built on demand and kept.
 
     Building one costs a pass over the word lists; the feedback table behind
     them all is loaded once by ``load_data``'s own cache.
@@ -89,21 +109,25 @@ class SolverPool:
     def data(self):
         return load_data(mask_last=self.mask_last)
 
-    def get(self, config, mode, form):
+    def get(self, config, mode, form, hard=False):
         """Caller must hold ``self.lock``."""
-        key = (config.slug, mode, form)
+        key = (config.slug, mode, form, bool(hard))
         solver = self._solvers.get(key)
         if solver is None:
             solver = WordleSolver(data=self.data(), config=config, mode=mode,
-                                  form=form, quiet=True, **self.options)
+                                  form=form, hard=bool(hard), **self.options)
             self._solvers[key] = solver
         return solver
+
+    def solver_for(self, settings):
+        """The solver a ``Settings`` names.  Caller must hold ``self.lock``."""
+        return self.get(settings.config, settings.mode, settings.form, settings.hard)
 
     def warm(self, config, mode, form):
         """Load the table, compile the kernels and compute the opening guess, so
         that the first thing the page asks for is not also the slowest."""
         try:
-            self.progress = "Loading the feedback table (167 MB)"
+            self.progress = f"Loading the feedback table ({table_size()})"
             with self.lock:
                 self.data()
                 self.progress = "Compiling the scoring kernels"
@@ -112,6 +136,10 @@ class SolverPool:
                 solver.best_guess(solver.all_candidates(), MAX_GUESSES)
             self.progress = "Ready"
             self.ready = True
+        except estimator.NotFitted as exc:
+            # nothing to debug: the message says which command makes the fit
+            self.failed = str(exc)
+            self.progress = "Failed to start"
         except Exception:
             traceback.print_exc()
             self.failed = traceback.format_exc(limit=0).strip()
@@ -120,16 +148,31 @@ class SolverPool:
 
 # -------------------------------------------------------------------- sessions
 
+class Settings:
+    """Everything about how the solver is asked, as one value.
+
+    It travels with the request rather than living on the session, so that
+    changing a setting mid-board re-runs the solver over the rows already played
+    instead of starting again.
+    """
+
+    __slots__ = ("config", "mode", "form", "hard", "top")
+
+    def __init__(self, config, mode, form, hard, top):
+        self.config = config
+        self.mode = mode
+        self.form = form
+        self.hard = hard
+        self.top = top
+
+
 class Session:
     """One board.  Only the rows played are kept; the candidate set is rebuilt
     from them on every request, which costs a few filters over 13k words and
     makes undo free."""
 
-    def __init__(self, config, mode, form, top):
-        self.config = config
-        self.mode = mode
-        self.form = form
-        self.top = top
+    def __init__(self, settings):
+        self.settings = settings
         self.rows = []  # (guess index, pattern number)
 
 
@@ -138,6 +181,10 @@ class Game:
 
     The answer is kept here and never sent until the game is over, so that
     reading the network traffic does not spoil it.
+
+    ``config`` is the prior the answer was *drawn* from and never changes; what
+    the hint is asked under comes with each hint request, so turning a prior off
+    mid-game rethinks the advice rather than dealing a new word.
     """
 
     def __init__(self, answer, config, source):
@@ -183,6 +230,24 @@ def parse_form(body):
     return form
 
 
+def parse_settings(body):
+    """The whole of how to ask the solver, read off one request.
+
+    The page sends all of it every time, as it sends the whole board every time,
+    so nothing on the server has to be kept in step with the switches.
+    """
+    return Settings(config=parse_config(body), mode=parse_mode(body),
+                    form=parse_form(body), hard=bool(body.get("hard", False)),
+                    top=min(10, max(1, int(body.get("top", 5)))))
+
+
+def parse_sort(body):
+    sort = str(body.get("sort", DEFAULT_SORT))
+    if sort not in FINDER_SORTS:
+        raise SolverError(f"Sort must be one of {', '.join(FINDER_SORTS)}")
+    return sort
+
+
 def parse_pattern(raw):
     """A five-tile pattern, as either 'NYGNN' or [0, 1, 2, 0, 0]."""
     if isinstance(raw, str):
@@ -206,13 +271,18 @@ def score_label(mode):
             else "expected guesses to finish")
 
 
-def describe_prior(config):
+def describe_prior(config, data):
+    """The prior as the page explains it: which halves are on, how much mass
+    each takes, how that mass is shaped, and the rates it is set from."""
     return {
         "summary": config.describe(),
         "repeat": config.repeat,
         "repeat_prob": config.repeat_prob,
+        "repeat_shape": config.repeat_shape if config.repeat else None,
         "curation": config.curation,
         "noncurated_prob": config.noncurated_prob,
+        "curation_shape": config.curation_shape if config.curation else None,
+        "measured": regime_stats(data),
     }
 
 
@@ -223,6 +293,9 @@ def describe_estimator(solver):
     values = estimator.f_value(samples, solver.params, solver.form)
     return {
         "form": solver.form.name,
+        # what "whatever is cached" resolves to for this prior, so the page can
+        # say which form is the fitted one instead of naming one in advance
+        "fitted": estimator.active_form_name(solver.config),
         "description": solver.form.description,
         "base": float(solver.form.base),
         "terms": [{"label": label, "coefficient": float(value)}
@@ -231,17 +304,17 @@ def describe_estimator(solver):
     }
 
 
-def build_state(pool, session_id, session, rows):
+def build_state(pool, session_id, settings, rows):
     """The whole board as the page wants it: what has been played, what the
     solver would play next, and what is still possible.
 
-    ``rows`` is passed in rather than read off the session so that a proposed
-    board can be scored before it is adopted; a set of rows that cannot all be
-    true raises rather than returning a state.
+    ``rows`` and ``settings`` are passed in rather than read off the session so
+    that a proposed board can be scored before it is adopted; a set of rows that
+    cannot all be true raises rather than returning a state.
     """
     started = time.perf_counter()
     with pool.lock:
-        solver = pool.get(session.config, session.mode, session.form)
+        solver = pool.solver_for(settings)
         data = solver.data
 
         candidates = solver.all_candidates()
@@ -267,14 +340,15 @@ def build_state(pool, session_id, session, rows):
                      for g, p in rows],
             "solved": solved,
             "over": solved or out_of_guesses,
-            "mode": session.mode,
-            "score_label": score_label(session.mode),
-            "prior": describe_prior(session.config),
+            "mode": settings.mode,
+            "hard": settings.hard,
+            "score_label": score_label(settings.mode),
+            "prior": describe_prior(settings.config, data),
             "candidates_left": int(len(candidates)),
             "recommendation": None,
             "alternatives": [],
             "possible_answers": [],
-            "estimator": describe_estimator(solver) if session.mode == EXPECTED else None,
+            "estimator": describe_estimator(solver) if settings.mode == EXPECTED else None,
         }
 
         weights = solver.weights[candidates]
@@ -288,7 +362,7 @@ def build_state(pool, session_id, session, rows):
 
         guesses_left = MAX_GUESSES - len(rows)
         exact = bool(solver.solved_exactly(candidates, guesses_left))
-        top = solver.top_guesses(candidates, k=max(1, session.top),
+        top = solver.top_guesses(candidates, k=max(1, settings.top),
                                  guesses_left=guesses_left)
         word, score = top[0]
         pick = data.word2ind[word]
@@ -319,7 +393,7 @@ def game_state(pool, session_id, game):
         "gave_up": game.gave_up,
         "over": game.over,
         "source": game.source,
-        "prior": describe_prior(game.config),
+        "prior": describe_prior(game.config, data),
         "answer": None,
         "share": None,
     }
@@ -329,29 +403,90 @@ def game_state(pool, session_id, game):
     return state
 
 
-def game_hint(pool, game, mode=EXPECTED, form=None):
+def game_hint(pool, game, settings):
     """What the solver would play here -- the web version of the terminal
     game's ``?``.
 
-    The prior is the one the answer was drawn from, so the hint is playing the
-    same game you are.  The mode and the shape of f come with the request
-    instead, so that changing either re-asks rather than dealing a new answer.
+    Every setting comes with the request rather than being fixed when the game
+    was dealt, so changing one rethinks the advice for the position you are in
+    instead of dealing a new answer.  That includes the priors: the answer was
+    drawn from the ones in force at the time, and it stays what it is.
     """
     with pool.lock:
-        solver = pool.get(game.config, mode, form)
+        solver = pool.solver_for(settings)
         candidates = solver.all_candidates()
         for guess, pattern in game.rows:
             candidates = solver.filter(guess, pattern, candidates)
         guesses_left = max(1, MAX_GUESSES - len(game.rows))
-        guess, score = solver.best_guess(candidates, guesses_left)
+        top = solver.top_guesses(candidates, k=max(1, settings.top),
+                                 guesses_left=guesses_left)
+        word, score = top[0]
         return {
-            "word": solver.data.all_words[guess],
+            "word": word,
             "score": float(score),
-            "mode": mode,
-            "score_label": score_label(mode),
+            "mode": settings.mode,
+            "hard": settings.hard,
+            "score_label": score_label(settings.mode),
             "candidates_left": int(len(candidates)),
             "exact": bool(solver.solved_exactly(candidates, guesses_left)),
+            "alternatives": [{"word": w, "score": float(s)} for w, s in top[1:]],
         }
+
+
+# ------------------------------------------------------------- the word finder
+
+def find_guesses(pool, answer, pattern, config, sort):
+    """Every word that would have come back as ``pattern`` against ``answer``.
+
+    The feedback table already holds the answer, so the search is one column of
+    it rather than a scoring pass: ``feedback_table[:, answer]`` is what each
+    word in the list scores against this one word.
+
+    Each match is then measured three ways, none of which depend on the pattern
+    having been seen -- ``left`` is how many words would still be possible after
+    it, ``bits`` is what the guess reveals on average over every answer, and
+    ``weight`` is the prior's own chance that the guess is itself the answer.
+    """
+    started = time.perf_counter()
+    with pool.lock:
+        # entropy needs no fitted f, so the finder works whatever is cached
+        solver = pool.get(config, ENTROPY, None)
+        data = solver.data
+        candidates = solver.all_candidates()
+
+        matches = np.nonzero(data.feedback_table[:, answer] == pattern)[0]
+        matches = np.ascontiguousarray(matches, dtype=np.int64)
+        if matches.size == 0:
+            # a pattern no word can produce against this answer -- four greens
+            # and a yellow, say
+            return {"answer": data.all_words[answer],
+                    "pattern": num_to_feedback(pattern), "sort": sort,
+                    "total": 0, "shown": 0, "words": [],
+                    "elapsed_ms": round((time.perf_counter() - started) * 1000)}
+        bits = kernels.ig_all(data.feedback_table, candidates,
+                              solver.weights, pool=matches)
+        left = np.array([len(solver.filter(int(g), pattern, candidates))
+                         for g in matches], dtype=np.int64)
+        weight = solver.weights[matches]
+        words = [data.all_words[i] for i in matches]
+
+    if sort == "alpha":
+        order = np.argsort(words, kind="stable")
+    else:
+        key = {"left": left, "bits": bits, "weight": weight}[sort]
+        order = np.argsort(FINDER_SORTS[sort] * key, kind="stable")
+
+    return {
+        "answer": data.all_words[answer],
+        "pattern": num_to_feedback(pattern),
+        "sort": sort,
+        "total": int(matches.size),
+        "shown": int(min(matches.size, MAX_LISTED_MATCHES)),
+        "words": [{"word": words[i], "left": int(left[i]), "bits": float(bits[i]),
+                   "weight": float(weight[i])}
+                  for i in order[:MAX_LISTED_MATCHES]],
+        "elapsed_ms": round((time.perf_counter() - started) * 1000),
+    }
 
 
 # ------------------------------------------------------------------ the server
@@ -444,9 +579,9 @@ class Handler(BaseHTTPRequestHandler):
                 "progress": WORDING.message(self.pool.progress),
                 "error": self.pool.failed,
                 "forms": sorted(estimator.FORMS),
-                "default_form": estimator.DEFAULT_FORM,
                 "modes": list(MODES),
                 "max_guesses": MAX_GUESSES,
+                "sorts": list(FINDER_SORTS),
             })
         return self.serve_static(path)
 
@@ -471,6 +606,7 @@ class Handler(BaseHTTPRequestHandler):
 
         routes = {"/api/new": self.api_new,
                   "/api/board": self.api_board,
+                  "/api/find": self.api_find,
                   "/api/game/new": self.api_game_new,
                   "/api/game/guess": self.api_game_guess,
                   "/api/game/hint": self.api_game_hint,
@@ -486,28 +622,34 @@ class Handler(BaseHTTPRequestHandler):
             return route(body)
         except SolverError as exc:
             return self.send_error_json(str(exc))
+        except estimator.NotFitted as exc:
+            # a setting the page offers that nobody has fitted: say which, and
+            # what to run, rather than logging a traceback nobody sees
+            return self.send_error_json(str(exc), status=503)
         except Exception:
             traceback.print_exc()
             return self.send_error_json("The solver raised; see the server log",
                                         status=500)
 
     def api_new(self, body):
-        session = Session(config=parse_config(body), mode=parse_mode(body),
-                          form=parse_form(body),
-                          top=min(10, max(1, int(body.get("top", 5)))))
+        session = Session(parse_settings(body))
         session_id = self.store.create(session)
-        return self.send_json(build_state(self.pool, session_id, session, []))
+        return self.send_json(
+            build_state(self.pool, session_id, session.settings, []))
 
     def api_board(self, body):
-        """Set the whole board at once.
+        """Set the whole board, and the whole of how to solve it, at once.
 
         The page sends every row rather than only the newest one, so that
         correcting a tile four rows up is the same request as playing a new
-        word.  A board that cannot be true is refused whole: the session keeps
-        the rows it had, and the page keeps the edit for the user to fix.
+        word.  The settings ride along for the same reason: changing a prior is
+        then this request too, and the board survives it.  A board that cannot
+        be true is refused whole -- the session keeps the rows and the settings
+        it had, and the page keeps the edit for the user to fix.
         """
         session_id = str(body.get("session", ""))
         session = self.store.get(session_id)
+        settings = parse_settings(body)
 
         raw_rows = body.get("rows")
         if not isinstance(raw_rows, list):
@@ -531,9 +673,27 @@ class Handler(BaseHTTPRequestHandler):
                 raise SolverError(f"Row {index + 1}: {exc}")
             rows.append((data.word2ind[word], pattern))
 
-        state = build_state(self.pool, session_id, session, rows)
+        state = build_state(self.pool, session_id, settings, rows)
+        session.settings = settings
         session.rows = rows
         return self.send_json(state)
+
+    # -------------------------------------------------------- the word finder
+
+    def api_find(self, body):
+        """Which words could have produced this pattern against this answer.
+
+        Backwards from the rest of the page: the answer is known and the guess
+        is what is being looked for.
+        """
+        data = self.pool.data()
+        answer = str(body.get("answer", "")).strip().lower()
+        if answer not in data.word2ind:
+            raise SolverError(f"'{answer}' is not in the word list" if answer
+                              else "Type the answer, a five letter word")
+        return self.send_json(find_guesses(
+            self.pool, data.word2ind[answer], parse_pattern(body.get("pattern")),
+            parse_config(body), parse_sort(body)))
 
     # ------------------------------------------------------------ the wording
 
@@ -593,8 +753,7 @@ class Handler(BaseHTTPRequestHandler):
         game = self.games.get(session_id)
         if game.over:
             raise SolverError("This game is over")
-        return self.send_json(
-            game_hint(self.pool, game, parse_mode(body), parse_form(body)))
+        return self.send_json(game_hint(self.pool, game, parse_settings(body)))
 
     def api_game_reveal(self, body):
         session_id = str(body.get("session", ""))

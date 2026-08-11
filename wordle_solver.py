@@ -52,6 +52,9 @@ def solver_kwargs(args):
         "exact_max": exact_max,
         "loss_penalty": args.loss_penalty,
         "exact_max_branch": None if args.exact_branch <= 0 else args.exact_branch,
+        # only play and benchmark offer it: f is cached per prior alone, so
+        # training under the restriction would overwrite the ordinary fit
+        "hard": getattr(args, "hard", False),
         "lookahead": args.lookahead,
         "beam_width": args.beam_width,
     }
@@ -70,7 +73,7 @@ def cmd_play(args):
                           **solver_kwargs(args))
 
     print(f"prior: {config.describe()}")
-    print(f"mode:  {args.mode}")
+    print(f"mode:  {args.mode}" + (", hard" if args.hard else ""))
     if args.mode == EXPECTED:
         print(estimator.describe(solver.params, solver.form))
     print()
@@ -289,6 +292,8 @@ def build_parser():
     play.add_argument("--form", choices=form_choices, default=None,
                       help="form of f to use (default: whichever the cache holds)")
     play.add_argument("--top", type=int, default=1, help="also show N-1 alternatives")
+    play.add_argument("--hard", action="store_true",
+                      help="only guess words that could still be the answer")
     play.set_defaults(func=cmd_play)
 
     tr = sub.add_parser("train", parents=[common],
@@ -314,6 +319,8 @@ def build_parser():
     bench.add_argument("--seed", type=int, default=12345)
     bench.add_argument("--no-deadline", action="store_true",
                        help="also report play without the last-guess restriction")
+    bench.add_argument("--hard", action="store_true",
+                       help="only guess words that could still be the answer")
     bench.set_defaults(func=cmd_benchmark)
 
     comp = sub.add_parser("compare", parents=[common],
@@ -338,7 +345,12 @@ def main(argv=None):
     if not any(arg in COMMANDS for arg in argv) and not {"-h", "--help"} & set(argv):
         argv.insert(0, "play")  # bare invocation, or plain flags, means play
     args = build_parser().parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except estimator.NotFitted as exc:
+        # the message carries the command that fixes it; a traceback would bury it
+        print(f"\n{exc}\n", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

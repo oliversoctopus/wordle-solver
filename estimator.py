@@ -113,11 +113,13 @@ FORMS = {f.name: f for f in [
           "a + b*(1-1/n)"),
 ]}
 
-# chosen by `wordle_solver.py compare`: tied for best with 'cubic' and
-# 'saturating', and the simplest of the three that keeps every term
-DEFAULT_FORM = "sqrt"
+# fitted when no form is asked for: tied for the smallest out-of-sample gap and
+# the best form on both of the priors that ship, at three terms rather than six
+# (analysis/form_default.py)
+DEFAULT_FORM = "saturating"
 
-# reference curve used when nothing is cached: f(2)~1.5, f(100)~2.9, f(1000)~3.5
+# a rough curve for the modes that never consult f, never played against a real
+# prior: f(2)~1.5, f(100)~2.9, f(1000)~3.5.  A prior with no fit raises instead
 _REFERENCE = (0.188, 0.624)  # slope on x, coefficient on (1 - 1/n), pinned at 1
 
 
@@ -268,8 +270,13 @@ def fit(n_eff, targets, form, sample_weights=None, n_max=None):
 
 
 def default_params(form):
-    """Projection of a reasonable reference curve onto this form's basis, used
-    when nothing has been fitted yet."""
+    """Projection of a rough reference curve onto this form's basis.
+
+    Only for the paths that never consult f -- entropy mode, and callers that
+    pass ``load_cached=False`` deliberately.  Expected-guess play with no fit
+    raises ``NotFitted`` rather than coming here, since this curve is not a
+    measurement of any prior and would not be saved if it were.
+    """
     form = get_form(form)
     grid = np.geomspace(1.0, 13000.0, 300)
     reference = 1.0 + _REFERENCE[0] * np.log2(grid) + _REFERENCE[1] * (1.0 - 1.0 / grid)
@@ -323,52 +330,65 @@ def _record_params(record, form):
     return params
 
 
-def _check_prior(record, config, quiet):
-    if record.get("prior") != config.fingerprint():
-        if not quiet:
-            print(f"[estimator] cached fit for {config.slug} was made with different prior "
-                  f"probabilities; using defaults")
-        return False
-    return True
+def _prior_matches(record, config):
+    return record.get("prior") == config.fingerprint()
 
 
-def load_active(config, quiet=False):
-    """``(params, form)`` from the active cache, or the defaults."""
+class NotFitted(RuntimeError):
+    """There is no fit for this prior, so there is no f to play with."""
+
+
+def _not_fitted(config, reason, form=None):
+    """The refusal, with the command that ends it.
+
+    Inventing an f here would hand back a policy nobody has measured, and it
+    would not be saved, so the next run would invent it again.
+    """
+    parts = ["python wordle_solver.py train --this-config-only", *config.flags()]
+    if form is not None:
+        parts.append(f"--form {form.name}")
+    return NotFitted(f"{reason} for {config.slug}. Fit and cache it with:\n"
+                     f"    {' '.join(parts)}")
+
+
+def active_form_name(config):
+    """The form the active cache holds for this prior combination, or None if
+    there is no usable fit and ``load_active`` would refuse to play."""
+    record = load_record(config)
+    name = record.get("form") if record else None
+    return name if name in FORMS else None
+
+
+def load_active(config):
+    """``(params, form)`` from the active cache, or ``NotFitted``."""
     record = load_record(config)
     if record is None:
-        if not quiet:
-            print(f"[estimator] no cached fit for {config.slug}; using defaults "
-                  f"(run: python wordle_solver.py train)")
-        form = get_form(None)
-        return default_params(form), form
+        raise _not_fitted(config, "No cached fit")
     name = record.get("form")
     if name not in FORMS:  # written before forms existed, so the term order is unknown
-        if not quiet:
-            print(f"[estimator] cached fit for {config.slug} predates the form registry; "
-                  f"using defaults (re-run: python wordle_solver.py train)")
-        form = get_form(None)
-        return default_params(form), form
+        raise _not_fitted(config, "The cached fit predates the form registry")
     form = get_form(name)
     params = _record_params(record, form)
-    if params is None or not _check_prior(record, config, quiet):
-        return default_params(form), form
+    if params is None:
+        raise _not_fitted(config, f"The cached fit does not fit the '{name}' form",
+                          form)
+    if not _prior_matches(record, config):
+        raise _not_fitted(config, "The cached fit was made with other prior "
+                                  "probabilities", form)
     return params, form
 
 
-def load_form_params(config, form, quiet=False):
+def load_form_params(config, form):
     """Parameters for a specific form: its archive, else the active cache if it
-    happens to use that form, else the defaults."""
+    happens to use that form, else ``NotFitted``."""
     form = get_form(form)
     for record in (load_record(config, form), load_record(config)):
         if record is None or record.get("form") != form.name:
             continue
         params = _record_params(record, form)
-        if params is not None and _check_prior(record, config, quiet):
+        if params is not None and _prior_matches(record, config):
             return params
-    if not quiet:
-        print(f"[estimator] no cached fit for {config.slug} with form '{form.name}'; "
-              f"using defaults")
-    return default_params(form)
+    raise _not_fitted(config, f"No cached fit in the '{form.name}' form", form)
 
 
 def describe(params, form):

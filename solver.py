@@ -49,13 +49,18 @@ class WordleSolver:
     rather than by f alone.  It is off by default: one ply is worth about 0.016
     guesses over 20 000 paired games and costs roughly 10x the wall clock, and
     two plies costs minutes per position.  See the README for the numbers.
+
+    ``hard`` restricts every guess to a word that could still be the answer,
+    which is a strictly smaller choice than the ~13k words the solver usually
+    picks from; f is still the one fitted for unrestricted play, so its estimates
+    are optimistic under the restriction.
     """
 
     def __init__(self, data=None, config=None, mode=EXPECTED, params=None,
-                 form=None, load_cached=True, quiet=False,
+                 form=None, load_cached=True,
                  use_exact=True, exact_max=DEFAULT_EXACT_MAX,
                  loss_penalty=DEFAULT_LOSS_PENALTY,
-                 exact_max_branch=DEFAULT_MAX_BRANCH,
+                 exact_max_branch=DEFAULT_MAX_BRANCH, hard=False,
                  lookahead=0, beam_width=DEFAULT_BEAM_WIDTH, beam_exact_max=None):
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
@@ -69,11 +74,13 @@ class WordleSolver:
             self.params = np.asarray(params, dtype=np.float64)
         elif mode == EXPECTED and load_cached:
             if form is None:
-                self.params, self.form = estimator.load_active(self.config, quiet=quiet)
+                self.params, self.form = estimator.load_active(self.config)
             else:
                 self.form = estimator.get_form(form)
-                self.params = estimator.load_form_params(self.config, self.form, quiet=quiet)
+                self.params = estimator.load_form_params(self.config, self.form)
         else:
+            # entropy mode never reads f, and load_cached=False is a deliberate
+            # ask for an unfitted one; expected play raises instead
             self.form = estimator.get_form(form)
             self.params = estimator.default_params(self.form)
 
@@ -85,10 +92,11 @@ class WordleSolver:
         self.beam_width = int(beam_width)
         self.use_exact = use_exact
         self.exact_max = exact_max
+        self.hard = bool(hard)
         self.beam_exact_max = exact_max if beam_exact_max is None else int(beam_exact_max)
         self.exact = ExactEndgame(self.data.feedback_table, self.weights,
                                   loss_penalty=loss_penalty,
-                                  max_branch=exact_max_branch)
+                                  max_branch=exact_max_branch, hard=self.hard)
         self.exact_hits = 0
         self.exact_bailouts = 0
 
@@ -105,6 +113,17 @@ class WordleSolver:
 
     def all_candidates(self):
         return self.data.all_candidates()
+
+    def guess_pool(self, candidates):
+        """Rows of the feedback table a guess may come from: every word, or in
+        hard mode only the words that could still be the answer."""
+        return candidates if self.hard else None
+
+    @staticmethod
+    def _row(pool, index):
+        """The word a pooled score belongs to.  Without a pool the score's own
+        position is already the word index."""
+        return index if pool is None else int(pool[index])
 
     def effective_size(self, candidates):
         return estimator.effective_size(self.weights[candidates])
@@ -125,22 +144,23 @@ class WordleSolver:
 
     # ----------------------------------------------------------------- search
 
-    def score_all(self, candidates, table=None):
-        """Score for every guessable word (or, with ``table``, for the subset of
-        rows it holds).  Higher is better in entropy mode, lower in expected."""
-        table = self.data.feedback_table if table is None else table
+    def score_all(self, candidates, pool=None):
+        """Score for every guessable word, or, with ``pool``, for the words it
+        names and in its order.  Higher is better in entropy mode, lower in
+        expected."""
+        table = self.data.feedback_table
         weights = self.weights[candidates]
         if self.mode == ENTROPY:
-            return kernels.ig_all(table, candidates, weights)
+            return kernels.ig_all(table, candidates, weights, pool=pool)
         return kernels.expected_guesses_all(
             table, candidates, weights, self.params,
-            self._codes, self._knots, self._base,
+            self._codes, self._knots, self._base, pool=pool,
         )
 
     def score_one(self, guess, candidates):
         """The same score, for a single guess."""
-        table = self.data.feedback_table[guess:guess + 1]
-        return float(self.score_all(candidates, table=table)[0])
+        pool = np.array([guess], dtype=np.int64)
+        return float(self.score_all(candidates, pool=pool)[0])
 
     def best_guess(self, candidates, guesses_left=None):
         """Return ``(guess_index, score)``.
@@ -211,22 +231,24 @@ class WordleSolver:
             # search's; entropy mode is left alone as a clean baseline
             return self._lookahead_guess(candidates, turns, self.lookahead)
 
-        scores = self.score_all(candidates)
+        pool = self.guess_pool(candidates)
+        scores = self.score_all(candidates, pool=pool)
 
         if self.mode == EXPECTED:
             best_ind = int(scores.argmin())
-            return best_ind, float(scores[best_ind])
+            return self._row(pool, best_ind), float(scores[best_ind])
 
         # entropy mode: among guesses within the tolerance of the best, prefer
         # one that could itself be the answer
         best_ind = int(scores.argmax())
         best = float(scores[best_ind])
         close = np.nonzero(scores >= best - IG_TIE_TOL)[0]
-        close_possible = close[np.isin(close, candidates)]
+        words = close if pool is None else pool[close]
+        close_possible = close[np.isin(words, candidates)]
         if close_possible.size:
             pick = int(close_possible[scores[close_possible].argmax()])
-            return pick, float(scores[pick])
-        return best_ind, best
+            return self._row(pool, pick), float(scores[pick])
+        return self._row(pool, best_ind), best
 
     # ------------------------------------------------------------- lookahead
 
@@ -265,7 +287,8 @@ class WordleSolver:
             except SearchBudgetExceeded:
                 self.exact_bailouts += 1
         if depth <= 0 or turns <= 1:
-            return float(self.score_all(candidates).min())
+            return float(self.score_all(
+                candidates, pool=self.guess_pool(candidates)).min())
         return self._lookahead_guess(candidates, turns, depth)[1]
 
     def _lookahead_guess(self, candidates, turns, depth):
@@ -280,13 +303,14 @@ class WordleSolver:
         if hit is not None:
             return hit
 
-        scores = self.score_all(candidates)
+        pool = self.guess_pool(candidates)
+        scores = self.score_all(candidates, pool=pool)
         beam = np.argsort(scores)[:self.beam_width]
         total = float(self.weights[candidates].sum())
 
-        best_guess, best_value = int(beam[0]), np.inf
-        for candidate_guess in beam:
-            guess = int(candidate_guess)
+        best_guess, best_value = self._row(pool, int(beam[0])), np.inf
+        for slot in beam:
+            guess = self._row(pool, int(slot))
             value = 1.0
             for mass, members in self._partition(guess, candidates):
                 value += mass / total * self._lookahead_value(
@@ -319,11 +343,13 @@ class WordleSolver:
         if self.solved_exactly(candidates, guesses_left):
             guess, score = self.best_guess(candidates, guesses_left)
             return [(self.data.all_words[guess], score)]
-        scores = self.score_all(candidates)
+        pool = self.guess_pool(candidates)
+        scores = self.score_all(candidates, pool=pool)
         order = np.argsort(scores)
         if self.mode == ENTROPY:
             order = order[::-1]
-        return [(self.data.all_words[i], float(scores[i])) for i in order[:k]]
+        return [(self.data.all_words[self._row(pool, int(i))], float(scores[i]))
+                for i in order[:k]]
 
     # --------------------------------------------------------------- rollouts
 

@@ -206,7 +206,7 @@ class SolverHint:
         from solver import WordleSolver
 
         full = load_data(mask_last=self.mask_last)
-        self._solver = WordleSolver(data=full, quiet=True)
+        self._solver = WordleSolver(data=full)
         self._candidates = self._solver.all_candidates()
         for word, pattern in self.history:
             self._candidates = self._solver.filter(

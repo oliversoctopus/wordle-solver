@@ -228,6 +228,27 @@ def _blanked_comments(source, style):
     return re.sub(pattern, lambda m: " " * len(m.group(0)), source)
 
 
+def _blanked_literals(source):
+    """The same, with the literals blanked too, leaving only the code around
+    them: prose full of commas cannot then be read as code."""
+    out = list(source)
+    for start, end, _, _ in _literals(source):
+        out[start:end] = " " * (end - start)
+    return "".join(out)
+
+
+def _statement(masked, offset):
+    """The code leading up to a literal, back to the end of the one before it.
+
+    A choice between two strings is often laid out with the arms under the name
+    they are assigned to, so what says whether a literal is user-visible can be
+    several lines above it rather than on its own line.
+    """
+    head = masked[:offset]
+    cut = max(head.rfind(";"), head.rfind("{"), head.rfind("}"), head.rfind(","))
+    return head[cut + 1:]
+
+
 def _docstrings(source):
     return [(m.start(), m.end()) for m in re.finditer(r'"""(?:.|\n)*?"""', source)]
 
@@ -237,7 +258,7 @@ _JS_LEAD = re.compile(
     r"(?:textContent|innerHTML|\.title|\.placeholder|\.label)\s*=\s*$"
     r"|say\(\s*$"
     r"|\bnote\s*=\s*$"
-    r"|\b(?:name|value|why|label|units|summary|description|solve|play)\s*:\s*$"
+    r"|\b(?:name|value|why|label|units|summary|description|solve|play|finder)\s*:\s*$"
 )
 # ...or if it is an arm of a choice between two such strings, which is only
 # safe to assume on a line that is doing one of the above
@@ -277,6 +298,7 @@ def _py_context(source, offset):
 def scan_code(source, name, style):
     lead = _JS_LEAD if style == "js" else _PY_LEAD
     blanked = _blanked_comments(source, style)
+    masked = _blanked_literals(blanked) if style == "js" else blanked
     skip = _docstrings(source) if style == "py" else []
     context = _js_context if style == "js" else _py_context
     found = []
@@ -290,8 +312,7 @@ def scan_code(source, name, style):
         if not lead.search(before):
             if style != "js" or not _JS_ARM.search(before):
                 continue
-            line_start = source.rfind("\n", 0, start)
-            if not _JS_TEXTY.search(source[line_start:start]):
+            if not _JS_TEXTY.search(_statement(masked, start)):
                 continue
         kind = "script" if style == "js" else "server"
         if style == "js" and re.search(r"\.title\s*=\s*$", before):

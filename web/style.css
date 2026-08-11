@@ -68,12 +68,31 @@ h1 {
 
 h1 span { color: var(--ink-dim); font-weight: 400; }
 
-.head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.head-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-/* the mode switch sits with the other head buttons but is not one of them:
-   it says where it goes, so it should read as a destination */
-.switcher { border-color: var(--green); color: var(--green); font-weight: 600; }
-.switcher:hover { background: var(--green); border-color: var(--green); color: #fff; }
+/* the three things the page does.  One control rather than three buttons, so
+   that which one is showing is read off the group and not off a label. */
+.views { display: flex; }
+
+.view-btn {
+  border-radius: 0;
+  border-left-width: 0;
+  font-weight: 600;
+  color: var(--ink-dim);
+}
+
+.views .view-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); border-left-width: 1px; }
+.views .view-btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+
+.view-btn.on {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+/* the neighbor's left edge would otherwise sit over the selected one's */
+.view-btn.on + .view-btn { border-left: 1px solid var(--green); }
+.view-btn.on:hover { border-color: var(--green); }
 
 button {
   font: inherit;
@@ -267,6 +286,24 @@ main {
 /* a row edited but not yet sent back to the solver */
 .row.dirty .tile { border-style: dashed; }
 
+/* ----------------------------------------------------------- the finder */
+
+#finder-board { display: flex; flex-direction: column; gap: 6px; }
+
+.finder-label {
+  margin: 6px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-weight: 600;
+}
+
+/* an uncolored pattern tile is gray, and gray is a color the pattern can be:
+   nothing here is empty the way an unplayed board tile is */
+#finder-board .tile { cursor: pointer; }
+#finder-board .tile:hover { border-color: var(--ink-dim); }
+
 #hint, .message { margin: 0; font-size: 13px; color: var(--ink-dim); text-align: center;
                   min-height: 20px; }
 
@@ -415,6 +452,13 @@ button.small { padding: 3px 10px; font-size: 12px; border-radius: 7px; }
 .rows .word { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 .rows .score { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 
+/* the finder's list is a result, not a set of words to put on a board */
+.rows.static li { cursor: default; }
+.rows.static li:hover .word { color: inherit; }
+
+.find-sort { margin: 12px 0 4px; }
+.find-sort select { width: 100%; }
+
 .chips { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
 
 .chips li {
@@ -431,11 +475,11 @@ button.small { padding: 3px 10px; font-size: 12px; border-radius: 7px; }
 .chips li:hover { border-color: var(--ink-dim); }
 .chips li.more { border-style: dashed; cursor: default; color: var(--ink-dim); }
 
-/* ------------------------------------------------------- technical details */
+/* ------------------------------------------------- cards that fold away */
 
-#tech-card { padding: 0; }
+.foldable { padding: 0; }
 
-#tech-card > summary {
+.foldable > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -445,8 +489,8 @@ button.small { padding: 3px 10px; font-size: 12px; border-radius: 7px; }
   list-style: none;
 }
 
-#tech-card > summary::-webkit-details-marker { display: none; }
-#tech-card > summary h2 { margin: 0; }
+.foldable > summary::-webkit-details-marker { display: none; }
+.foldable > summary h2 { margin: 0; }
 
 .chev {
   width: 8px;
@@ -457,9 +501,9 @@ button.small { padding: 3px 10px; font-size: 12px; border-radius: 7px; }
   transition: transform 140ms ease;
 }
 
-#tech-card[open] .chev { transform: rotate(-135deg) translate(-2px, -2px); }
+.foldable[open] > summary .chev { transform: rotate(-135deg) translate(-2px, -2px); }
 
-#tech-body { padding: 0 16px 14px; }
+.foldable-body { padding: 0 16px 14px; }
 
 /* one per thing in force: a headline that is always shown, and a "?" that
    opens the paragraph explaining it */

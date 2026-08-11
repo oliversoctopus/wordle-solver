@@ -13,23 +13,31 @@ const TILES = "NYG";
 const $ = (id) => document.getElementById(id);
 const board = $("board");
 
-let view = "solve";                // "solve" (the assistant) or "play" (a game)
+let view = "solve";                // "solve" (the assistant), "play" (a game) or "finder"
 let state = null;                  // the last board the server accepted
 let rows = [];                     // the editable copy: [{letters, pattern}]
 let busy = false;
 let started = false;               // the first board has landed and the veil is down
 let pending = null;                // one request held back while another runs
 
-/* Set when a setting changes on the side that is not showing; that side is
-   rebuilt when it is next looked at, not behind your back. */
+/* Set when a solver setting changes while the board is not showing; it is
+   re-run over the rows it already has when it is next looked at. */
 let staleBoard = false;
-let staleGame = false;
+/* The answer box is the one setting that cannot be applied to a game in
+   progress, so it is the only one that deals again. */
+let needNewGame = false;
 
 /* play mode: the answer stays on the server, so all the page has is the rows
    it has been told about and whatever it has asked the solver */
 let game = null;
 let draft = { letters: ["", "", "", "", ""], col: 0, atEnd: false };
 let hint = null;
+
+/* the finder, which runs the other way round: an answer that is known, a
+   pattern to match, and the words that could have produced it */
+let finder = { letters: ["", "", "", "", ""], pattern: [0, 0, 0, 0, 0],
+               row: "answer", col: 0 };
+let found = null;
 
 /* Where the keys land.  ``atEnd`` marks the cursor as sitting past the last
    letter rather than on it, which is the difference between typing to correct
@@ -95,6 +103,7 @@ function applyState(next) {
   }));
   if (!state.over && rows.length < MAX_GUESSES) rows.push(emptyRow());
   cursor = { row: Math.max(0, rows.length - 1), col: 0, atEnd: false };
+  markFittedForm();
   renderPanel();
   renderKeyboard();   // depends only on the rows the solver has accepted
   renderLocal();
@@ -229,10 +238,30 @@ function submit() {
   // an emptied board is still worth sending while the solver holds rows
   if (payload.length === 0 && state.rows.length === 0) return;
 
-  send("/api/board", { session: state.session, rows: payload }, () => {
+  send("/api/board", { ...settings(), session: state.session, rows: payload }, () => {
     if (state.solved) say(`Solved in ${state.rows.length}.`, "good");
     else if (state.over) say("Out of guesses.", "bad");
     else clearMessage();
+  });
+}
+
+/** Re-run the solver over the board it has already accepted, under whatever the
+    switches now say.  The rows sent are the server's own, not the local copy,
+    so a word half typed into the open row is neither submitted nor lost. */
+function resend() {
+  staleBoard = false;
+  if (!state) return newBoard();
+  const payload = state.rows.map((row) => ({ word: row.word, pattern: row.pattern }));
+  const typing = rows[state.rows.length];
+  const at = cursor;
+  return send("/api/board", { ...settings(), session: state.session, rows: payload },
+              () => {
+    if (typing && rows.length > state.rows.length) {
+      rows[state.rows.length] = typing;
+      cursor = at;
+    }
+    clearMessage();
+    renderLocal();
   });
 }
 
@@ -275,7 +304,9 @@ function makeTile() {
 }
 
 function renderBoard() {
-  return view === "play" ? renderPlayBoard() : renderSolveBoard();
+  if (view === "play") return renderPlayBoard();
+  if (view === "finder") return renderFinderBoard();
+  return renderSolveBoard();
 }
 
 function renderSolveBoard() {
@@ -356,6 +387,145 @@ function renderPlayBoard() {
   }
 }
 
+/* Two rows that do not describe each other: the letters are the answer, and the
+   colors are a pattern some other word produced against it.  There is no ghost
+   and nothing is grayed out, since a gray tile is a pattern rather than a gap. */
+function renderFinderBoard() {
+  const answer = $("finder-answer");
+  const pattern = $("finder-pattern");
+  answer.textContent = "";
+  pattern.textContent = "";
+
+  for (let c = 0; c < 5; c++) {
+    const letter = makeTile();
+    if (finder.letters[c]) {
+      letter.textContent = finder.letters[c];
+      letter.classList.add("filled");
+    }
+    letter.title = "Click to type here";
+    letter.addEventListener("click", () => finderMoveTo("answer", c));
+    if (finder.row === "answer" && finder.col === c) letter.classList.add("cursor");
+    answer.appendChild(letter);
+
+    const tile = makeTile();
+    tile.classList.add("t-" + TILES[finder.pattern[c]]);
+    tile.title = "Click to change the color";
+    tile.addEventListener("click", () => finderCycle(c));
+    if (finder.row === "pattern" && finder.col === c) tile.classList.add("cursor");
+    pattern.appendChild(tile);
+  }
+}
+
+function finderMoveTo(row, col) {
+  finder.row = row;
+  finder.col = Math.min(Math.max(col, 0), 4);
+  renderLocal();
+}
+
+/** A letter is always a letter of the answer, wherever the cursor had got to. */
+function finderType(letter) {
+  if (busy) return;
+  finder.row = "answer";
+  finder.letters[finder.col] = letter;
+  if (finder.col < 4) finder.col += 1;
+  clearMessage();
+  renderLocal();
+}
+
+function finderBackspace() {
+  if (busy) return;
+  finder.row = "answer";
+  if (finder.letters[finder.col]) finder.letters[finder.col] = "";
+  else if (finder.col > 0) {
+    finder.col -= 1;
+    finder.letters[finder.col] = "";
+  }
+  clearMessage();
+  renderLocal();
+}
+
+/** gray -> yellow -> green -> gray, on whichever pattern tile is selected. */
+function finderCycle(col = finder.col) {
+  if (busy) return;
+  finder.row = "pattern";
+  finder.col = col;
+  finder.pattern[col] = (finder.pattern[col] + 1) % 3;
+  clearMessage();
+  renderLocal();
+  const tile = $("finder-pattern").children[col];
+  tile.classList.add("pop");
+  setTimeout(() => tile.classList.remove("pop"), 90);
+}
+
+function clearPattern() {
+  if (busy) return;
+  finder.pattern = [0, 0, 0, 0, 0];
+  clearMessage();
+  renderLocal();
+}
+
+function findWords() {
+  if (busy) return;
+  if (!finder.letters.every(Boolean)) return say("The answer needs all five letters", "bad");
+  request("/api/find", {
+    answer: finder.letters.join(""),
+    pattern: finder.pattern,
+    sort: $("opt-sort").value,
+    // only the priors reach this far: they shape the two columns that are
+    // averages over every answer, not the pattern match itself
+    repeat: $("opt-repeat").checked,
+    curation: $("opt-curation").checked,
+  }, (payload) => {
+    found = payload;
+    renderFinderPanel();
+    renderLocal();
+  }, () => {
+    if (found.total === 0) say("No word gives that pattern against that answer.", "bad");
+    else clearMessage();
+  });
+}
+
+const FIND_VALUE = {
+  left: (word) => `${word.left.toLocaleString()} left`,
+  bits: (word) => `${word.bits.toFixed(2)} bits`,
+  weight: (word) => `${(word.weight * 100).toFixed(3)}%`,
+};
+
+function renderFinderPanel() {
+  const list = $("found");
+  list.textContent = "";
+  if (!found) {
+    $("find-count").textContent = "—";
+    $("find-sub").textContent = "Type the answer, color the pattern the guess came back as, and press Find words.";
+    return;
+  }
+
+  $("find-count").textContent = found.total.toLocaleString();
+  const answer = found.answer.toUpperCase();
+  if (found.total === 0) {
+    $("find-sub").textContent = `No word gives ${found.pattern} against ${answer}.`;
+    return;
+  }
+  $("find-sub").textContent = found.total > found.shown
+    ? `${found.total.toLocaleString()} words give ${found.pattern} against ${answer}; the best ${found.shown} by this order are listed.`
+    : `${found.total.toLocaleString()} word${found.total === 1 ? "" : "s"} give ${found.pattern} against ${answer}.`;
+
+  const value = FIND_VALUE[found.sort] || FIND_VALUE.left;
+  for (const entry of found.words) {
+    const item = document.createElement("li");
+    const word = document.createElement("span");
+    word.className = "word";
+    word.textContent = entry.word;
+    const score = document.createElement("span");
+    score.className = "score";
+    score.textContent = value(entry);
+    item.append(word, score);
+    item.title = `${entry.left.toLocaleString()} words left · ${entry.bits.toFixed(2)} bits · `
+      + `${(entry.weight * 100).toFixed(3)}% chance of being the answer`;
+    list.appendChild(item);
+  }
+}
+
 function playType(letter) {
   if (busy || !game || game.over) return;
   // as in the solver: at the end of a finished word, the last letter is the
@@ -384,12 +554,17 @@ function clearDraft() {
   draft = { letters: ["", "", "", "", ""], col: 0, atEnd: false };
 }
 
+/** Put a word into the row being typed, ready to be guessed or edited. */
+function playFill(word, col = 0) {
+  draft = { letters: word.split(""), col, atEnd: false };
+  clearMessage();
+  renderLocal();
+}
+
 /** Take the solver's pick; a clicked ghost tile says where to carry on from. */
 function takeHint(col = 0) {
   if (!hint) return;
-  draft = { letters: hint.word.split(""), col, atEnd: false };
-  clearMessage();
-  renderLocal();
+  playFill(hint.word, col);
 }
 
 function applyGame(next) {
@@ -425,11 +600,10 @@ function playGuess() {
 
 function askHint() {
   if (busy || !game || game.over) return;
-  // the mode and the shape of f go with the request rather than being fixed
-  // when the game was dealt, so changing either just re-asks
-  request("/api/game/hint",
-          { session: game.session, mode: $("opt-mode").value, form: $("opt-form").value || null },
-          (payload) => {
+  // every setting goes with the request rather than being fixed when the game
+  // was dealt, priors included, so changing one just re-asks.  The answer was
+  // drawn under whatever was on at the time and stays what it is.
+  request("/api/game/hint", { ...settings(), session: game.session }, (payload) => {
     hint = payload;
     renderPlayPanel();
     renderLocal();
@@ -451,7 +625,7 @@ function giveUp() {
 }
 
 function newGame() {
-  staleGame = false;
+  needNewGame = false;
   return request("/api/game/new",
                  { ...settings(), answer: $("opt-answer").value.trim() },
                  applyGame,
@@ -486,13 +660,40 @@ function renderPlayPanel() {
     tag.textContent = hint.exact ? "Exact" : (hint.mode === "entropy" ? "Greedy" : "Estimated");
   }
 
+  const alts = (hint && hint.alternatives) || [];
+  const card = $("game-alt-card");
+  card.hidden = alts.length === 0;
+  // assist opens it; nothing ever closes it, so opening it by hand while assist
+  // is off survives the next guess
+  if (alts.length && $("opt-assist").checked) card.open = true;
+  fillAlternatives($("game-alternatives"), alts, playFill);
+
   $("share-card").hidden = !game.share;
   if (game.share) $("share-grid").textContent = game.share;
+}
+
+/** The ranked list under a recommendation, in either view. */
+function fillAlternatives(list, alts, take) {
+  list.textContent = "";
+  for (const alt of alts) {
+    const item = document.createElement("li");
+    const word = document.createElement("span");
+    word.className = "word";
+    word.textContent = alt.word;
+    const score = document.createElement("span");
+    score.className = "score";
+    score.textContent = fmtScore(alt.score);
+    item.append(word, score);
+    item.title = "Put this word in the selected row";
+    item.addEventListener("click", () => take(alt.word));
+    list.appendChild(item);
+  }
 }
 
 const KEY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
 
 function letterStates() {
+  if (view === "finder") return {};   // there is no board behind the finder
   const rank = { N: 0, Y: 1, G: 2 };
   const best = {};
   const source = view === "play" ? (game ? game.rows : []) : (state ? state.rows : []);
@@ -537,6 +738,13 @@ function renderHintLine() {
   const line = $("hint");
   if (busy) return void (line.textContent = "Thinking…");
 
+  if (view === "finder") {
+    line.textContent = finder.letters.every(Boolean)
+      ? "Space colors the selected tile · Enter finds every word that fits"
+      : "Type the answer, then color the pattern the guess came back as";
+    return;
+  }
+
   if (view === "play") {
     if (!game) return void (line.textContent = " ");
     if (game.over) {
@@ -570,6 +778,12 @@ function renderHintLine() {
 function renderLocal() {
   renderBoard();
   renderHintLine();
+
+  if (view === "finder") {
+    $("find").disabled = busy || !finder.letters.every(Boolean);
+    $("finder-clear").disabled = busy || finder.pattern.every((tile) => tile === 0);
+    return;
+  }
 
   if (view === "play") {
     const live = game && !game.over && !busy;
@@ -635,21 +849,7 @@ function renderPanel() {
 
   const alts = state.alternatives || [];
   $("alt-card").hidden = alts.length === 0;
-  const list = $("alternatives");
-  list.textContent = "";
-  for (const alt of alts) {
-    const item = document.createElement("li");
-    const word = document.createElement("span");
-    word.className = "word";
-    word.textContent = alt.word;
-    const score = document.createElement("span");
-    score.className = "score";
-    score.textContent = fmtScore(alt.score);
-    item.append(word, score);
-    item.title = "Put this word in the selected row";
-    item.addEventListener("click", () => fill(alt.word));
-    list.appendChild(item);
-  }
+  fillAlternatives($("alternatives"), alts, fill);
 
   $("cand-count").textContent = state.candidates_left.toLocaleString();
   $("cand-sub").textContent = state.effective_size !== undefined
@@ -679,44 +879,98 @@ function renderPanel() {
 /* --------------------------------------------- technical details, expanded */
 
 const PERCENT = (p) => `${(p * 100).toFixed(0)}%`;
+const COUNT = (n) => n.toLocaleString();
 
-function priorFacts() {
-  const prior = state.prior;
-  return [
-    {
+/* a measured rate, which is worth a decimal the round prior probabilities are not */
+const RATE = (p) => `${(p * 100).toFixed(1)}%`;
+
+/* how many times the regime rate is the whole record's */
+const TIMES = (recent, ever) => (ever > 0 ? Math.round(recent / ever) : 1);
+
+function repeatFact(prior) {
+  const m = prior.measured;
+  if (!prior.repeat) {
+    return {
       key: "repeat",
       name: "Repeat prior",
-      value: prior.repeat ? `On: p = ${prior.repeat_prob.toFixed(2)}` : "Off",
-      why: prior.repeat
-        ? `<p>The editor sometimes reuses a word that has already been an answer.
-             With this on, <b>all</b> the words already used share
-             ${PERCENT(prior.repeat_prob)} of the probability between them, instead
-             of each getting the same share as an unused word.</p>
-           <p>The ${PERCENT(prior.repeat_prob)} is set for the current regime:
-             repeats run at about 10% since Wordle #1690, but about 1% across the
-             whole record, because nothing repeated at all before 2026. Judging it
-             against all history would set it roughly ten times too low.</p>`
-        : `<p>Off: a word that has already been an answer is treated as no less
-             likely to come up again than one that never has. Every word competes
-             on equal terms, subject to the curation prior.</p>`,
-    },
-    {
+      value: "Off",
+      why: `<p>Off: a word that has already been an answer is treated as no less
+              likely to come up again than one that never has. Every word competes
+              on equal terms, subject to the curation prior when that is on.</p>`,
+    };
+  }
+  const note = prior.repeat_shape === "binned"
+    ? `That mass is not spread evenly over them: each is weighted by where it
+       first appeared, so the early answers nearly every repeat has come from
+       carry more of it than the recent ones.`
+    : `Every used word carries the same share of that mass, wherever in the run
+       it first appeared.`;
+  return {
+    key: "repeat",
+    name: "Repeat prior",
+    value: `On: p = ${prior.repeat_prob.toFixed(2)}, ${prior.repeat_shape}`,
+    why: `<p>The editor sometimes reuses a word that has already been an answer.
+            With this on, the ${COUNT(m.used)} words already used share
+            ${PERCENT(prior.repeat_prob)} of the probability between them, instead
+            of each getting the same share as an unused word. ${note}</p>
+          <p>The ${PERCENT(prior.repeat_prob)} is set for the current regime:
+            repeats run at ${RATE(m.regime.repeat)} over the ${COUNT(m.puzzles)}
+            puzzles since Wordle #${m.start_puzzle}, but ${RATE(m.all_time.repeat)}
+            across the whole record, because nothing repeated at all before that.
+            Judging it against all history would set it about
+            ${TIMES(m.regime.repeat, m.all_time.repeat)} times too low.</p>`,
+  };
+}
+
+function curationFact(prior) {
+  const m = prior.measured;
+  if (!prior.curation) {
+    return {
       key: "curation",
       name: "Curation prior",
-      value: prior.curation ? `On: p = ${prior.noncurated_prob.toFixed(2)}` : "Off",
-      why: prior.curation
-        ? `<p>Most answers are drawn from the curated 2022 list. With this on,
-             words outside that list share ${PERCENT(prior.noncurated_prob)} of
-             whatever probability is left <b>after</b> the repeat step.</p>
-           <p>So it is a conditional probability — off-list <em>given not a
-             repeat</em> — and has to be measured with that denominator. On that
-             basis off-list answers run at about 9% since Wordle #1690, against
-             2.4% across the whole record.</p>`
-        : `<p>Off: no distinction is drawn between the curated 2022 answer list
-             and the rest of the valid words. All ~13k are equally eligible,
-             subject to the repeat prior.</p>`,
-    },
-  ];
+      value: "Off",
+      why: `<p>Off: no distinction is drawn between the curated 2022 answer list
+              and the rest of the valid words. All ${COUNT(m.words)} are equally
+              eligible, subject to the repeat prior when that is on.</p>`,
+    };
+  }
+  const note = prior.curation_shape === "uniform"
+    ? `Every off-list word carries the same share of that mass.`
+    : prior.curation_shape === "wordlebot"
+      ? `That mass is not spread evenly over them: each is weighted by WordleBot's
+         own published weight for it, with a little held back for the words
+         WordleBot does not list at all.`
+      : `That mass is not spread evenly over them: each is weighted by how
+         answer-like the word looks, so the ordinary ones outrank the obscure.`;
+  return {
+    key: "curation",
+    name: "Curation prior",
+    value: `On: p = ${prior.noncurated_prob.toFixed(2)}, ${prior.curation_shape}`,
+    why: `<p>Most answers are drawn from the curated 2022 list of
+            ${COUNT(m.curated)} words. With this on, words outside that list
+            share ${PERCENT(prior.noncurated_prob)} of whatever the repeat prior
+            has <b>left</b> — all of it, when that prior is off. ${note}</p>
+          <p>So it is a conditional probability — off-list <em>given not a
+            repeat</em> — and has to be measured with that denominator. On that
+            basis off-list answers run at ${RATE(m.regime.noncurated)} over the
+            ${COUNT(m.puzzles)} puzzles since Wordle #${m.start_puzzle}, against
+            ${RATE(m.all_time.noncurated)} across the whole record.</p>`,
+  };
+}
+
+function priorFacts() {
+  return [repeatFact(state.prior), curationFact(state.prior)];
+}
+
+/** Which form the empty choice resolves to. It is fitted per prior, so it
+    moves when the toggles do, and no one form is the default. */
+function markFittedForm() {
+  const fitted = state.estimator && state.estimator.fitted;
+  for (const option of $("opt-form").options) {
+    if (!option.value) continue;
+    option.textContent = option.value === fitted
+      ? `${option.value} (fitted)` : option.value;
+  }
 }
 
 function modeFact() {
@@ -853,6 +1107,7 @@ function settings() {
     curation: $("opt-curation").checked,
     mode: $("opt-mode").value,
     form: $("opt-form").value || null,
+    hard: $("opt-hard").checked,
     top: 5,
   };
 }
@@ -862,46 +1117,63 @@ function newBoard() {
   return send("/api/new", settings());
 }
 
-/** Whichever of the two the page is showing, start it again. */
+/** Whichever of the three the page is showing, start it again. */
 function restart() {
-  return view === "play" ? newGame() : newBoard();
+  if (view === "play") return newGame();
+  if (view === "solve") return newBoard();
 }
 
 /* ------------------------------------------------------------------- views */
 
-/* The switch is labeled with where it goes, not where you are. */
-const OTHER_VIEW = { solve: "play", play: "solve" };
-const VIEW_LABEL = { solve: "Solve a Wordle", play: "Play Wordle" };
+const VIEW_NOTE = {
+  solve: `A setting changed here re-runs the solver over the board you already
+          have; only New board clears it.`,
+  play: `The answer was drawn under the priors that were on when it was dealt and
+         stays what it is. Changing one now only changes what the hint plays.`,
+  finder: `The two priors shape the bits and chance columns. Nothing else here
+           reaches the finder.`,
+};
 
 function setView(next) {
   view = next;
-  const other = OTHER_VIEW[next];
+  for (const button of document.querySelectorAll("#views .view-btn")) {
+    const on = button.dataset.view === next;
+    button.classList.toggle("on", on);
+    button.setAttribute("aria-pressed", String(on));
+  }
 
+  $("board").hidden = next === "finder";
+  $("finder-board").hidden = next !== "finder";
   $("solve-panel").hidden = next !== "solve";
   $("play-panel").hidden = next !== "play";
+  $("finder-panel").hidden = next !== "finder";
   $("solve-controls").hidden = next !== "solve";
   $("play-controls").hidden = next !== "play";
+  $("finder-controls").hidden = next !== "finder";
   $("solve-keys").hidden = next !== "solve";
   $("play-keys").hidden = next !== "play";
+  $("finder-keys").hidden = next !== "finder";
   $("answer-setting").hidden = next !== "play";
-
-  $("view-toggle").textContent = VIEW_LABEL[other];
-  $("view-toggle").title = `Switch to ${VIEW_LABEL[other]}`;
+  // the finder never asks the solver for a guess, so nothing that shapes one is
+  // shown alongside it
+  for (const id of ["mode-setting", "form-setting", "hard-setting"]) {
+    $(id).hidden = next === "finder";
+  }
+  $("reset").hidden = next === "finder";
   $("reset").textContent = next === "play" ? "New game" : "New board";
-  $("settings-note").textContent = next === "play"
-    ? "The priors decide what the answer is, so changing one deals a new game; "
-      + "the mode and f only shape what the hint suggests."
-    : "Changing any of these starts a fresh board.";
+  $("settings-note").textContent = VIEW_NOTE[next];
 
   clearMessage();
 
   // drawn before anything is asked for, so the view is never left empty
   if (started) {
     if (next === "play") {
-      if (!game || staleGame) newGame();
+      if (!game || needNewGame) newGame();
       else renderPlayPanel();
+    } else if (next === "finder") {
+      renderFinderPanel();
     } else {
-      if (staleBoard) newBoard();
+      if (staleBoard) resend();
       else renderPanel();
     }
   }
@@ -911,11 +1183,23 @@ function setView(next) {
 
 /* --------------------------------------------------- keys, whichever view */
 
-const onLetter = (letter) => (view === "play" ? playType(letter) : typeLetter(letter));
-const onBackspace = () => (view === "play" ? playBackspace() : backspace());
-const onEnter = () => (view === "play" ? playGuess() : submit());
+const BY_VIEW = (actions) => () => actions[view]();
+
+const onLetter = (letter) =>
+  BY_VIEW({ play: () => playType(letter), finder: () => finderType(letter),
+            solve: () => typeLetter(letter) })();
+const onBackspace = BY_VIEW({ play: playBackspace, finder: finderBackspace,
+                              solve: backspace });
+const onEnter = BY_VIEW({ play: playGuess, finder: findWords, solve: submit });
+const onSpace = BY_VIEW({ play: () => {}, finder: () => finderCycle(),
+                          solve: () => cycle() });
 
 function onArrow(dRow, dCol) {
+  if (view === "finder") {
+    if (dCol) finder.col = Math.min(Math.max(finder.col + dCol, 0), 4);
+    if (dRow) finder.row = dRow > 0 ? "pattern" : "answer";
+    return renderLocal();
+  }
   if (view === "play") {
     if (dCol) {
       draft.col = Math.min(Math.max(draft.col + dCol, 0), 4);
@@ -945,7 +1229,12 @@ function wire() {
     action();
   });
 
-  onClick("view-toggle", () => setView(OTHER_VIEW[view]));
+  for (const button of document.querySelectorAll("#views .view-btn")) {
+    button.addEventListener("click", (event) => {
+      event.currentTarget.blur();
+      setView(event.currentTarget.dataset.view);
+    });
+  }
   onClick("reset", restart);
   onClick("undo", deleteRow);
   // submit falls back to taking the suggestion when there is nothing to send
@@ -954,29 +1243,32 @@ function wire() {
   onClick("hint-btn", toggleHint);
   onClick("giveup", giveUp);
   onClick("copy-share", copyShare);
+  onClick("find", findWords);
+  onClick("finder-clear", clearPattern);
 
-  // the priors decide what the answer is, so changing one has to deal again
-  for (const id of ["opt-repeat", "opt-curation"]) {
-    $(id).addEventListener("change", () => {
-      staleBoard = staleGame = true;
-      restart();
-    });
-  }
-  // the mode and f only decide what the solver would play, which in a game is
-  // just the hint -- no reason to throw the game away over it
-  for (const id of ["opt-mode", "opt-form"]) {
+  // every one of these changes what the solver is asked, not where you are, so
+  // nothing is thrown away: the board re-runs over the rows it has, the game
+  // keeps its answer, and the finder re-sorts what it found
+  for (const id of ["opt-repeat", "opt-curation", "opt-mode", "opt-form", "opt-hard"]) {
     $(id).addEventListener("change", () => {
       staleBoard = true;
-      if (view !== "play") return newBoard();
-      if (hint) askHint();
+      if (view === "solve") return resend();
+      if (view === "play" && hint) return askHint();
+      if (view === "finder" && found) return findWords();
     });
   }
+  // the one setting that cannot be applied to a game already in progress
   $("opt-answer").addEventListener("change", () => {
-    staleGame = true;
+    needNewGame = true;
     if (view === "play") newGame();
   });
   $("opt-assist").addEventListener("change", (event) => {
-    if (event.target.checked && view === "play" && !hint) askHint();
+    if (view !== "play") return;
+    if (event.target.checked && !hint) return askHint();
+    renderPlayPanel();   // assist also decides whether the alternatives start open
+  });
+  $("opt-sort").addEventListener("change", () => {
+    if (found) findWords();
   });
 
   document.addEventListener("keydown", (event) => {
@@ -986,7 +1278,7 @@ function wire() {
     switch (event.key) {
       case "Enter":      event.preventDefault(); onEnter(); break;
       case "Backspace":  event.preventDefault(); onBackspace(); break;
-      case " ":          event.preventDefault(); if (view === "solve") cycle(); break;
+      case " ":          event.preventDefault(); onSpace(); break;
       case "ArrowLeft":  event.preventDefault(); onArrow(0, -1); break;
       case "ArrowRight": event.preventDefault(); onArrow(0, 1); break;
       case "ArrowUp":    event.preventDefault(); onArrow(-1, 0); break;
@@ -1039,7 +1331,7 @@ async function start() {
   for (const name of status.forms) {
     const option = document.createElement("option");
     option.value = name;
-    option.textContent = name + (name === status.default_form ? " (default)" : "");
+    option.textContent = name;
     forms.appendChild(option);
   }
 

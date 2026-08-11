@@ -1,7 +1,8 @@
 # analysis/
 
 Every measured number in `README.md` and `SOLVER_EXPLAINED.md` about the two
-priors comes from one of these. They read `data/` and print; they write nothing.
+priors, and about which form of `f` is the default, comes from one of these.
+They read `data/` and the estimator cache and print; they write nothing.
 
 ```
 python analysis/regime.py           the regime table and the pool arithmetic
@@ -9,18 +10,25 @@ python analysis/repeat_shapes.py    prequential comparison of repeat shapes
 python analysis/drift.py            is the source window moving?
 python analysis/curation_shapes.py  prequential comparison of curation shapes
 python analysis/replay.py           what the shapes are worth in guesses (slow)
+python analysis/form_default.py     which form to fit by default (slower)
+python analysis/results_tables.py   the two tables in README *Results* (slowest)
 ```
 
 The first four are seconds. `replay.py` plays a few thousand real games and
-takes a few minutes.
+takes a few minutes; `form_default.py` replays 45 fitted policies and takes
+longer again; `results_tables.py` is an hour and a quarter at its default sizes,
+most of it the flat-prior rows, where more candidates survive each guess and the
+endgame search runs on bigger sets.
 
 | script | backs |
 | --- | --- |
 | `regime.py` | README *Both defaults describe a regime six months old*, SOLVER_EXPLAINED §4.1 |
 | `repeat_shapes.py` | README *Sharpening the repeat prior* table, SOLVER_EXPLAINED §4.2 |
 | `drift.py` | the closing paragraph of README *Sharpening the repeat prior* |
-| `curation_shapes.py` | SOLVER_EXPLAINED §4.3, the opening of README *Shaping the two priors* |
-| `replay.py` | the replay paragraph and the three-arm table |
+| `curation_shapes.py` | SOLVER_EXPLAINED §4.3 including why the hedge is flat, the opening of README *Shaping the two priors* |
+| `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
+| `form_default.py` | README *Which form is the default* |
+| `results_tables.py` | both tables in README *Results* |
 
 ## Rerunning them
 
@@ -37,12 +45,29 @@ README carried before the 2026-08-10 update — uniform −134.5, binned −116.
 `regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s
 uniform baseline (−9.27) are fixed points for the same reason.
 
+## `replay.py` lost its uniform-shape arms
+
+It used to compare the sharpened shapes against the uniform ones, which needed
+fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and
+`repeat1_curation1_c-wordlebot`. Those fits are no longer in the repo, and since
+2026-08-10 a prior with no fit raises rather than playing an invented `f`, so
+those arms were removed rather than retrained. What is left is the comparison
+both remaining fits support: curation `frequency` against the shipped
+`wordlebot`, over the regime and by arm.
+
 ## What is not reproduced here
 
 `replay.py` is only comparable against itself. Its numbers depend on the fitted
 estimator as much as on the data, and every configuration's winning form moved
 in the 2026-08-10 refit, so its output cannot be diffed against a run from
-before that.
+before that. The same holds for `form_default.py`: it scores the fits in
+`estimator_cache/forms/`, so a refit moves every row.
+
+Three rows of the README *Shaping the two priors* table — `wordlebot` alone,
+`binned` alone, and the uniform baseline they are measured against — are now
+history rather than output. Reproducing them means fitting the three
+uniform-shape configurations again, which is a deliberate choice about what this
+repo ships, not something a rerun should do behind your back.
 
 Two figures the documents used to carry could not be reproduced exactly. The
 window variants' *spread* was −124…−129; the best variant here matches, but the

@@ -87,6 +87,7 @@ class WordleData:
     word2ind: dict           # word -> index
     curated_list: list       # the original 2022 answer list
     past_solutions: list     # answers that have already been used, in order
+    puzzle_numbers: list     # Wordle's own number for each of those, in step
     feedback_table: np.ndarray  # uint8 [guess, answer] -> pattern number
 
     @property
@@ -127,12 +128,16 @@ def load_data(mask_last=1, use_cache=True, with_feedback_table=True):
     if mask_last:
         solutions_so_far = solutions_so_far[:-mask_last]
     past_solutions = [entry["solution"] for entry in solutions_so_far]
+    # the pre-NYT entries carry no day count, so fall back to their position
+    puzzle_numbers = [entry.get("days_since_launch", i) + 1
+                      for i, entry in enumerate(solutions_so_far)]
 
     data = WordleData(
         all_words=all_words,
         word2ind=word2ind,
         curated_list=curated_list,
         past_solutions=past_solutions,
+        puzzle_numbers=puzzle_numbers,
         feedback_table=feedback_table,
     )
     if use_cache:

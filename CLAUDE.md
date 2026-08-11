@@ -52,6 +52,11 @@ The whole solver sits behind one lock. Scoring ~13k guesses already uses every
 core, so concurrent requests would only make both slower, and the memo tables
 are not written for concurrent use.
 
+Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
+rather than inventing an `f`, so a prior combination assembled on the fly needs
+`train --this-config-only` first — the exception's message spells the command
+out. Entropy mode needs no fit and runs on anything.
+
 ## The pieces
 
 | file | what it is |
@@ -106,11 +111,23 @@ r ≈ 0.98, and no longer reproduces the file.
 
 ## The web page
 
+Three views — solve, play and find — over one board pane and one set of
+switches. The finder is the odd one: it is given the answer and looks for the
+guess, so it has its own two rows, its own panel, and `/api/find` instead of a
+session.
+
 The server holds sessions; the page holds an editable copy of the board and
 sends **the whole board** on every submit, never a delta. The reply is the board
 as the solver accepted it, and the local copy is rebuilt from it, so the two
 cannot drift. Editing an earlier row is therefore the same request as playing a
 new one.
+
+**The settings ride along with the board**, as one `Settings` value parsed per
+request, rather than living on the session. Changing one is then the same request
+as playing a row, which is what lets a switch re-run the solver over the rows
+already played instead of clearing them. Only the answer box deals a new game.
+Nothing on the server has to be kept in step with the switches; do not add a
+setting that is remembered at `/api/new` time.
 
 Every board edit — typing, coloring, deleting a row — is local until Enter.
 `README.md` § *Editing the board* has the rules that follow from this and why

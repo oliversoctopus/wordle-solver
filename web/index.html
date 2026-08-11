@@ -13,7 +13,12 @@
   <h1>Wordle <span>solver</span></h1>
   <div class="head-actions">
     <button id="settings-toggle" class="ghost" aria-expanded="true" aria-controls="settings">Settings</button>
-    <button id="view-toggle" class="ghost switcher">Play Wordle</button>
+    <!-- three things the page does, rather than a switch between two -->
+    <div class="views" id="views" role="group" aria-label="what the page is doing">
+      <button class="view-btn" data-view="solve" title="Have the solver work out an answer with you">Solve</button>
+      <button class="view-btn" data-view="play" title="Play a game against an answer the solver knows">Play</button>
+      <button class="view-btn" data-view="finder" title="Work backwards from an answer to the guesses that fit a pattern">Find</button>
+    </div>
     <button id="reset" class="ghost">New board</button>
   </div>
 </header>
@@ -30,7 +35,8 @@
         <span class="switch-name">Repeat prior</span>
       </label>
       <p class="setting-why">Assume the editor rarely reuses a word that has already been a Wordle
-      answer. Makes already-used words less likely.</p>
+      answer, and that the ones that do come back are usually early ones. Makes
+      already-used words less likely.</p>
     </div>
 
     <div class="setting">
@@ -40,10 +46,22 @@
         <span class="switch-name">Curation prior</span>
       </label>
       <p class="setting-why">Assume most answers come from the curated 2022 list of answer words.
-      Makes words outside this list less likely to be answers.</p>
+      Makes words outside this list less likely to be answers, and the ones that
+      look answerable likelier than the rest.</p>
     </div>
 
-    <div class="setting">
+    <div class="setting" id="hard-setting">
+      <label class="switch">
+        <input type="checkbox" id="opt-hard">
+        <span class="track"><span class="knob"></span></span>
+        <span class="switch-name">Hard mode</span>
+      </label>
+      <p class="setting-why">Only guess words that could still be the answer. A word that cannot win
+      is often the sharper probe, so this usually costs a little; f was fitted
+      without the restriction, so its scores read slightly low under it.</p>
+    </div>
+
+    <div class="setting" id="mode-setting">
       <label class="field" for="opt-mode"><span class="switch-name">Mode</span>
         <select id="opt-mode">
           <option value="expected">Fewest expected guesses</option>
@@ -54,7 +72,7 @@
         expected to cost, or the bits it is expected to reveal right now.</p>
     </div>
 
-    <div class="setting">
+    <div class="setting" id="form-setting">
       <label class="field" for="opt-form"><span class="switch-name">Shape of f</span>
         <select id="opt-form"><option value="">Whatever is cached</option></select>
       </label>
@@ -79,6 +97,16 @@
   <section class="board-pane">
     <div id="board" aria-label="board"></div>
 
+    <!-- the finder runs the other way round: the answer is given and the guess
+         is what is being looked for, so it needs a word and a pattern that do
+         not describe each other -->
+    <div id="finder-board" hidden>
+      <p class="finder-label">The answer</p>
+      <div class="row" id="finder-answer" aria-label="the answer"></div>
+      <p class="finder-label">The pattern it came back as</p>
+      <div class="row" id="finder-pattern" aria-label="the pattern"></div>
+    </div>
+
     <p id="hint">&nbsp;</p>
     <p id="message" class="message" hidden></p>
 
@@ -93,6 +121,11 @@
       <button id="guess" class="primary">Guess</button>
       <button id="hint-btn" class="ghost">Hint</button>
       <button id="giveup" class="ghost">Reveal answer</button>
+    </div>
+
+    <div class="controls" id="finder-controls" hidden>
+      <button id="find" class="primary">Find words</button>
+      <button id="finder-clear" class="ghost" title="Set every tile back to gray, leaving the answer alone">Clear pattern</button>
     </div>
 
     <details id="keys-help">
@@ -111,6 +144,15 @@
         <dt>A&ndash;Z</dt><dd>Write a letter</dd>
         <dt>&larr; &rarr;</dt><dd>Move along the row</dd>
         <dt>Enter</dt><dd>Guess the word. On an empty row, play the solver's pick when it is showing.</dd>
+        <dt>Backspace</dt><dd>Delete a letter</dd>
+      </dl>
+      <dl class="keys" id="finder-keys" hidden>
+        <dt>A&ndash;Z</dt><dd>Write a letter of the answer</dd>
+        <dt>&larr; &rarr;</dt><dd>Move along the row</dd>
+        <dt>&uarr; &darr;</dt><dd>Move between the answer and the pattern</dd>
+        <dt>Space</dt><dd>Change the selected pattern tile: gray &rarr; yellow
+          &rarr; green</dd>
+        <dt>Enter</dt><dd>Find every word that gives that pattern</dd>
         <dt>Backspace</dt><dd>Delete a letter</dd>
       </dl>
     </details>
@@ -141,9 +183,9 @@
       <ul id="candidates" class="chips"></ul>
     </div>
 
-    <details class="card" id="tech-card">
+    <details class="card foldable" id="tech-card">
       <summary><h2>Advanced</h2><span class="chev" aria-hidden="true"></span></summary>
-      <div id="tech-body"></div>
+      <div id="tech-body" class="foldable-body"></div>
     </details>
   </aside>
 
@@ -173,6 +215,15 @@
       <p class="rec-score" id="hint-score"></p>
     </div>
 
+    <!-- folded away by default: the pick is the answer to the question, and the
+         rest of the ranking is only wanted when you go looking for it -->
+    <details class="card foldable" id="game-alt-card" hidden>
+      <summary><h2>Alternatives</h2><span class="chev" aria-hidden="true"></span></summary>
+      <div class="foldable-body">
+        <ol id="game-alternatives" class="rows"></ol>
+      </div>
+    </details>
+
     <div class="card" id="share-card" hidden>
       <div class="card-head">
         <h2>Share</h2>
@@ -181,13 +232,48 @@
       <pre class="share-grid" id="share-grid"></pre>
     </div>
   </aside>
+
+  <aside class="panel" id="finder-panel" hidden>
+    <div class="card">
+      <div class="card-head">
+        <h2>Words that fit</h2>
+        <span class="tag" id="find-count">&mdash;</span>
+      </div>
+      <p class="sub" id="find-sub"></p>
+      <label class="field find-sort" for="opt-sort"><span class="switch-name">Order by</span>
+        <select id="opt-sort">
+          <option value="left">Fewest words left</option>
+          <option value="bits">Most information</option>
+          <option value="weight">Likeliest to be an answer</option>
+          <option value="alpha">Alphabetical</option>
+        </select>
+      </label>
+      <ol id="found" class="rows static"></ol>
+    </div>
+
+    <details class="card foldable" id="find-help">
+      <summary><h2>What the numbers are</h2><span class="chev" aria-hidden="true"></span></summary>
+      <div class="foldable-body fact-why">
+        <p><b>Words left</b> is how many words would still be possible if you had
+          played that guess and seen that pattern &mdash; the answer among them.
+          Fewest first is the guess that would have told you the most about this
+          particular answer.</p>
+        <p><b>Bits</b> is what the guess reveals on average over every answer it
+          could have faced, not just this one. It does not depend on the pattern,
+          so it ranks the words as openings rather than as hindsight.</p>
+        <p><b>Chance</b> is the prior's own probability that the guess is itself
+          the answer, so it moves with the two prior switches. So does the bits
+          column; the pattern match itself does not.</p>
+      </div>
+    </details>
+  </aside>
 </main>
 
 <div id="veil">
   <div class="veil-inner">
     <div class="spinner"></div>
     <p id="veil-text">Starting up</p>
-    <p class="sub">The 167 MB feedback table and the numba kernels load once.</p>
+    <p class="sub">The feedback table and the numba kernels load once.</p>
   </div>
 </div>
 

@@ -73,16 +73,21 @@ class SearchBudgetExceeded(Exception):
 
 class ExactEndgame:
     """Exact solver for a fixed prior.  Values depend only on the weights, so
-    the memo survives changes to the estimator."""
+    the memo survives changes to the estimator.
+
+    ``hard`` narrows every node's choice to the candidates themselves, which is
+    the exact search's half of the solver's hard mode.
+    """
 
     # backstop only; with the branch cap on, real positions use a handful
     DEFAULT_MAX_NODES = 2000
 
     def __init__(self, feedback_table, weights, loss_penalty=1.0,
                  max_nodes=DEFAULT_MAX_NODES, memo_limit=500_000,
-                 max_branch=DEFAULT_MAX_BRANCH):
+                 max_branch=DEFAULT_MAX_BRANCH, hard=False):
         self.feedback_table = feedback_table
         self.weights = weights
+        self.hard = bool(hard)
         self.loss_penalty = float(loss_penalty)
         # the bound stays valid for any penalty: a guess costs 1, and being
         # wrong costs at least one more guess or the penalty, whichever is less
@@ -124,10 +129,12 @@ class ExactEndgame:
             # guess the likelier one; if wrong the other is known
             return int(candidates[heaviest]), 2.0 - p_max
         if turns == 2:
+            pool = candidates if self.hard else None
             scores = kernels.two_turn_scores(self.feedback_table, candidates,
-                                             weights, self.loss_penalty)
-            guess = int(scores.argmin())
-            return guess, float(scores[guess])
+                                             weights, self.loss_penalty, pool=pool)
+            best = int(scores.argmin())
+            guess = int(candidates[best]) if self.hard else best
+            return guess, float(scores[best])
 
         key = (candidates.tobytes(), turns)
         cached = self.memo.get(key)
@@ -138,10 +145,18 @@ class ExactEndgame:
         if self.nodes > self.max_nodes:
             raise SearchBudgetExceeded(f"more than {self.max_nodes} nodes")
 
-        bounds = kernels.two_turn_scores(self.feedback_table, candidates,
-                                         weights, self.bound_penalty)
-        representatives = self._distinct_partitions(candidates)
-        rep_bounds = bounds[representatives]
+        if self.hard:
+            # nothing for the dedupe to merge: only a candidate itself can come
+            # back all-green, so no two of them split S the same way
+            representatives = candidates
+            rep_bounds = kernels.two_turn_scores(self.feedback_table, candidates,
+                                                 weights, self.bound_penalty,
+                                                 pool=candidates)
+        else:
+            bounds = kernels.two_turn_scores(self.feedback_table, candidates,
+                                             weights, self.bound_penalty)
+            representatives = self._distinct_partitions(candidates)
+            rep_bounds = bounds[representatives]
         order = np.argsort(rep_bounds)
         if self.max_branch is not None:
             # keep only the most promising splits.  Where the dedupe already

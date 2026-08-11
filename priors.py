@@ -48,8 +48,8 @@ BIN_ALPHA = 0.5
 # optimum is flat between 0.2 and 0.5; this is the middle of it.
 FREQ_TEMPERATURE = 0.35
 
-# 'wordlebot': mass kept outside the list, since it missed 2 of the 41 off-list
-# answers that followed the snapshot it was validated against
+# 'wordlebot': mass kept outside the list, since the 2023 snapshot missed 2 of
+# the 41 off-list answers that followed it
 OFFLIST_HEDGE = 0.05
 
 _TABLES = {}
@@ -93,6 +93,26 @@ class PriorConfig:
         if self.curation and self.curation_shape != "uniform":
             parts.append(f"c-{self.curation_shape}")
         return "_".join(parts)
+
+    def flags(self):
+        """The `wordle_solver.py` flags that rebuild this configuration, so a
+        message about a missing fit can name the command that makes it."""
+        out = []
+        if not self.repeat:
+            out.append("--no-repeat-prior")
+        else:
+            if self.repeat_prob != DEFAULT_REPEAT_PROB:
+                out.append(f"--repeat-prob {self.repeat_prob:g}")
+            if self.repeat_shape != PriorConfig.repeat_shape:
+                out.append(f"--repeat-shape {self.repeat_shape}")
+        if not self.curation:
+            out.append("--no-curation-prior")
+        else:
+            if self.noncurated_prob != DEFAULT_NONCURATED_PROB:
+                out.append(f"--noncurated-prob {self.noncurated_prob:g}")
+            if self.curation_shape != PriorConfig.curation_shape:
+                out.append(f"--curation-shape {self.curation_shape}")
+        return out
 
     def describe(self):
         parts = []
@@ -166,19 +186,25 @@ def _repeat_shape(data, used_mask):
     return rel
 
 
+def _answer_like(words):
+    """Relative weight by how answer-like each word is."""
+    table = _table(ANSWER_LIKE_PATH)
+    score = np.array([table.get(w, -50.0) for w in words])
+    return np.exp(FREQ_TEMPERATURE * (score - score.max()))
+
+
 def _curation_shape(data, mask, shape):
     """Relative weights within the non-curated group."""
     words = [data.all_words[i] for i in np.flatnonzero(mask)]
     rel = np.zeros(len(mask), dtype=np.float64)
 
     if shape == "frequency":
-        table = _table(ANSWER_LIKE_PATH)
-        score = np.array([table.get(w, -50.0) for w in words])
-        rel[mask] = np.exp(FREQ_TEMPERATURE * (score - score.max()))
+        rel[mask] = _answer_like(words)
         return rel
 
     # 'wordlebot': the mass goes to the words WordleBot considers answerable,
-    # in proportion to its weight, less a hedge spread over everything else
+    # in proportion to its weight, less a hedge spread over everything else.
+    # The hedge stays flat on purpose -- see analysis/curation_shapes.py
     table = _table(WORDLEBOT_PATH)
     listed = np.array([table.get(w, 0.0) for w in words])
     inside = listed > 0.0
@@ -249,3 +275,41 @@ def build_weights(data, config):
     if not np.all(weights > 0.0):
         raise ValueError("prior assigns zero weight to some word")
     return weights
+
+
+def regime_stats(data):
+    """The rates the two default probabilities are set from, measured rather
+    than written down, so they follow ``solutions.json`` as it grows.
+
+    The regime starts at the first repeat in the record: nothing repeated
+    before it, and nothing was off-list before it either.  Off-list is
+    conditional on not being a repeat, the same order the model draws in.
+    """
+    words = data.past_solutions
+    curated = set(data.curated_list)
+
+    seen, repeats = set(), []
+    for word in words:
+        repeats.append(word in seen)
+        seen.add(word)
+    start = next((i for i, r in enumerate(repeats) if r), 0)
+
+    def rates(lo):
+        window = range(lo, len(words))
+        fresh = [i for i in window if not repeats[i]]
+        return {
+            "repeat": sum(repeats[i] for i in window) / max(1, len(window)),
+            "noncurated": (sum(words[i] not in curated for i in fresh)
+                           / max(1, len(fresh))),
+        }
+
+    return {
+        "start_puzzle": data.puzzle_numbers[start] if data.puzzle_numbers else 1,
+        "puzzles": len(words) - start,
+        "regime": rates(start),
+        "all_time": rates(0),
+        "words": data.n_words,
+        "curated": len(curated),
+        # the repeat group is the used words the solver can actually name
+        "used": sum(1 for word in seen if word in data.word2ind),
+    }
