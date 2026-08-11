@@ -104,7 +104,9 @@ def main():
         print(f"  CHANGED      {len(changed)} existing days, e.g. {changed[0]}")
 
     if args.write:
-        write_json(SOLUTIONS_PATH, rows, indent=None)
+        # indented, one field per line: a day added should read as a few added
+        # lines, not as a rewrite of the whole file
+        write_json(SOLUTIONS_PATH, rows)
         print(f"wrote {SOLUTIONS_PATH}")
     elif len(rows) == len(before) and not changed:
         print("not written; it is already up to date")

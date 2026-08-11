@@ -4,7 +4,9 @@
         "repeat": false,
         "curation": false,
         "repeat_prob": null,
-        "noncurated_prob": null
+        "noncurated_prob": null,
+        "repeat_shape": null,
+        "curation_shape": null
     },
     "form": "loglinear",
     "form_expression": "a + b*log2(n)",
@@ -13,88 +15,88 @@
         "x"
     ],
     "params": [
-        1.6052892504947385,
-        0.1970370311070261
+        1.5820406146320956,
+        0.20077705601249296
     ],
-    "fitted_at": "2026-07-28 17:18:30",
+    "fitted_at": "2026-08-10 18:23:27",
     "n_games": 2000,
     "seed": 0,
     "iterations": 4,
     "converged": true,
     "terms_used": 2,
-    "entropy_baseline_mean_guesses": 4.085,
-    "best_train_mean_guesses": 4.077,
-    "mean_guesses_last_eval": 4.0785,
-    "fit_rmse": 0.6196785696480456,
+    "entropy_baseline_mean_guesses": 4.083,
+    "best_train_mean_guesses": 4.087,
+    "mean_guesses_last_eval": 4.087,
+    "fit_rmse": 0.6473076917979584,
     "holdout": {
-        "games": 5000,
-        "mean_guesses_solved": 4.051862234681618,
-        "mean_guesses_penalized": 4.0554,
-        "solve_rate": 0.9988,
+        "games": 2000,
+        "mean_guesses_solved": 4.030515257628815,
+        "mean_guesses_penalized": 4.032,
+        "solve_rate": 0.9995,
         "distribution": {
-            "2": 22,
-            "3": 1035,
-            "4": 2754,
-            "5": 1028,
-            "6": 155,
-            "7": 6
+            "2": 8,
+            "3": 449,
+            "4": 1091,
+            "5": 376,
+            "6": 75,
+            "7": 1
         }
     },
     "opening_word": "tares",
-    "opening_expected_guesses": 4.0740859634141735,
+    "opening_expected_guesses": 4.078842869894919,
     "history": [
         {
             "label": "entropy seed",
-            "mean_guesses": 4.085,
+            "mean_guesses": 4.083,
             "policy_params": null,
             "fitted_params": [
-                1.592640854456633,
-                0.19937816620446294
+                1.5903602900057767,
+                0.19942937329154778
             ],
             "terms_used": 2,
-            "seconds": 1.0645609999774024
+            "seconds": 1.0323443000670522
         },
         {
             "label": "iter 1",
-            "mean_guesses": 4.0835,
+            "mean_guesses": 4.089,
             "policy_params": [
-                1.592640854456633,
-                0.19937816620446294
+                1.5903602900057767,
+                0.19942937329154778
             ],
             "fitted_params": [
-                1.6052892504947385,
-                0.1970370311070261
+                1.5820406146320956,
+                0.20077705601249296
             ],
             "terms_used": 2,
-            "seconds": 1.6958049999957439
+            "seconds": 37.98096179985441
         },
         {
             "label": "iter 2",
-            "mean_guesses": 4.077,
+            "mean_guesses": 4.087,
             "policy_params": [
-                1.6052892504947385,
-                0.1970370311070261
+                1.5820406146320956,
+                0.20077705601249296
             ],
             "fitted_params": [
-                1.610068601838659,
-                0.19528188292438234
+                1.5809821050081774,
+                0.20051959563705513
             ],
             "terms_used": 2,
-            "seconds": 1.955612799996743
+            "seconds": 6.597359600011259
         },
         {
             "label": "iter 3",
-            "mean_guesses": 4.0785,
+            "mean_guesses": 4.087,
             "policy_params": [
-                1.610068601838659,
-                0.19528188292438234
+                1.5809821050081774,
+                0.20051959563705513
             ],
             "fitted_params": [
-                1.6096025007384742,
-                0.1957485899712626
+                1.5809821050081774,
+                0.20051959563705513
             ],
             "terms_used": 2,
-            "seconds": 1.8250082000158727
+            "seconds": 0.593186300015077
         }
     ]
 }
