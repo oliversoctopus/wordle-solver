@@ -9,6 +9,12 @@ a web page that does both.
 the other and both are kept current; if you change behavior, update the one that
 documents it.
 
+`ABOUT_SOLVER_EXPLAINED.md` is the front door to the second of those: what it is
+for, how to view its LaTeX, and the route through its sections. The viewing
+instructions live there and nowhere else — do not restore a copy of them to the
+top of `SOLVER_EXPLAINED.md`, and if you add or remove a section, its section map
+is the thing that goes stale.
+
 ## Conventions
 
 **American English**, everywhere: prose, comments, identifiers, CSS custom

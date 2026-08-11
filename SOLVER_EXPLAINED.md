@@ -1,41 +1,16 @@
 # How to read this document
 
-This file is Markdown with a handful of LaTeX display equations (`$$ ... $$`).
-Tables, code blocks and headings render in any Markdown viewer; the six or so
-display equations need a viewer with math support. Pick one:
+This file is Markdown with twelve LaTeX display equations (`$$ ... $$`), so it
+wants a viewer with math support — a GitHub gist, StackEdit, HackMD, or
+`Ctrl+Shift+V` in VS Code. **`ABOUT_SOLVER_EXPLAINED.md` has the steps for each**,
+along with what this document is for and what order to read it in.
 
-### Option A — GitHub Gist (recommended)
+> If your viewer shows raw `$$` symbols, it simply lacks math support. Nothing is
+> lost: every formula here is also stated in words in the surrounding prose, and
+> the code references are plain text.
 
-1. Go to <https://gist.github.com> (sign in; a gist is the only step that needs an account).
-2. Set the filename to `SOLVER_EXPLAINED.md` — the `.md` extension is what turns on rendering.
-3. Paste this entire file into the body.
-4. Click **Create secret gist**. Secret means unlisted, not private, so don't treat the URL as a secret.
-
-GitHub renders `$$ ... $$` math natively, along with the tables and code blocks.
-This is the highest-fidelity option and the result is a stable link you can share.
-
-### Option B — StackEdit (no account at all)
-
-1. Go to <https://stackedit.io> and click **Start writing**.
-2. Select all of the sample text in the left pane and paste this file over it.
-3. The right pane is the rendered view. KaTeX is on by default.
-
-The `</>` button in the toolbar exports a standalone HTML file if you want one.
-
-### Option C — HackMD
-
-1. Go to <https://hackmd.io> and start a new guest note.
-2. Paste. Split view renders live, with KaTeX and slightly nicer typography than B.
-
-### Backup — locally, in VS Code
-
-Open this file and press `Ctrl+Shift+V`. VS Code ships a built-in *Markdown Math*
-extension, so KaTeX works with nothing installed. `Ctrl+K V` opens the preview
-side by side with the source instead.
-
-> If a viewer shows raw `$$` symbols, it simply lacks math support. Nothing is
-> lost: every formula in this document is also stated in words in the surrounding
-> prose, and the code references are plain text.
+Read it start to finish the first time — the order is the argument. In ten
+minutes instead: §2, §6, §12.
 
 ---
 
@@ -386,13 +361,23 @@ At `t = 0.35`, relative to the flat weight it replaces:
 Every word on the left is a real off-list answer; every word on the right is one
 of the words behind a recorded loss in §10.
 
-### 4.5 Why the two shapes only pay off together
+### 4.5 Why the two shapes interact
 
-This is the part that is easy to get wrong, and the project got it wrong first.
+This is the part that is easy to get wrong. The project got it wrong first, and
+then got the *reason* wrong too.
 
-Measured on its own the WordleBot shape is **a wash**, and measured on its own
-the binned repeat shape is worth nothing either. Together they are worth more
-than the sum. The reason is arithmetic about who competes with whom.
+When these shapes were adopted, the WordleBot shape measured **a wash** on its
+own, the binned repeat shape close to nothing on its own, and the pair far more
+than the sum of the two — which is what justified shipping them together. On
+current data that superadditivity is gone: −0.044, −0.022 and −0.064 against a
+sum of −0.066, additive within noise (§4.6). The pair is still the best
+configuration and still ships; the argument for *why* it had to be a pair no
+longer holds up.
+
+What follows is the mechanism, and that part is intact — it is still the right
+account of how the two sides interfere, and it is what the repeat-arm penalty in
+§4.6 is. It is simply no longer evidence that either shape needs the other. The
+reason is arithmetic about who competes with whom.
 
 Concentrating the off-list mass onto ~850 words gives each about **1×10⁻⁴**,
 where a used word under the flat repeat shape has **5.4×10⁻⁵**. Sharpening one
@@ -418,8 +403,16 @@ prior shifts every `n_eff` into that tail, and the ranking of opening words
 flips: under `sqrt`, the form chosen for the *uniform* shapes, a sharpened prior
 picks `raise` over `salet`. `raise` is genuinely worse — forcing it under the
 unchanged uniform prior costs **+0.034 ± 0.028** — so this is estimator error,
-not a real preference. Every form that fits better than `sqrt` picks `salet`,
-and so does one-ply lookahead. This is why the shape is part of the cache key.
+not a real preference. The three best-fitting forms under the sharpened prior all
+pick `salet` — `invonly`, `saturating` and `spline`, at fit RMSE 0.486–0.490
+against `sqrt`'s 0.505 — and so does one-ply lookahead. This is why the shape is
+part of the cache key.
+
+Fit quality is not the criterion, though, and that is worth seeing plainly:
+`anchored2` has the worst RMSE of any form at 0.70 and picks `salet` anyway,
+while `anchored` fits a hair *better* than `sqrt` (0.5041 against 0.5047) and
+still picks `raise`. What decides the opening word is concavity in `x` (§6), not
+how closely the curve tracks the pairs it was fitted to.
 
 **The evaluation needs three arms, one of them repeats.** A shape can only be
 judged on answers that actually happened, never on answers sampled from its own
@@ -564,7 +557,7 @@ carry real weight:
 - **Excluding `GGGGG` is the whole reason a possible answer beats an equally
   informative non-answer.** That bucket costs nothing more — you already won. So
   a guess that might just *be* the answer gets a free discount equal to its
-  probability. About ~0.46 of the ~0.50-guess gap over greedy entropy is this
+  probability. About 0.56 of the 0.60-guess gap over greedy entropy is this
   bonus alone — see the decomposition at the end of §6.
 - **Buckets of 1 and 2 skip `f` entirely** (`kernels.py:148`), because their
   values are known in closed form: 1 candidate is worth exactly `1`, and 2
@@ -573,7 +566,9 @@ carry real weight:
 
 ### Why this isn't just entropy in disguise
 
-Here's the identity that explains the table in §4. Suppose `f` is **linear**:
+Here's the identity that explains the form table in README *Results* — why some
+forms of `f` land on greedy entropy's score and others beat it. Suppose `f` is
+**linear**:
 `f(n) = a + b·x` with `x = log₂(n)`. Substituting, and using the chain rule from
 §3:
 
@@ -584,36 +579,58 @@ $$E(g,S) = 1 + a(1 - p_{\text{win}}) + b\big(H(S) - \mathrm{IG}(g)\big)$$
 `f` buys you nothing but the bonus.** All the remaining gain comes from `f` being
 *concave* in `x`.
 
-The form comparison is this identity showing up as data: `loglinear` and `spline`
-(locally linear) both pick entropy's opening word `raise` and land at 3.226, while
-the curved forms pick `salet` and reach 3.184.
-
-That also decomposes the gap cleanly. Greedy entropy scores 3.6878 and
+The form comparison is this identity showing up as data, and it decomposes the
+gap cleanly. Under the shipped shapes greedy entropy scores 3.6802 and
 `loglinear` — which by the identity above *is* entropy plus the bonus — scores
-3.2255, so the bonus is worth **0.462**. The best curved form reaches 3.1841, so
-curvature adds only **0.041**. Together 0.5037, which is the measured
+3.1190, so the bonus is worth **0.561**. The best form reaches 3.0789, so
+curvature adds only **0.040**. Together 0.601, which is the measured
 entropy-to-best gap. Nearly all of the improvement over a standard entropy solver
 is the free discount for guessing a word that might be the answer; the fitted
-curve's shape contributes under a tenth of it.
+curve's shape contributes about a fifteenth of it.
 
-Under the shipped shapes the same decomposition comes out 0.561 for the bonus
-and 0.040 for curvature, of a 0.601 gap — a bigger bonus against a sharper
-prior, curvature worth the same as ever. The one thing that does not carry over
-is which forms are locally linear enough to fall on entropy's side: refitted
-against the sharpened prior, `spline` picks `salet` and wins the comparison
-outright. See README *Results*.
+Under the flat shapes the same decomposition read 0.462 and 0.041 of a 0.504
+gap: the bonus grows as the prior sharpens, curvature is worth what it always
+was. What does not carry over is *which* forms are locally linear enough to fall
+on entropy's side. Under the flat shapes `loglinear` and `spline` both picked
+entropy's opening `raise`; refitted against the sharpened prior, `spline` picks
+`salet` and wins the comparison outright. See README *Results*.
 
-And the actual fitted curve for the default prior is:
+Hard mode is the identity's cleanest test, because it isolates the bonus from
+everything else. Restrict greedy entropy to words that could still be the answer
+and you have forced `p_win` up without touching its scoring rule at all — and it
+gains **0.176 ± 0.005 guesses** (3.6785 → 3.5021 over 20,000 games,
+`analysis/hard_mode.py`). That is a third of the 0.561 the objective gets by
+*pricing* the same bonus rather than imposing it. The objective does better
+because it takes the bonus **and** keeps the probes: it plays a non-candidate
+whenever the split is worth more than the win chance it gives up, which is
+exactly the trade hard mode is not allowed to make.
+
+And the actual fitted curve for the default prior is a piecewise-linear spline,
+not a formula worth memorizing:
 
 ```
-f(n) = 0.6095 - 0.0035·x + 0.7737·√x        (x = log₂ n)
+f(n) = 0.955 + 0.372·x − 0.112·(x−2)₊ − 0.138·(x−4)₊ − 0.104·(x−6)₊
+                                            (x = log₂ n, (u)₊ = max(u, 0))
 ```
 
-The linear coefficient is essentially **zero**. Empirically the answer is
-`f ≈ 0.61 + 0.77·√(log₂ n)` — doubly compressive. Concretely: `f(3)=1.58`,
-`f(10)=2.01`, `f(100)=2.58`, `f(1000)=3.02`, `f(12947)=3.42`. Going from 100
-candidates to 1000 costs less than half a guess, which is the honest shape of the
-game — and precisely what a linear `f` cannot express.
+Every knot bends it flatter and none bends it back — the sixth, at `x = 8`, was
+dropped altogether by the monotonicity guard. Concretely: `f(2)=1.33`,
+`f(3)=1.54`, `f(10)=2.04`, `f(100)=2.47`, `f(1000)=2.53`, `f(12947)=2.60`. Going
+from 100 candidates to 1,000 costs **0.06 guesses**, and from 1,000 to the whole
+word list another 0.07 — which is the honest shape of the game, and precisely
+what a linear `f` cannot express.
+
+That is far flatter than the curve fitted under the flat shapes
+(`0.61 + 0.77·√x`, running 2.58 → 3.02 → 3.42 over the same last three points).
+Sharpening the prior did not just move the fit, it changed which shapes are
+usable: with the mass concentrated, the effective size rarely reaches the range
+where a saturating curve has gone flat, so saturation stopped being the
+liability it was. README *Results* has that as a ranking — `invonly` saturates
+completely and rose from 6th to 3rd.
+
+Remember that `f` is fitted **per prior**, so this curve is the default prior's
+and no other. Turn a prior off on the page and a different curve, in a different
+form, is what scores the guesses.
 
 ## 7. Where does `f` come from? Policy iteration
 
@@ -717,6 +734,11 @@ check, so a collision costs a redundant representative but never a missing one
 *always* splits distinctly, since only it produces `GGGGG` — so a real candidate
 can never get merged away into a probe.
 
+Read that property the other way and it says what hard mode does to this step:
+if every guess must be a candidate, then no two guesses can split `S` the same
+way, and the dedupe has nothing left to merge. The search under hard mode skips
+it entirely.
+
 This only bites while `S` is tiny, though: at 12 candidates, 12.7k of the 13k
 guesses already split differently, so beyond that the branching factor is
 effectively the whole word list. That, not the node count, is what makes the
@@ -793,10 +815,13 @@ pool with the candidate set itself and leaves the rest of the dispatch alone; se
 README *Hard mode*, including why `f` is still the one fitted for free play.
 
 The heuristic `E(g,S)` is genuinely a **fallback** — it only runs where the game
-is too wide to solve outright. Result with both priors on and the flat shapes,
-30,000 unseen answers: **3.1841 mean guesses, 99.96% solve rate**, opening word
-`salet`. The sharpened shapes keep the same opening; what they are worth cannot
-be read off a number like this one, for the reason §4.6 gives.
+is too wide to solve outright. Result with both priors on and the shapes that
+ship, 30,000 unseen answers: **3.0789 mean guesses**, opening word `salet`.
+Under the flat shapes the same protocol gave 3.1841. Do not read the difference
+as what the shapes are worth — the answers are drawn from the prior being
+measured, so a sharper prior makes the game genuinely easier and the two rows are
+not comparable. §4.6 is about exactly that trap; README *Shaping the two priors*
+has the comparable measurement.
 
 ## 12. The result worth framing
 
@@ -830,13 +855,26 @@ they are. Lookahead and deeper search estimate a *fixed* quantity more
 accurately, and accuracy was never the binding constraint. A prior changes the
 quantity being optimized: which words are plausible answers at all. That is a
 decision-side change wearing valuation-side clothes, which is why it escapes the
-rule — and why the two shapes had to arrive together, since each alone leaves
-the other's error binding.
+rule. (The stronger claim that each shape *needs* the other is not in the current
+numbers — see §4.5.)
 
-Which is also the honest reading of the numbers: the ~0.50-guess gain over greedy
-entropy is ~0.46 from the possible-answer bonus and ~0.04 from curvature in `f` —
-and the *prior* is worth more than either. Modeling the editor beat improving
-the search, every time.
+Hard mode is the same exception in its bluntest form, and the one that makes the
+distinction hard to argue with. It improves no valuation whatsoever — it deletes
+words from the choice set — and under greedy entropy it is worth **−0.176 ±
+0.005** guesses, an order of magnitude more than one-ply lookahead buys by
+valuing positions three times better. Take the choice away from a policy that
+was pricing it wrong and you gain more than you do by pricing everything else
+right. (Under the expected-guesses objective, which already prices it, the same
+restriction costs +0.029 ± 0.003. Same intervention, opposite sign, entirely
+because of what the objective was already getting right.)
+
+Which is also the honest reading of the numbers: the 0.60-guess gain over greedy
+entropy is 0.56 from the possible-answer bonus and 0.04 from curvature in `f`.
+And the bonus is the *prior* showing up inside the objective — `p_win` is
+nothing but the mass the prior puts on the word being guessed, which is why the
+same decomposition read 0.46 under the flat shapes and 0.56 under the sharpened
+ones. The search contributes the 0.04. Modeling the editor beat improving the
+search, every time.
 
 ---
 
