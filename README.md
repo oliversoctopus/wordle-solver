@@ -469,8 +469,42 @@ ordinary fit. So `f` is always the one fitted for unrestricted play, and under
 the restriction its scores read a little low — the estimate is of a position from
 which the solver would be allowed a probe it is not in fact allowed. That is the
 same reason the restriction costs guesses at all: a word that cannot win is often
-the sharper split. Nothing here measures the size of that; `benchmark --hard`
-against the same run without it is the comparison to make.
+the sharper split.
+
+What it costs, over 20,000 games per row, answers drawn from the row's own prior,
+the same answers in both arms, failures counted as 7 (`analysis/hard_mode.py`):
+
+| priors | free | hard | paired cost | losses, free → hard |
+| --- | --- | --- | --- | --- |
+| none | 4.0629 | 4.4467 | +0.3839 ± 0.0073 | 12 → 1561 |
+| curation only | 3.4846 | 3.5928 | +0.1081 ± 0.0046 | 2 → 87 |
+| repeat only | 4.0133 | 4.3688 | +0.3554 ± 0.0072 | 9 → 1501 |
+| **both (default)** | **3.0770** | **3.1059** | **+0.0290 ± 0.0028** | **2 → 16** |
+| both, `frequency` | 3.1193 | 3.1490 | +0.0297 ± 0.0027 | 11 → 65 |
+
+Under the shipped prior it costs **+0.029 ± 0.003** guesses — real at 10σ, and
+about a twentieth of what the estimator is worth over greedy entropy. What sets
+the size is how flat the prior is: with no priors at all the cost is thirteen
+times larger and the solve rate falls from 99.94% to **92.20%**, because a wide
+candidate set with no probe available is exactly the position the restriction
+forbids you to fix. Concentrate the mass and the candidate set collapses fast
+enough that the likely answers are decent probes anyway.
+
+The losses are where it really shows. Even in the default row, where the mean
+barely moves, they go 2 → 16 over the same games. Hard mode arrives in the
+one-letter families of *The penalty* below and then cannot spend a turn
+separating them, since the separating word is the one it is not allowed to play.
+
+The opening word never changes, in any row. Every one of the 12,947 words carries
+prior mass, so at the first guess every word is still a possible answer and the
+restriction binds nothing at all.
+
+Under `--mode entropy` the restriction **helps**, by −0.176 ± 0.005 guesses on the
+default prior (3.6785 → 3.5021, over the same 20,000 games). That is the identity
+under *Results* read backwards: what greedy entropy is missing is the bonus for
+guessing a word that could be the answer, and hard mode supplies it by force. It
+pays in losses, 0 → 30, and it still does not reach the expected-guesses policy's
+3.0770 — which gets the same bonus for free, and keeps the probes.
 
 ## The exact endgame
 

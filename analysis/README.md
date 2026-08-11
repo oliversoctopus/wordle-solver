@@ -1,24 +1,28 @@
 # analysis/
 
 Every measured number in `README.md` and `SOLVER_EXPLAINED.md` about the two
-priors, and about which form of `f` is the default, comes from one of these.
-They read `data/` and the estimator cache and print; they write nothing.
+priors, about which form of `f` is the default, and about what hard mode costs,
+comes from one of these. They read `data/` and the estimator cache and print;
+they write nothing.
 
 ```
 python analysis/regime.py           the regime table and the pool arithmetic
 python analysis/repeat_shapes.py    prequential comparison of repeat shapes
 python analysis/drift.py            is the source window moving?
 python analysis/curation_shapes.py  prequential comparison of curation shapes
+python analysis/hard_mode.py        what the hard-mode restriction costs
 python analysis/replay.py           what the shapes are worth in guesses (slow)
 python analysis/form_default.py     which form to fit by default (slower)
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
 ```
 
-The first four are seconds. `replay.py` plays a few thousand real games and
-takes a few minutes; `form_default.py` replays 45 fitted policies and takes
-longer again; `results_tables.py` is an hour and a quarter at its default sizes,
-most of it the flat-prior rows, where more candidates survive each guess and the
-endgame search runs on bigger sets.
+The first four are seconds. `hard_mode.py` is 15 s for the default prior and two
+minutes for `--all-priors`, both arms at 20,000 games — cheap because the
+restriction it measures is also what makes a turn cheap to score. `replay.py`
+plays a few thousand real games and takes a few minutes; `form_default.py`
+replays 45 fitted policies and takes longer again; `results_tables.py` is an
+hour and a quarter at its default sizes, most of it the flat-prior rows, where
+more candidates survive each guess and the endgame search runs on bigger sets.
 
 | script | backs |
 | --- | --- |
@@ -26,6 +30,7 @@ endgame search runs on bigger sets.
 | `repeat_shapes.py` | README *Sharpening the repeat prior* table, SOLVER_EXPLAINED §4.2 |
 | `drift.py` | the closing paragraph of README *Sharpening the repeat prior* |
 | `curation_shapes.py` | SOLVER_EXPLAINED §4.3 including why the hedge is flat, the opening of README *Shaping the two priors* |
+| `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results* |
@@ -62,6 +67,11 @@ estimator as much as on the data, and every configuration's winning form moved
 in the 2026-08-10 refit, so its output cannot be diffed against a run from
 before that. The same holds for `form_default.py`: it scores the fits in
 `estimator_cache/forms/`, so a refit moves every row.
+
+`hard_mode.py` is the one that survives a refit, and it is worth knowing why: its
+two arms play the *same* `f`, so a refit moves both columns together and mostly
+cancels in the paired difference. Read the difference across refits; read the
+two means only against each other.
 
 Three rows of the README *Shaping the two priors* table — `wordlebot` alone,
 `binned` alone, and the uniform baseline they are measured against — are now
