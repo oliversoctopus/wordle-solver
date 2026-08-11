@@ -15,6 +15,13 @@ instructions live there and nowhere else — do not restore a copy of them to th
 top of `SOLVER_EXPLAINED.md`, and if you add or remove a section, its section map
 is the thing that goes stale.
 
+**Read its *If you edit it* rules before changing `SOLVER_EXPLAINED.md`.** That
+document decays by accretion — a result gets appended, then a paragraph
+reconciling it with the one above — until it reads as a changelog rather than an
+explanation. It has been rewritten once to undo exactly that. The short version:
+edit the sentence that carries a number rather than adding one that says the
+number moved, and never let the document mention its own revision history.
+
 ## Conventions
 
 **American English**, everywhere: prose, comments, identifiers, CSS custom

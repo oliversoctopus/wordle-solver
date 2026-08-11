@@ -116,7 +116,58 @@ The figures in it come from the same runs as `README.md`'s, so a refit of the
 estimator or an update to `data/solutions.json` moves both. `analysis/` holds the
 scripts behind them.
 
-It does carry its own history on purpose — "under the flat shapes the same
-decomposition read 0.462", and so on. That is not staleness. A derivation is
-partly a record of what was tried, and several of the results here are only
-convincing next to the thing they replaced.
+## If you edit it
+
+This document decays in a specific way, and it has done it once already. Findings
+get appended rather than absorbed: a paragraph states a result, a later paragraph
+opens "under the shipped shapes the same decomposition comes out…", and a third
+explains which of the two you should believe. Each addition is individually
+reasonable. The sum is a changelog wearing the clothes of an explanation, and it
+reads like one — the reader ends up reconstructing the project's history in order
+to extract its conclusions.
+
+It was rewritten end to end to undo that. These are the rules that undid it, and
+following them is what keeps a rewrite from being needed again.
+
+**Say what is true now, in the place it belongs.** When a number moves, edit the
+sentence that carries it. Do not add a paragraph saying it moved. If two
+paragraphs disagree, one of them is a patch and should not exist.
+
+**Keep superseded numbers only where the contrast is the lesson.** The
+possible-answer bonus growing 0.46 → 0.56 as the prior sharpens is evidence for
+§12's thesis, so it stays — as a clause, inside the current statement. "An
+earlier version of this table reported −8.08" teaches nothing and goes. The test:
+does the old number explain something about the solver, or only about the repo?
+
+**Never let the document talk about itself.** No "the claim this section used to
+make is dead", no "this section has been updated", no dates of revision. Where
+the project was wrong and the error is instructive — §4.5's superadditivity,
+§4.6's `sqrt` trap — tell it as something that happened to the *project*, in the
+past tense, as part of the argument. The reader should never be made aware they
+are reading a file with a git history.
+
+**Put a new finding where the argument needs it, not at the end.** Hard mode
+earns its place in §6 because it is the cleanest test of the entropy identity;
+it appears again in §9 and §11 only as a consequence, and in §12 as an example of
+the thesis. It is not a section of its own. Ask what a new result is *evidence
+for*, and put it next to the claim it supports.
+
+**Say each thing once.** The warning that the §4 table is not comparable across
+rows belongs at that table and nowhere else. A caveat repeated in three sections
+is three places to forget to update.
+
+**Every section should hand off.** End by naming the question the next one
+answers — §0 lists what §1–§3 must supply, §3 sets up why §4 is the long one, §6
+ends "where `f` comes from is §7's problem." The order is the argument; a section
+that could be moved without anyone noticing is not carrying its weight.
+
+**Point at code by name, never by line number** — `priors.build_weights`, not
+`priors.py:221`. One pass found seven references that had silently drifted.
+
+**Section numbers are load-bearing.** The map above, and cross-references
+throughout both long documents, are keyed to them. Renumbering is a
+whole-repository edit, so prefer to add subsections at the end of a section.
+
+A quick way to check yourself: read the section you edited from its first line,
+out loud if you can stand it. If you hear the seam where your paragraph joins,
+the reader will too.
