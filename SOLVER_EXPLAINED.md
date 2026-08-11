@@ -40,7 +40,7 @@ compute feedback (§1), a way to describe what a guess *does* to the candidate s
 
 ## 1. The feedback rule, and why there's a 167 MB file
 
-`score_guess` in `wordle_data.py:54` implements the coloring rule, including the
+`wordle_data.score_guess` implements the coloring rule, including the
 fiddly duplicate-letter case. The rule is two passes: **greens are assigned
 first**, and then yellows consume whatever letters are left over, at most one
 tile per copy of the letter in the answer.
@@ -141,7 +141,7 @@ $$H(S) = \underbrace{H(p_1, \ldots, p_k)}_{\text{which bucket}} + \sum_r p_r H(S
 
 Substituting, **the information gained is exactly the entropy of the bucket-mass
 distribution.** You never need to look inside the buckets. That's
-`kernels.py:87` — accumulate mass per pattern, then `h -= p*log2(p)`.
+`kernels._ig` — accumulate mass per pattern, then `h -= p*log2(p)`.
 
 That gives **`--mode entropy`**: pick the guess whose partition has the highest
 bucket entropy. It's the standard 3Blue1Brown-style solver, and it averages
@@ -160,7 +160,7 @@ punchline and the reason §4 is the longest section here.
 That's badly wrong, and fixing it turns out to be worth more than *any* search
 improvement in the project.
 
-`priors.py:221` models the editor as a two-step process:
+`priors.build_weights` models the editor as a two-step process:
 
 1. With probability **0.10**, reuse a word that has already been an answer
    (among the ~1,858 used ones).
@@ -501,7 +501,7 @@ has 40 candidates" is misleading — 40 candidates with one of them at 90%
 probability is much easier than 40 equally likely ones. Everything from here on
 needs a size that knows the difference.
 
-The fix (`estimator.py:212`):
+The fix (`estimator.effective_size`):
 
 $$n_{\text{eff}} = 2^{H}$$
 
@@ -544,7 +544,7 @@ what coupled a candidate's contribution to a global property of its bucket, and
 factoring the logarithm decouples it again.
 
 So `w_i log₂ w_i` is computed **once per candidate**, up front, for all guesses
-(`_w_log_w`, `kernels.py:138`). The inner accumulate loop then just adds a
+(`kernels._w_log_w`). The inner accumulate loop then just adds a
 precomputed float into a bucket:
 
 ```
@@ -554,7 +554,7 @@ w_log_w[r] += wlw[i]        # instead of a log() call here
 and the reduce recovers the entropy from two accumulators it already has:
 
 ```python
-x = np.log2(mass) - wlw / mass      # kernels.py:157 — this x *is* H
+x = np.log2(mass) - wlw / mass      # in _bucket_guesses — this x *is* H
 ```
 
 Cost, for a position with `m` candidates scored against all 12,947 guesses: the
@@ -565,7 +565,7 @@ a wide position.
 
 **One more consequence.** Since `n_eff = 2^H`, that `x` is exactly `log₂(n_eff)` —
 already in the units `f` wants. That's why `f_eval_x` is parameterized by `x`
-rather than by `n` (`estimator.py:138`): every caller reaches `f` through an
+rather than by `n` (`estimator.f_eval_x`): every caller reaches `f` through an
 entropy, so it has `x` in hand, and going via `n` would mean computing `2^x` only
 for `f` to take `log₂` straight back off.
 
@@ -601,7 +601,7 @@ carry real weight:
   informative non-answer.** That bucket costs nothing more — you already won. So
   a guess that might just *be* the answer gets a free discount equal to its
   probability.
-- **Buckets of 1 and 2 skip `f` entirely** (`kernels.py:149`), because their
+- **Buckets of 1 and 2 skip `f` entirely** (`kernels._bucket_guesses`), because their
   values are known in closed form: 1 candidate is worth exactly `1`, and 2
   candidates are worth `2 − p_max` (guess the likelier one; if wrong, you now
   know the other).
@@ -679,7 +679,7 @@ different curve, in a different functional form, is what scores the guesses.
 Circular problem: to play well you need `f`, but `f` is defined as the cost
 *under good play*. This is the same chicken-and-egg as value functions in
 reinforcement learning, and it's solved the same way — bootstrap and iterate
-(`train.py:86`).
+(`train.policy_iteration`).
 
 ```
 round 0:  play 2,000 games with greedy entropy (needs no f)
@@ -716,7 +716,7 @@ Three constraints worth flagging:
 - **Training games are played with no 6-turn deadline.** Otherwise a game that
   runs long gets truncated at 6, biasing the targets downward. The deadline is a
   constraint layered *on top* of `f`, not part of it — which is §8.
-- **`f` must be non-decreasing** on `[1, 12947]` (`estimator.py:233`). If a
+- **`f` must be non-decreasing** on `[1, 12947]` (`estimator._is_monotone`). If a
   bigger candidate set could score *cheaper*, the search would prefer
   uninformative guesses that dump everything into one bucket. When the full basis
   violates that, terms are dropped from the end until it holds — which is why
@@ -778,7 +778,7 @@ branching factor is the number of *distinct partitions* rather than 12,947. With
 ≤7 candidates the whole feedback vector packs into one int64 (8 bits per
 candidate) and equal keys are provably equal partitions; above that it's an FNV
 hash with an explicit collision check, so a collision costs a redundant
-representative but never a missing one (`kernels.py:365`). Nice safety property:
+representative but never a missing one (`kernels.distinct_partitions`). Nice safety property:
 a guess that could itself be the answer *always* splits distinctly, since only it
 produces `GGGGG` — so a real candidate can never get merged away into a probe.
 (Which is also why hard mode skips this step entirely: if every guess must be a
@@ -926,16 +926,19 @@ Modeling the editor beat improving the search, every time.
 
 In reading order:
 
-| file | what it establishes |
+| where | what it establishes |
 | --- | --- |
-| `wordle_data.py:54` | the feedback rule and the precomputed table (§1) |
-| `priors.py:221` | the weight vector over answers (§4) |
-| `priors.py:153` | the repeat shape, binned by first appearance (§4.2) |
-| `priors.py:196` | the curation shapes, WordleBot and frequency (§4.3, §4.4) |
-| `kernels.py:87` | the entropy scorer (§3) |
-| `estimator.py:212` | effective size, and the split-logarithm rearrangement (§5) |
-| `kernels.py:160` | the expected-guesses scorer (§6) |
-| `estimator.py` | `f`, its functional forms, and the monotonicity guard (§6, §7) |
-| `train.py:86` | policy iteration (§7) |
-| `exact.py` | the endgame search, and the loss penalty (§8, §9) |
-| `solver.py:196` | the dispatch deciding which of the above runs (§11) |
+| `wordle_data.score_guess` | the feedback rule and the precomputed table (§1) |
+| `priors.build_weights` | the weight vector over answers (§4) |
+| `priors._repeat_shape` | the repeat shape, binned by first appearance (§4.2) |
+| `priors._curation_shape` | the curation shapes, WordleBot and frequency (§4.3, §4.4) |
+| `kernels._ig` | the entropy scorer (§3) |
+| `estimator.effective_size` | effective size, and the split-logarithm rearrangement (§5) |
+| `kernels._expected_guesses` | the expected-guesses scorer (§6) |
+| `estimator.FORMS`, `estimator.fit` | `f`, its functional forms, and the monotonicity guard (§6, §7) |
+| `train.policy_iteration` | policy iteration (§7) |
+| `exact.ExactEndgame` | the endgame search, and the loss penalty (§8, §9) |
+| `solver.WordleSolver._best_guess_uncached` | the dispatch deciding which of the above runs (§11) |
+
+Named rather than given as line numbers, which drift with every edit. Every
+entry is greppable: `grep -rn "def score_guess" .`

@@ -28,6 +28,12 @@ change, no measurement tables in source. The reasoning and the numbers go in
 `README.md`; the comment says what the line does. File headers explaining what a
 module is are the exception and are welcome.
 
+**Point at code by name, never by line number.** `priors.build_weights`, not
+`priors.py:221`. Line references go stale on the next edit and nothing checks
+them — a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted.
+A `module.function` name is stable, greppable, and wrong loudly rather than
+quietly if the symbol is renamed.
+
 **Line endings are LF, everywhere, including `web/`.** They were mixed until
 2026-08-10 and the rule that described them ("CRLF in `web/`") was never true of
 either side of that line; the whole tree is normalized now.
