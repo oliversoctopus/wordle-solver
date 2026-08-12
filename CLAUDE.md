@@ -42,7 +42,7 @@ em-dash aside. Each of those is good English by itself, and the trouble is only
 the rate at which it recurs. Mix in sentences that open on a subordinate clause,
 sentences joining two full clauses, and sentences that state a thing and stop.
 Chopping the long ones into short ones is not the fix; it reads worse than what
-it replaced. `SOLVER_EXPLAINED.md` §0–3 is the sound to aim for.
+it replaced.
 
 **Hold that one loosely.** It is a smell worth checking when a paragraph reads
 badly, and not a rule to enforce by counting. Three sentences in a row can take
