@@ -683,9 +683,9 @@ function renderPlayPanel() {
 
 const VOWELS = "aeiou";
 
-/** The letter odds, with the vowels in a row of their own. The server sends
-    only the letters still in doubt, so an empty list means there is nothing
-    left to show and the card is hidden. */
+/** The letter odds, with the vowels in a row of their own. The server drops
+    the letters no remaining candidate holds, and an empty list hides the
+    card. */
 function renderLetterOdds() {
   const letters = (game && game.letters) || [];
   $("letters-card").hidden = letters.length === 0;

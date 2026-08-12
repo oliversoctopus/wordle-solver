@@ -410,9 +410,9 @@ def letter_odds(pool, game):
 
     The weighting is the prior the answer was drawn from and not the settings on
     the request, so turning a prior off mid-game rethinks the hint but leaves
-    these numbers alone.  A letter every remaining candidate holds sits at 1.0
-    and one no candidate holds sits at 0.0; the keyboard is already coloring
-    both, so neither is listed.
+    these numbers alone.  A letter no remaining candidate holds sits at 0.0 and
+    is left out; the gray keys have said that already.  The ones at 1.0 stay,
+    and they sort to the front.
     """
     with pool.lock:
         # entropy's solver will do: this wants weights and filtering, never a
@@ -427,9 +427,9 @@ def letter_odds(pool, game):
             return []
         odds = (weights @ solver.data.letter_presence()[candidates]) / total
 
-    settled = 1e-9   # nothing this close to 0 or 1 is genuinely in doubt
+    absent = 1e-9   # this close to zero and no candidate holds the letter at all
     return [{"letter": chr(ord("a") + i), "chance": float(odds[i])}
-            for i in np.argsort(-odds) if settled < odds[i] < 1.0 - settled]
+            for i in np.argsort(-odds) if odds[i] > absent]
 
 
 def game_hint(pool, game, settings):

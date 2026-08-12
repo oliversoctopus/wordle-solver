@@ -84,10 +84,10 @@ listed above the other letters.
 
 The prior doing the weighting is the one the answer was drawn from, not the one
 the switches currently name, so turning a prior off mid-game rethinks the hint
-but leaves these numbers alone. Letters are listed only while they are in doubt.
-Once every remaining candidate holds an E, or once none of them does, the chance
-is 100% or 0%. The keyboard is already coloring that letter, and the list drops
-it. Late in a game there is often nothing left in doubt and the card disappears.
+but leaves these numbers alone. A letter that no remaining candidate holds drops
+off the list, since 0% says nothing the gray keys have not said already. Letters
+at 100% stay and sort to the top, so late in a game the list opens with the ones
+the answer is known to contain.
 
 **Find** is the page's own, and it runs backwards from everything else here. The
 answer is known and the guess is the unknown. Type an answer, color the pattern
