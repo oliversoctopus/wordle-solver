@@ -213,12 +213,29 @@ because the data did, not because the analysis drifted.
 
 ## Testing
 
-There is no test suite in the repo. For page logic, the approach that works is a
-small fake DOM plus a fake `fetch`, loading `web/app.js` unmodified via `vm` and
-appending a getter object to reach its internals. That catches the cursor and
-board-state bugs, which is where they live. Server endpoints are quickest to
-check with `http.client` over a single keep-alive connection — several bugs have
-been connection-reuse bugs, and one request per connection hides them.
+`tests/` holds three files and `tests/README.md` describes them; `python
+tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the
+table. They are deliberately narrow — the board's editing rules, the two front
+ends agreeing on how the solver is asked, and whether the cached `f` is a fit of
+the answer record we have.
+
+**Nothing there asserts a number written down by hand, and nothing new should.**
+Each check has an oracle instead: the other front end, the answer record, or a
+property that holds of every board. A figure copied into a test is a fourth
+place for it to go stale, and there are three already.
+
+The board tests are the pattern to follow for page logic: a small fake DOM plus
+a fake `fetch`, `web/app.js` loaded unmodified via `vm`, and a getter object
+appended to reach its internals. Cursor and board-state bugs are where the page's
+bugs live. Add cases as **properties over a random walk of whole intentions**
+(*a word*, *clearing the row by hand*), not as more sequences you thought of:
+bare random keystrokes never clear a row, and the anchors only ever cover what
+someone already had in mind. The phantom free row was found by the walk, not by
+anyone writing a case for it.
+
+Server endpoints are quickest to check with `http.client` over a single
+keep-alive connection — several bugs have been connection-reuse bugs, and one
+request per connection hides them.
 
 Do not trust a solver change without checking it end to end: build a truthful
 board with `score_guess(guess, answer)` instead of hand-writing patterns, or

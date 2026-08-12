@@ -1,0 +1,95 @@
+"""Is each cached f still a fit of the answer record we have?
+
+`estimator` keys its cache on the `PriorConfig` alone.  It checks that a cached
+fit was made for the prior and the form being asked for, and nothing checks what
+answer record it was fitted against -- so `solutions.py --write` silently leaves
+every fit describing a shorter history than the solver now scores against, and
+the page carries on recommending under it.  Nothing anywhere says so.
+
+This is the one thing here that is not a test of code.  It compares two files:
+the `fitted_at` stamp each cache already carries, and the newest answer the
+solver actually uses.  What it catches is not a wrong function but a stale one.
+
+    python tests/fit_provenance.py
+
+Refit what it names with:  python wordle_solver.py train --this-config-only
+"""
+
+import datetime
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import estimator
+import web
+from wordle_data import DATA_DIR
+
+failures = 0
+
+
+def report(ok, what, detail=""):
+    global failures
+    if not ok:
+        failures += 1
+    print(f"{'ok  ' if ok else 'FAIL'}  {what}")
+    if detail:
+        print(f"        {detail}")
+
+
+def answer_record(mask_last):
+    """The newest answer the solver is allowed to see, and how many there are."""
+    with open(os.path.join(DATA_DIR, "solutions.json"), encoding="utf-8") as fh:
+        solutions = json.load(fh)
+    used = solutions[:-mask_last] if mask_last else solutions
+    newest = used[-1]
+    return len(used), newest["solution"], date_of(newest["print_date"])
+
+
+def date_of(text):
+    return datetime.date.fromisoformat(text[:10])
+
+
+def page_configs():
+    """Every prior the page's two switches can name, which is every prior a fit
+    has to exist for before expected-guesses play works at all."""
+    return [(f"repeat={repeat}, curation={curation}",
+             web.parse_config({"repeat": repeat, "curation": curation}))
+            for repeat in (True, False) for curation in (True, False)]
+
+
+def main():
+    mask_last = web.build_parser().parse_args([]).mask_last
+    count, newest_word, newest_date = answer_record(mask_last)
+    print(f"the answer record holds {count} answers the solver may use, "
+          f"the newest {newest_word} on {newest_date}")
+    if mask_last:
+        print(f"(the last {mask_last} are masked, so today's answer is not in it)")
+    print()
+
+    for label, config in page_configs():
+        path = estimator.cache_path(config)
+        if not os.path.exists(path):
+            report(False, f"{label} has a fit",
+                   f"nothing at {os.path.relpath(path)}; expected-guesses play "
+                   f"raises NotFitted for this prior")
+            continue
+
+        with open(path, encoding="utf-8") as fh:
+            fit = json.load(fh)
+        fitted = date_of(fit["fitted_at"])
+        stale = fitted < newest_date
+        report(not stale, f"{label} is fitted against the record we have",
+               f"{config.slug}: fitted {fitted} in the '{fit['form']}' form, "
+               f"{(newest_date - fitted).days} days behind the newest answer; "
+               f"refit before trusting a replay"
+               if stale else
+               f"{config.slug}: fitted {fitted} in the '{fit['form']}' form")
+
+    print(f"\n{failures} stale or missing" if failures else "\nall passed")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -858,17 +858,24 @@ def build_parser():
     return parser
 
 
-def main(argv=None):
-    args = build_parser().parse_args(argv)
-
-    pool = SolverPool(mask_last=args.mask_last, options={
+def solver_options(args):
+    """How every solver this server builds is configured, as `wordle_solver`'s
+    ``solver_kwargs`` is for the terminal.  The two have to agree where they
+    overlap, and `tests/front_ends_agree.py` is what says so."""
+    return {
         "use_exact": not args.no_exact,
         "exact_max": args.exact_max,
         "loss_penalty": args.loss_penalty,
         "exact_max_branch": None if args.exact_branch <= 0 else args.exact_branch,
         "lookahead": args.lookahead,
         "beam_width": args.beam_width,
-    })
+    }
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+
+    pool = SolverPool(mask_last=args.mask_last, options=solver_options(args))
     if args.wording_file:
         global WORDING
         WORDING = wording.Wording(path=os.path.abspath(args.wording_file))
