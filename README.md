@@ -63,11 +63,31 @@ the quickest way to set the solver a position, and it is the only setting that
 deals a new game — an answer already dealt cannot be given a different one.
 *Hint* is the terminal game's `?` and presses again to close, the *Assist* switch
 is `--assist` (Enter then plays its pick, which is `--auto`), *Reveal answer* is
-`quit`, and the emoji grid at the end is `--share`. Under the recommendation is
-an *Alternatives* card holding the rest of the ranking, opened by *Assist* and
-never closed behind you; clicking a word puts it in the row you are typing. The
-answer stays on the server until the game is over, so the network traffic does
-not spoil it.
+`quit`, and the emoji grid at the end is `--share`. The answer stays on the
+server until the game is over, so the network traffic does not spoil it.
+
+The panel beside the board holds three cards, and all three fold away. They start
+closed.
+
+*Solver's pick* holds the word the solver would play here and its score.
+*Alternatives* holds the next four behind it; clicking one of those words puts it
+in the row you are typing. Both cards open when you turn *Assist* on, and both
+open when you press *Hint*. Neither is ever closed for you, so a card you opened
+with *Assist* off is still open on your next turn.
+
+*Letter frequency* sits above those two and *Assist* doesn't touch it. You open
+and close it yourself, and it stays as you left it for the rest of the game. Each
+letter carries the chance that the answer contains it somewhere: the prior's
+weight on the remaining candidates that hold the letter, over the prior's weight
+on all of them. On an empty board E is at the top with about 40%. Vowels are
+listed above the other letters.
+
+The prior doing the weighting is the one the answer was drawn from, not the one
+the switches currently name, so turning a prior off mid-game rethinks the hint
+but leaves these numbers alone. Letters are listed only while they are in doubt.
+Once every remaining candidate holds an E, or once none of them does, the chance
+is 100% or 0%. The keyboard is already coloring that letter, and the list drops
+it. Late in a game there is often nothing left in doubt and the card disappears.
 
 **Find** is the page's own, and runs the other way round from everything else:
 the answer is known and the guess is what is being looked for. Type an answer,

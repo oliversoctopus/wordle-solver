@@ -612,7 +612,12 @@ function askHint() {
 
 /** The hint button is a toggle: press it again and the answer goes away. */
 function toggleHint() {
-  if (!hint) return askHint();
+  // pressing Hint means you want to see the pick, so open the card whether or
+  // not assist would have
+  if (!hint) {
+    $("hint-card").open = true;
+    return askHint();
+  }
   hint = null;
   renderPlayPanel();
   renderLocal();
@@ -648,7 +653,8 @@ function renderPlayPanel() {
     ? `The answer was ${game.answer.toUpperCase()} — ${game.source}.`
     : `The answer is ${game.source}.`;
 
-  $("hint-card").hidden = !hint;
+  const pick = $("hint-card");
+  pick.hidden = !hint;
   if (hint) {
     $("hint-word").textContent = hint.word;
     $("hint-score").textContent =
@@ -658,18 +664,56 @@ function renderPlayPanel() {
     tag.hidden = false;
     tag.className = "tag" + (hint.exact ? " exact" : "");
     tag.textContent = hint.exact ? "Exact" : (hint.mode === "entropy" ? "Greedy" : "Estimated");
+    if ($("opt-assist").checked) pick.open = true;
   }
 
   const alts = (hint && hint.alternatives) || [];
   const card = $("game-alt-card");
   card.hidden = alts.length === 0;
-  // assist opens it; nothing ever closes it, so opening it by hand while assist
-  // is off survives the next guess
+  // assist opens both, and nothing ever closes them: a card opened by hand with
+  // assist off is still open after the next guess
   if (alts.length && $("opt-assist").checked) card.open = true;
   fillAlternatives($("game-alternatives"), alts, playFill);
 
+  renderLetterOdds();
+
   $("share-card").hidden = !game.share;
   if (game.share) $("share-grid").textContent = game.share;
+}
+
+const VOWELS = "aeiou";
+
+/** The letter odds, with the vowels in a row of their own. The server sends
+    only the letters still in doubt, so an empty list means there is nothing
+    left to show and the card is hidden. */
+function renderLetterOdds() {
+  const letters = (game && game.letters) || [];
+  $("letters-card").hidden = letters.length === 0;
+  if (!letters.length) return;
+
+  const vowels = letters.filter((entry) => VOWELS.includes(entry.letter));
+  const rest = letters.filter((entry) => !VOWELS.includes(entry.letter));
+  fillLetters("vowel", vowels);
+  fillLetters("consonant", rest);
+}
+
+function fillLetters(kind, entries) {
+  $(`${kind}s-head`).hidden = entries.length === 0;
+  const list = $(`${kind}-letters`);
+  list.hidden = entries.length === 0;
+  list.textContent = "";
+  for (const entry of entries) {
+    const item = document.createElement("li");
+    const tile = document.createElement("span");
+    tile.className = "letter-tile";
+    tile.textContent = entry.letter;
+    const chance = document.createElement("span");
+    chance.className = "letter-chance";
+    // "0.0%" would read as impossible when the letter is merely a long shot
+    chance.textContent = entry.chance < 0.001 ? "<0.1%" : RATE(entry.chance);
+    item.append(tile, chance);
+    list.appendChild(item);
+  }
 }
 
 /** The ranked list under a recommendation, in either view. */

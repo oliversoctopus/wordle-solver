@@ -89,6 +89,7 @@ class WordleData:
     past_solutions: list     # answers that have already been used, in order
     puzzle_numbers: list     # Wordle's own number for each of those, in step
     feedback_table: np.ndarray  # uint8 [guess, answer] -> pattern number
+    _letter_presence: np.ndarray = None
 
     @property
     def n_words(self):
@@ -96,6 +97,18 @@ class WordleData:
 
     def all_candidates(self):
         return np.arange(self.n_words, dtype=np.int64)
+
+    def letter_presence(self):
+        """bool [word, letter] -- does the word contain that letter at all.
+        It is built once and kept, which turns a weighted count over any
+        candidate set into a single matrix product."""
+        if self._letter_presence is None:
+            grid = np.frombuffer("".join(self.all_words).encode(), dtype=np.uint8)
+            grid = grid.reshape(self.n_words, -1).astype(np.intp) - ord("a")
+            presence = np.zeros((self.n_words, 26), dtype=bool)
+            np.put_along_axis(presence, grid, True, axis=1)
+            self._letter_presence = presence
+        return self._letter_presence
 
 
 _CACHE = {}

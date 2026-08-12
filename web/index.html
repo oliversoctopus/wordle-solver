@@ -206,17 +206,34 @@
       submits the solver's recommendation.</p>
     </div>
 
-    <div class="card" id="hint-card" hidden>
-      <div class="card-head">
+    <!-- above the two solver cards.  Assist does not touch this one; the
+         player opens and closes it -->
+    <details class="card foldable" id="letters-card" hidden>
+      <summary><h2>Letter frequency</h2><span class="chev" aria-hidden="true"></span></summary>
+      <div class="foldable-body">
+        <p class="sub">How likely the answer is to contain each letter the board
+          has not settled yet.</p>
+        <h3 class="letters-head" id="vowels-head">Best possible vowels</h3>
+        <ul class="letters" id="vowel-letters"></ul>
+        <h3 class="letters-head" id="consonants-head">Best possible letters</h3>
+        <ul class="letters" id="consonant-letters"></ul>
+      </div>
+    </details>
+
+    <!-- all three fold away and all three start closed.  Assist opens the two
+         that answer "what should I play" -->
+    <details class="card foldable" id="hint-card" hidden>
+      <summary>
         <h2>Solver's pick</h2>
         <span class="tag" id="hint-tag" hidden></span>
+        <span class="chev" aria-hidden="true"></span>
+      </summary>
+      <div class="foldable-body">
+        <p class="rec-word" id="hint-word">&mdash;</p>
+        <p class="rec-score" id="hint-score"></p>
       </div>
-      <p class="rec-word" id="hint-word">&mdash;</p>
-      <p class="rec-score" id="hint-score"></p>
-    </div>
+    </details>
 
-    <!-- folded away by default: the pick is the answer to the question, and the
-         rest of the ranking is only wanted when you go looking for it -->
     <details class="card foldable" id="game-alt-card" hidden>
       <summary><h2>Alternatives</h2><span class="chev" aria-hidden="true"></span></summary>
       <div class="foldable-body">

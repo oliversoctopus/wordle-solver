@@ -400,7 +400,36 @@ def game_state(pool, session_id, game):
     if game.over:
         state["answer"] = data.all_words[game.answer]
         state["share"] = share_grid(game.rows, game.solved)
+    else:
+        state["letters"] = letter_odds(pool, game)
     return state
+
+
+def letter_odds(pool, game):
+    """The chance the answer contains each letter, likeliest first.
+
+    The weighting is the prior the answer was drawn from and not the settings on
+    the request, so turning a prior off mid-game rethinks the hint but leaves
+    these numbers alone.  A letter every remaining candidate holds sits at 1.0
+    and one no candidate holds sits at 0.0; the keyboard is already coloring
+    both, so neither is listed.
+    """
+    with pool.lock:
+        # entropy's solver will do: this wants weights and filtering, never a
+        # fitted f, so it works under a prior nothing has been fitted for
+        solver = pool.get(game.config, ENTROPY, None)
+        candidates = solver.all_candidates()
+        for guess, pattern in game.rows:
+            candidates = solver.filter(guess, pattern, candidates)
+        weights = solver.weights[candidates]
+        total = float(weights.sum())
+        if candidates.size == 0 or total <= 0.0:
+            return []
+        odds = (weights @ solver.data.letter_presence()[candidates]) / total
+
+    settled = 1e-9   # nothing this close to 0 or 1 is genuinely in doubt
+    return [{"letter": chr(ord("a") + i), "chance": float(odds[i])}
+            for i in np.argsort(-odds) if settled < odds[i] < 1.0 - settled]
 
 
 def game_hint(pool, game, settings):

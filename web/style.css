@@ -424,6 +424,43 @@ main {
 
 button.small { padding: 3px 10px; font-size: 12px; border-radius: 7px; }
 
+/* --- letter frequency --------------------------------------------------- */
+
+.letters-head {
+  margin: 14px 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-dim);
+}
+
+.letters {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 10px 8px;
+}
+
+.letters li { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+
+/* the keyboard's key, at the size a grid of them fits in the panel */
+.letter-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+  background: var(--gray);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.letter-chance { font-size: 11.5px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+
 .share-grid {
   margin: 8px 0 0;
   font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
@@ -491,6 +528,10 @@ button.small { padding: 3px 10px; font-size: 12px; border-radius: 7px; }
 
 .foldable > summary::-webkit-details-marker { display: none; }
 .foldable > summary h2 { margin: 0; }
+
+/* a summary with a tag in it keeps the tag beside its heading, and the
+   chevron on the far edge where every other card has it */
+.foldable > summary .chev { margin-left: auto; }
 
 .chev {
   width: 8px;
