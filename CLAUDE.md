@@ -16,11 +16,12 @@ top of `SOLVER_EXPLAINED.md`, and if you add or remove a section, its section ma
 is the thing that goes stale.
 
 **Read its *If you edit it* rules before changing `SOLVER_EXPLAINED.md`.** That
-document decays by accretion — a result gets appended, then a paragraph
-reconciling it with the one above — until it reads as a changelog rather than an
-explanation. It has been rewritten once to undo exactly that. The short version:
-edit the sentence that carries a number rather than adding one that says the
-number moved, and never let the document mention its own revision history.
+document decays by accretion. A result gets appended, then a paragraph
+reconciling it with the one above, and eventually the whole thing reads as a
+changelog instead of an explanation. It has been rewritten once to undo exactly
+that. The short version: edit the sentence that carries a number instead of
+adding one that says the number moved, and never let the document mention its own
+revision history.
 
 ## Conventions
 
@@ -37,9 +38,9 @@ module is are the exception and are welcome.
 
 **Point at code by name, never by line number.** `priors.build_weights`, not
 `priors.py:221`. Line references go stale on the next edit and nothing checks
-them — a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted.
-A `module.function` name is stable, greppable, and wrong loudly rather than
-quietly if the symbol is renamed.
+them; a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted.
+A `module.function` name is stable, greppable, and fails loudly instead of
+quietly when the symbol is renamed.
 
 **Line endings are LF, everywhere, including `web/`.** They were mixed until
 2026-08-10 and the rule that described them ("CRLF in `web/`") was never true of
@@ -122,9 +123,9 @@ starts on the 167 MB table**. Run it deliberately or not at all.
 | `data/wordlebot_weights.json` | nothing | a third-party scrape of WordleBot; not rebuildable here |
 
 `answer_like.py` needs `wordfreq`, which nothing else here does. Its fit is
-sensitive to details that are easy to guess wrong: thirteen features rather than
-the four `SOLVER_EXPLAINED.md` §4.4 names, ten foreign languages rather than
-more, a duplicate-letter *count* rather than a flag, and the ridge applied to
+sensitive to details that are easy to guess wrong: thirteen features and not the
+four `SOLVER_EXPLAINED.md` §4.4 names, exactly ten foreign languages, a
+duplicate-letter *count* where a flag would seem enough, and a ridge that hits
 the intercept too. Change any of them and it still fits, still correlates at
 r ≈ 0.98, and no longer reproduces the file.
 
@@ -142,9 +143,9 @@ cannot drift. Editing an earlier row is therefore the same request as playing a
 new one.
 
 **The settings ride along with the board**, as one `Settings` value parsed per
-request, rather than living on the session. Changing one is then the same request
-as playing a row, which is what lets a switch re-run the solver over the rows
-already played instead of clearing them. Only the answer box deals a new game.
+request. Nothing about them lives on the session. Changing one is then the same
+request as playing a row, which is what lets a switch re-run the solver over the
+rows already played instead of clearing them. Only the answer box deals a new game.
 Nothing on the server has to be kept in step with the switches; do not add a
 setting that is remembered at `/api/new` time.
 
@@ -152,8 +153,8 @@ Every board edit — typing, coloring, deleting a row — is local until Enter.
 `README.md` § *Editing the board* has the rules that follow from this and why
 they are what they are; they are not obvious and they were each a bug once.
 
-Requests are serialized: one in flight, and a second made meanwhile is held
-rather than dropped. Dropping it used to leave a view with nothing in it.
+Requests are serialized: one in flight, and a second made meanwhile is held, not
+dropped. Dropping it used to leave a view with nothing in it.
 
 Patterns cross the wire as either `"NYGNN"` or `[0, 1, 2, 0, 0]`; the server
 takes both, and the page sends whichever it has to hand. A test double for the
@@ -193,5 +194,5 @@ check with `http.client` over a single keep-alive connection — several bugs ha
 been connection-reuse bugs, and one request per connection hides them.
 
 Do not trust a solver change without checking it end to end: build a truthful
-board with `score_guess(guess, answer)` rather than hand-writing patterns, or
+board with `score_guess(guess, answer)` instead of hand-writing patterns, or
 the server rejects it as contradictory and the test proves nothing.

@@ -54,7 +54,7 @@ guess  speed   ->  N N Y N Y      guess  geese   ->  N N N N G
 
 - `speed` has two E's and `abide` has one, so the **first** E takes the yellow
   and the second gets nothing. The D is also yellow — it's in the answer, just
-  not in position 4. So the pattern is `NNYNY`, not "one yellow E."
+  not in position 4. So the pattern is `NNYNY`.
 - `geese` has three E's. The one in position 5 matches `abide`'s E exactly, so it
   goes green — and because greens are assigned first, it consumes the answer's
   only E and the two *earlier* E's get nothing despite coming first in reading
@@ -179,9 +179,9 @@ Those two 0.10s look aggressive against Wordle's full history, and the reason
 they aren't is a regime change: measured over the **current editorial regime
 (Wordle #1690 onward, from 2026-02-02)**, the repeat rate is 11.1% and the
 off-list rate is 8.9%. Over all 1,879 puzzles they'd be 1.1% and 2.5% — roughly
-10× and 4× lower. The reason is mechanical: 1,812 of 2,309 curated words are used
-up, ~334 are consumed a year, so the pool empties in about 1.5 years, and both
-repeats and off-list picks are the editor's response to that.
+10× and 4× lower. What drives it is mechanical: 1,812 of 2,309 curated words are
+used up and ~334 are consumed a year, so the pool empties in about 1.5 years.
+Repeats and off-list picks are both the editor's response to that.
 
 **The prior is where the wins are.** 20,000 answers per row, drawn from that
 row's own prior, each row playing the form of `f` fitted for it:
@@ -472,13 +472,13 @@ is scored against the same real answers, so the blend is a genuine paired
 comparison rather than each prior being asked how it fares in a world of its own
 devising.
 
-Two things to know about the table's provenance before leaning on it. It comes
-from a solver whose estimator has since been refitted, and every configuration's
-winning form moved in that refit, so the policy changed underneath the
-measurement as well as the data — these numbers are comparable to each other and
-to nothing else. And the top three rows can no longer be recomputed from what the
-repo carries, since they need fits for the uniform shapes and a prior with no fit
-refuses to play (§7). What `analysis/replay.py` measures now is the one contrast
+The table's provenance limits what it can be set beside. It comes from a solver
+whose estimator has since been refitted, and every configuration's winning form
+moved in that refit, so the policy changed underneath the measurement as well as
+the data: these numbers are comparable to each other and to nothing else. The top
+three rows can no longer be recomputed from what the repo carries either, since
+they need fits for the uniform shapes and a prior with no fit refuses to play
+(§7). What `analysis/replay.py` measures now is the one contrast
 both surviving fits support, `frequency` against `wordlebot` head to head:
 **−0.010 ± 0.025** blended, the same distance the bottom two rows sit apart,
 reached without the baseline in between.
@@ -838,7 +838,7 @@ Two fifths of all losses vanish for **+0.0001 guesses**. Widening `--exact-max`
 from 24 to 60 takes it to 60 losses. Total: **137 → 60, a 56% reduction, with the
 mean unchanged.**
 
-Worth knowing: every loss in every run was a *non-curated* word. Wordle is
+Every loss in every run was a *non-curated* word. Wordle is
 provably solvable in five guesses, but that theorem is about the 2,309 curated
 words — here 9% of the prior mass sits on 10,638 never-curated ones. Played
 against all 2,309 curated words as answers, the solver loses **0 out of 2,309**.

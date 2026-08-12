@@ -2,14 +2,14 @@
 
 Nothing here is a list of strings to maintain.  The site's own source is read
 and the user-visible text picked out of it by how it is *used* -- text between
-tags, ``textContent = ...``, ``say(...)``, ``SolverError(...)`` and so on --
-so a string written the ordinary way is editable the moment it exists, with no
-step in between.
+tags, ``textContent = ...``, ``say(...)``, ``SolverError(...)`` and so on.  A
+string written the ordinary way is therefore editable the moment it exists, with
+no step in between.
 
 Each occurrence is found at a character offset, so two identical strings in two
-places are two separate things to edit.  Rewriting therefore happens to the
-served bytes of ``index.html`` and ``app.js`` rather than to the rendered page:
-by the time text reaches the DOM there is no telling the two apart.
+places stay two separate things to edit.  Rewriting therefore happens
+to the served bytes of ``index.html`` and ``app.js`` and not to the rendered
+page: by the time text reaches the DOM there is no telling the two apart.
 
 An occurrence's id is ``<file>:<hash of the text>:<n>``, where n counts from 0
 among identical strings *in that file*.  Line numbers and offsets both move

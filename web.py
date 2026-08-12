@@ -7,9 +7,9 @@
 The page does both of the terminal front ends, and switches between them:
 
 * **solve** is ``wordle_solver.py play`` -- here is my recommendation, tell me
-  what you guessed and what came back -- except that the feedback is entered by
-  coloring tiles rather than typing ``NYGNN``, and the prior toggles and the
-  mode are switches rather than flags.
+  what you guessed and what came back -- except that you color the tiles
+  instead of typing ``NYGNN``, and the prior toggles and the mode appear as
+  switches.
 * **play** is ``wordle_game.py``: an answer is drawn from the same prior (or
   typed in), you guess, and the solver is there for a hint if you want one.
   The answer stays on this side until the game ends.
@@ -20,8 +20,8 @@ feedback table and the numba kernels are warmed up in the background as soon as
 the server starts, and the page waits for them.
 
 The whole solver is behind one lock.  Scoring ~13k guesses already uses every
-core, so letting two requests do it at once would only make both slower, and the
-solver's memo tables are not written for concurrent use.
+core, which leaves two concurrent requests nothing to win and both of them
+slower.  The solver's memo tables are not written for concurrent use either.
 """
 
 import argparse

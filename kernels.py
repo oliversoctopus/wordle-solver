@@ -6,38 +6,38 @@ buckets to a single number.  Entropy reduces them to bits gained, the expected
 guess count reduces them through the fitted estimator f, and the two-turn value
 reduces them to the exact score when two guesses remain.
 
-Small candidate sets are scored far more often than large ones -- every node of
+Small candidate sets are scored far more often than large ones.  Every node of
 the exact search and every late turn of every rollout scans a handful of
-candidates against all ~13k guesses -- so a scan must not carry a cost fixed at
-the 243 possible patterns.  Three things avoid that, none of them adding to the
-accumulate loop, which runs once per (guess, candidate) pair and stays
-branch-free:
+candidates against all ~13k guesses, and a scan carrying a cost fixed at the 243
+possible patterns would spend all its time there.  Three things avoid that.  None
+of them adds to the accumulate loop, which runs once per (guess, candidate) pair
+and stays branch-free:
 
-* the per-pattern accumulators are allocated once per block of guesses rather
-  than once per guess;
+* the per-pattern accumulators are allocated once per block of guesses, not
+  once per guess;
 * below ``_RESCAN_MAX`` candidates the reduce walks the candidates a second
   time instead of sweeping all 243 patterns, taking each bucket the first time
-  it is reached and zeroing it there, so the reduce *and* the clear for the next
-  guess both cost the number of candidates;
-* ``w * log2(w)`` depends only on the candidate, never on the guess, so it is
-  computed once per candidate instead of once per (guess, candidate) pair --
-  this alone was most of the cost of scoring a wide position.
+  it is reached and zeroing it there.  The reduce *and* the clear for the next
+  guess then both cost the number of candidates;
+* ``w * log2(w)`` depends only on the candidate and never on the guess.
+  Computing it once per candidate instead of once per (guess, candidate) pair
+  was, on its own, most of the cost of scoring a wide position.
 
-What is left is bound by memory, not arithmetic: ``feedback_table[guess, c]``
+What is left is bound by memory, not arithmetic.  ``feedback_table[guess, c]``
 for scattered ``c`` spends a whole cache line per candidate to use one byte of
-it, so a small scattered candidate set costs several times what the same number
-of adjacent candidates would.  That is why the second pass above is nearly free
--- it re-reads what the first pass has already pulled in -- and why there is
-little further to win here short of also storing the table transposed.
+it, and a small scattered candidate set costs several times what the same number
+of adjacent candidates would.  The second pass above is nearly free for
+that reason, since it re-reads what the first pass has already pulled in, and
+short of storing the table transposed as well there is little further to win.
 
-None of these carry ``fastmath``, and they must not: the reduce reads a bucket
-and then zeroes it for the next guess, and under fastmath LLVM reorders the
-store ahead of the load, so every bucket maximum reads back as zero.  It shows
-up as ``two_turn_scores`` returning 3.0 everywhere and the search preferring
-nonsense words.  The two other scorers happen to survive only because a log or
-a call in the reduce blocks the same transform, which is not something to rely
-on.  Leaving it off costs nothing on the widest positions and up to about 10%
-in the middle, which is a small price for scores that are what they claim.
+None of these carry ``fastmath``, and they must not.  The reduce reads a bucket
+and then zeroes it for the next guess; under fastmath LLVM reorders the store
+ahead of the load, and every bucket maximum reads back as zero.  It shows up as
+``two_turn_scores`` returning 3.0 everywhere and the search preferring nonsense
+words.  The two other scorers happen to survive only because a log or a call in
+the reduce blocks the same transform, which is not something to rely on.
+Leaving it off costs nothing on the widest positions and up to about 10% in the
+middle.  That is a small price for scores that are what they claim.
 
 Every kernel takes a ``pool`` of row indices into the feedback table and returns
 one score per pool entry, in pool order; ``pool=None`` means every row.  Scoring

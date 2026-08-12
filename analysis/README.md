@@ -55,10 +55,10 @@ uniform baseline (−9.27) are fixed points for the same reason.
 It used to compare the sharpened shapes against the uniform ones, which needed
 fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and
 `repeat1_curation1_c-wordlebot`. Those fits are no longer in the repo, and since
-2026-08-10 a prior with no fit raises rather than playing an invented `f`, so
-those arms were removed rather than retrained. What is left is the comparison
-both remaining fits support: curation `frequency` against the shipped
-`wordlebot`, over the regime and by arm.
+2026-08-10 a prior with no fit raises instead of playing an invented `f`. The
+arms were removed rather than retrained. What is left is the comparison both
+remaining fits support: curation `frequency` against the shipped `wordlebot`,
+over the regime and by arm.
 
 ## What is not reproduced here
 
@@ -73,16 +73,16 @@ two arms play the *same* `f`, so a refit moves both columns together and mostly
 cancels in the paired difference. Read the difference across refits; read the
 two means only against each other.
 
-Three rows of the README *Shaping the two priors* table — `wordlebot` alone,
-`binned` alone, and the uniform baseline they are measured against — are now
-history rather than output. Reproducing them means fitting the three
-uniform-shape configurations again, which is a deliberate choice about what this
-repo ships, not something a rerun should do behind your back.
+Three rows of the README *Shaping the two priors* table are history now, not
+output: `wordlebot` alone, `binned` alone, and the uniform baseline they are
+measured against. Reproducing them means fitting the three uniform-shape
+configurations again. That is a deliberate choice about what this repo ships,
+and not something a rerun should do behind your back.
 
 Two figures the documents used to carry could not be reproduced exactly. The
 window variants' *spread* was −124…−129; the best variant here matches, but the
-worst is far worse, so the original must have defined the band more robustly —
-only the best of the sixteen is quoted now, which is the number the argument
-actually needs. And the drift rate's standard error was ±0.39 against ±1.56
-here; the slope agrees to two decimals, so the parameterization is right and the
-error model is not.
+worst is far worse, so the original must have defined the band more robustly.
+Only the best of the sixteen is quoted now, which is the number the argument
+actually needs. The drift rate's standard error was ±0.39 against ±1.56 here;
+the slope agrees to two decimals, so the parameterization is right and the error
+model is not.

@@ -39,24 +39,24 @@ python web.py --port 9000     somewhere else
 python web.py --no-browser    do not open one
 ```
 
-Both terminal front ends are there, and one thing that has no terminal
+Both terminal front ends are there, plus one thing that has no terminal
 equivalent. The group beside *Settings* says which of the three the page is
-doing — it marks where you are, rather than where the button takes you.
+doing. It marks where you are, not where the button will take you.
 
-**Solve** is `wordle_solver.py play`: the feedback is entered by coloring tiles
-rather than typing `NYGNN`, and the prior toggles, `--mode`, `--form` and
-`--hard` are switches rather than flags. *Shape of f* leaves the choice to the
-cache by default and marks which form that is, since the winning form is fitted
-per prior and moves with the toggles. The panel alongside the board carries the
-alternatives, the candidates that are still possible, and — under *Advanced* —
-the prior with the rates it is set from, the objective and the fitted f, each
-with an explanation of what it is doing. Those rates are measured from
-`solutions.json` when the board is built rather than written into the page, so
-the explanation cannot fall behind the answer record the way a sentence quoting
-"about 10%" does. They count one puzzle fewer than the table in *Both defaults
-describe a regime six months old* below: the server drops the last entry of
-`solutions.json` (`--mask-last`, default 1) so that today's answer is not sitting
-in the solver's prior while you are solving today's puzzle.
+**Solve** is `wordle_solver.py play`. You enter the feedback by coloring tiles
+instead of typing `NYGNN`, and the prior toggles, `--mode`, `--form` and
+`--hard` all become switches. *Shape of f* leaves the choice to the cache by
+default and marks which form that is, since the winning form is fitted per prior
+and moves with the toggles. Alongside the board is a panel of alternatives and
+still-possible candidates, with the prior, the objective and the fitted f under
+*Advanced*. Each of those comes with an explanation of what it is doing, and the
+rates quoted in it are measured from `solutions.json` at the moment the board is
+built. Nothing is written into the page, so the explanation can't fall behind the
+answer record the way a sentence quoting "about 10%" would. The count runs one
+puzzle behind the table in *Both defaults describe a regime six months old*
+below: the server drops the last entry of `solutions.json` (`--mask-last`,
+default 1) to keep today's answer out of the solver's prior while you are solving
+today's puzzle.
 
 **Play** is `wordle_game.py`. The *Answer* box takes a word of your own, which is
 the quickest way to set the solver a position, and it is the only setting that
@@ -89,17 +89,17 @@ Once every remaining candidate holds an E, or once none of them does, the chance
 is 100% or 0%. The keyboard is already coloring that letter, and the list drops
 it. Late in a game there is often nothing left in doubt and the card disappears.
 
-**Find** is the page's own, and runs the other way round from everything else:
-the answer is known and the guess is what is being looked for. Type an answer,
-color the pattern a guess came back as, and it lists every word in the list that
-would have produced that pattern against that answer — the question you ask of
-somebody else's share grid. The two rows do not describe each other, so there is
-no ghost word and nothing is grayed out; a gray tile there is a color the pattern
-can be, not an empty tile waiting for a letter.
+**Find** is the page's own, and it runs backwards from everything else here. The
+answer is known and the guess is the unknown. Type an answer, color the pattern
+that a guess came back as, and you get every word in the list that would have
+produced that pattern against that answer. It is the question you ask of somebody
+else's share grid. Neither row describes the other. That is why there is no ghost
+word and nothing is grayed out, and why a gray tile in the pattern is a color
+rather than an empty tile waiting for a letter.
 
-The match itself is exact and immediate — the answer is a column of the feedback
-table, so finding the words is a comparison over it rather than a scoring pass.
-The three numbers each word carries are not:
+The match itself is exact and immediate, since the answer is one column of the
+feedback table and finding the words is a comparison over it instead of a
+scoring pass. The three numbers each word carries take more work:
 
 * **Words left** is how many candidates would survive that guess *given this
   pattern*, so it ranks the words with hindsight — smallest first is what would
@@ -109,10 +109,10 @@ The three numbers each word carries are not:
   words as openings instead.
 * **Chance** is the prior's own probability that the guess is itself the answer.
 
-Both of the last two move with the prior switches and nothing else does, which is
-why the mode, the shape of f and hard mode are hidden while the finder is
-showing: none of them reaches it. It never asks for a guess, so it needs no
-fitted `f` and works under any prior.
+The last two move with the prior switches. Nothing else on the page reaches the
+finder at all, which is why the mode, the shape of f and hard mode are hidden
+while it is showing. The finder never asks for a guess, needs no fitted `f`, and
+works under any prior.
 
 | key | solve | play | find |
 | --- | --- | --- | --- |
@@ -122,9 +122,9 @@ fitted `f` and works under any prior.
 | Space | change the selected tile: gray → yellow → green | — | change the selected pattern tile |
 | Enter | on an empty row take the suggestion, otherwise submit | guess, or play the solver's pick when it is showing | find every word that fits |
 
-Going back up to an earlier row and correcting it is the point of ↑: the whole
-board is sent on every submit, so a tile fixed four rows up re-runs the solver
-from there rather than needing the rows under it deleted first.
+Going back up to an earlier row and correcting it is the point of ↑. Every submit
+sends the whole board, so a tile fixed four rows up re-runs the solver from
+there. You never have to delete the rows under it first.
 
 ### Editing the board
 
@@ -154,16 +154,15 @@ few letters of a row can go without disturbing the last ones.
 
 **Delete row empties the row in place and leaves the gap.** The rows under it
 stay where they were played, so the word that should have been there goes
-straight into the hole. Submitting with the gap still empty is refused — *Row 2
-is empty* — rather than closing it up and sliding the rows below into new
-positions.
+straight into the hole. Submit with the gap still empty and you get *Row 2 is
+empty* back. Nothing closes up and nothing slides.
 
-That is a deliberate refusal rather than a missing feature. A word only reaches
-the board because it was played, so a row that needs deleting is nearly always
-one that needs *replacing*; closing the gap would silently claim you played
-those later words earlier than you did. And the position is not free to move:
-`guesses_left = MAX_GUESSES - len(rows)` feeds the endgame search and the
-estimator, so shifting rows up changes what the solver recommends.
+The refusal is deliberate. A word only reaches the board because it was played,
+which makes a row that needs deleting nearly always a row that needs
+*replacing*; closing the gap would quietly claim you played those later words
+earlier than you did. The position is not free to move either. Both the endgame
+search and the estimator are fed `guesses_left = MAX_GUESSES - len(rows)`, so
+shifting rows up would change what the solver recommends.
 
 An empty row with nothing under it is a different thing — it is the row waiting
 to be played, so it is simply not sent. That is what makes *Delete row* on the
@@ -171,11 +170,11 @@ last guess an undo, and what clears the board back to the opening
 recommendation.
 
 One request is in flight at a time, since the solver is behind a single lock
-anyway. A second made meanwhile is *held* rather than dropped: dropping it left
-the page showing something nobody asked for — a game view with no game dealt
-into it, every panel reading "—" — and stay that way. For the same reason the
-loading veil stays up until there is a board behind it, retrying if the first
-request fails.
+anyway. A second one made meanwhile is *held*, not dropped. Dropping it used to
+leave the page showing something nobody had asked for: a game view with no game
+dealt into it, every panel reading "—", and it would stay that way. The loading
+veil stays up until there is a board behind it for the same reason, retrying if
+the first request fails.
 
 **A setting throws nothing away.** The three views share one set of switches, and
 changing any of them — a prior, the mode, the shape of f, hard mode — asks the
@@ -184,16 +183,17 @@ over the rows the server has already accepted, so a word half typed into the
 open row is neither submitted nor lost; the game keeps its answer and re-asks the
 hint; the finder searches again. Only the *Answer* box deals a new game.
 
-This is a change from the four combinations the terminal menu offers, where the
-prior decides what the answer is drawn from and so has to be chosen before the
-deal. Here the answer was drawn under whatever was on at the time and stays what
-it is: turning a prior off mid-game rethinks the advice rather than dealing a new
-word, which is the only reading that lets you ask what the *other* model of the
-editor would have played from here.
+The terminal menu works the other way round, with four combinations to choose
+between before the deal, because there the prior decides what the answer is drawn
+from. Here the answer was drawn under whatever was on at the time and it stays
+what it is. Turning a prior off mid-game rethinks the advice instead of dealing a
+new word, and that is the only reading under which you can ask what the *other*
+model of the editor would have played from here.
 
-Nothing is rebuilt behind your back either. A setting changed while a view is not
-showing marks it, and it is re-run when you next look at it — the alternative
-being a view that quietly claims a setting it was never built under.
+Nothing is rebuilt behind your back either. A setting changed while a view is
+hidden marks that view for a re-run, and the re-run happens when you next look
+at it. The alternative would be a view quietly claiming a setting it was never
+built under.
 
 ### Rewriting what it says
 
@@ -227,23 +227,22 @@ drop it, and saving is refused if one goes missing. `--no-editor` turns the whol
 thing off, and it is served only when the server is listening to this machine
 alone.
 
-**Save** leaves the source alone — the rewrites live in `wording.json` and are
+**Save** leaves the source alone. The rewrites live in `wording.json` and are
 applied to the served bytes on the way out. **Write into the code** puts them in
-the files for good and clears `wording.json`, which is the end state worth
-reaching: an override is matched to the code by wording, so it is only fragile
-for as long as it sits outside it. Prose is re-wrapped to the indentation it
-lands in, and the old and new phrases are appended to `wording_history.json`.
-That record is the only one kept — the bake edits the source in place and there
-is no undo, so it is worth a look at the source afterwards. The server keeps
-running the code it started with, so its own messages need a restart before they
-read the new way.
+the files for good and clears `wording.json`. That is the end state worth
+reaching, because an override is matched to the code by wording and stays fragile
+for exactly as long as it sits outside it. Prose is re-wrapped to the indentation
+it lands in, and both phrases are appended to `wording_history.json`. That record
+is the only one kept. The bake edits the source in place with no undo, so it is
+worth reading the source afterwards. The server keeps running the code it started
+with, and its own messages need a restart before they read the new way.
 
 Nothing to install: the server is `http.server` and the page is three static
-files in `web/`, with three more behind `/editor`. The feedback table and the
-numba kernels are warmed up in the background at startup and the page waits for
-them, so the first load is the slow one. The solver is behind a single lock —
-scoring ~13k guesses already uses every core, so two requests at once would only
-make both slower.
+files in `web/`, with three more behind `/editor`. Startup warms the feedback
+table and the numba kernels in the background while the page waits. That makes
+the first load the slow one. A single lock covers the solver. Scoring ~13k
+guesses already uses every core, so two requests at once would only make both
+slower.
 
 ## Layout
 
@@ -303,10 +302,10 @@ over the flat spread the two priors used on their own.
 * `--repeat-shape uniform`, `--curation-shape uniform` give the flat spread back.
 
 Each shape is worth having on its own terms, and the two are **additive within
-noise** — they were adopted on a superadditivity that current data does not show;
-see *Shaping the two priors* below. The shape is part of the cache key, because
-the best form of `f` depends on it — `sqrt` is right for the uniform shapes and
-picks the wrong opening word for the sharpened ones.
+noise**. They were adopted on a superadditivity that current data does not show;
+see *Shaping the two priors* below. The shape is part of the cache key because
+the best form of `f` depends on it. `sqrt` is right for the uniform shapes, and
+it picks the wrong opening word for the sharpened ones.
 
 ### Both defaults describe a regime six months old
 
@@ -329,8 +328,8 @@ since falls in the last 190 puzzles, a little over one in nine.
 The two moves started together because the curated pool is running out: 1,812
 of the 2,309 curated words are used, 497 remain, and fresh ones are consumed at
 ~334/year — about 1.5 years left. Going off-list and recycling old answers are
-the same editorial response to the same constraint, so extrapolating both
-upward is defensible, and 0.10 is the forward-looking number rather than the
+the same editorial response to the same constraint. Extrapolating both upward is
+defensible on that basis, and 0.10 is a forward-looking number rather than a
 historical one.
 
 ### Sharpening the repeat prior
@@ -361,8 +360,8 @@ histogram with nothing to tune. (A window needs a third knob besides `K` and the
 half-width: how much mass to leave outside. With a hard cutoff a single repeat
 landing outside costs ~7 nats, which is `sandy` and `smile` all over again.)
 
-An age-based shape — weight rising with time since last use, rather than binned
-by where in the answer order the word first appeared — is the obvious rival and
+The obvious rival is an age-based shape, with weight rising by time since last
+use instead of binning by where in the answer order the word first appeared. It
 does not beat this. Refitting its rate prequentially scores −143.1, worse than
 binned and barely better than uniform; the rate is unstable on twenty-odd
 events. A rate fixed at 2/year reaches −131.6, but only when chosen with
@@ -395,10 +394,9 @@ with an sd of 0.83, and 18 of 21 events sit between 4.4 and 5.1 years.
 
 ## Shaping the two priors
 
-Both shapes are worth having, and are shipped rather than left out. They were
-originally adopted because they looked *superadditive* — worth much more
-together than apart. On current data they no longer do; see the note under the
-table.
+Both shapes are worth having and both ship. They were originally adopted because
+they looked *superadditive*, worth much more together than apart. On current data
+they no longer look that way; see the note under the table.
 
 Weighting off-list words instead of flatly is a large modeling gain on its own.
 Scored prequentially over the off-list answers, uniform is −9.27 nats per event;
@@ -420,8 +418,9 @@ plus the 497 still-unused curated words — blended at the regime's own mixture 
 | `binned` + `wordlebot` | +0.095 ± 0.228 | −0.826 ± 0.150 | −0.012 ± 0.018 | **−0.064 ± 0.032** |
 
 Concentrating the off-list mass on ~850 words gives each about 1e-4 against a
-used word's 5.4e-5, so past answers stop competing for the solver's attention —
-hence the residual penalty `wordlebot` alone still carries on the repeat arm.
+used word's 5.4e-5, so past answers stop competing for the solver's attention.
+That is where the residual penalty `wordlebot` alone carries on the repeat arm
+comes from.
 
 **The superadditivity is gone.** These shapes were adopted because `wordlebot`
 alone blended to +0.009 (a wash), `binned` alone to −0.021, and the pair to
@@ -430,12 +429,12 @@ alone blended to +0.009 (a wash), `binned` alone to −0.021, and the pair to
 best row and still worth shipping; the *reason* given for shipping it no longer
 holds.
 
-Two caveats before reading much into the change. These numbers come from a
-solver whose estimator was refitted afterwards, and every configuration's
-winning form moved, so they are not comparable like-for-like with the published
-ones — the policy changed, not just the data. And `frequency` (−0.074 ± 0.028)
-and `wordlebot` (−0.064 ± 0.032) now sit well inside each other's intervals, so
-the shipped default of `wordlebot` is no longer measurably the better of the two.
+The change is worth two caveats. These numbers come from a solver whose estimator
+was refitted afterwards, and every configuration's winning form moved, so they
+are not comparable like-for-like with the published ones: the policy changed, not
+just the data. `frequency` (−0.074 ± 0.028) and `wordlebot` (−0.064 ± 0.032) also
+sit well inside each other's intervals now. The shipped default of `wordlebot`
+is no longer measurably the better of the two.
 
 **The first three rows are history now.** They need fits for the uniform shapes,
 which the repo no longer carries, and since 2026-08-10 a prior with no fit
@@ -477,8 +476,8 @@ Both are only fallbacks, used where the game is too wide to search.
 Wordle's own hard mode: every guess must be a word that could still be the
 answer. It is a flag on `play` and `benchmark` and a switch on the page.
 
-Mechanically it is one substitution — the pool of guesses to score becomes the
-candidate set rather than all 12,947 words (`WordleSolver.guess_pool`), which the
+Mechanically it is one substitution. The pool of guesses to score becomes the
+candidate set instead of all 12,947 words (`WordleSolver.guess_pool`), which the
 kernels already take as a parameter, and the exact search narrows the same way.
 In the search that also removes the partition dedupe: only a candidate itself can
 come back `GGGGG`, so no two candidates split S identically and there is nothing
@@ -486,11 +485,11 @@ left to merge.
 
 It is deliberately **not** a `train` flag. The fit is cached per prior and the
 restriction is not part of the slug, so training under it would overwrite the
-ordinary fit. So `f` is always the one fitted for unrestricted play, and under
-the restriction its scores read a little low — the estimate is of a position from
-which the solver would be allowed a probe it is not in fact allowed. That is the
-same reason the restriction costs guesses at all: a word that cannot win is often
-the sharper split.
+ordinary fit. `f` is therefore always the one fitted for unrestricted play, and
+its scores read a little low under the restriction: the position it is estimating
+is one where the solver would be allowed a probe that it is not in fact allowed.
+The restriction costs guesses for that same reason. A word that cannot win is
+often the sharper split.
 
 What it costs, over 20,000 games per row, answers drawn from the row's own prior,
 the same answers in both arms, failures counted as 7 (`analysis/hard_mode.py`):
@@ -538,8 +537,8 @@ V(S, 0) = loss_penalty
 ```
 
 with `t` the guesses left including this one. A loss penalty of 1 means running
-out costs one unit more than the six turns already spent — a lost game scores 7
-— so the deadline needs no separate objective and no risk weighting.
+out costs one unit more than the six turns already spent, so a lost game scores
+7. The deadline then needs no separate objective and no risk weighting.
 
 V is non-*decreasing* in t here: with more turns left you are obliged to finish
 rather than pay the comparatively cheap penalty. That is what makes the
@@ -662,7 +661,7 @@ Opening words are untouched, since the root never reaches the exact search.
 
 ### Widening the search's reach
 
-The floor at ~79 is where the exact search stops reaching, so the second lever
+The floor at ~79 is where the exact search stops reaching, and the second lever
 is `--exact-max`. Losses are rare and the games are identical, so this counts
 games lost by exactly one setting ("fixed" = the baseline lost it, the wider
 search did not).
@@ -770,13 +769,13 @@ back under another. A cached file is refused if it was fitted with different
 prior probabilities, or predates the form registry.
 
 **A prior with no fit does not play.** `load_active` raises `NotFitted` and names
-the `train` command that fixes it, rather than bending a fixed reference curve
-onto the chosen form and playing that. The invented curve was never a
-measurement of any prior — under the shipped one it read f(2000) ≈ 3.69 where
-the fitted `f` says 2.55 — it flipped the opening word from `salet` to `raise`,
-it cost 0.034 ± 0.004 guesses paired over 20,000 games, and it was never saved,
-so every run paid for it again. Entropy mode, which never consults `f`, still
-runs on any prior.
+the `train` command that fixes it. The alternative was to bend a fixed reference
+curve onto the chosen form and play that, and the invented curve was never a
+measurement of any prior: under the shipped one it read f(2000) ≈ 3.69 where the
+fitted `f` says 2.55. It flipped the opening word from `salet` to `raise`, cost
+0.034 ± 0.004 guesses paired over 20,000 games, and was never saved, so every run
+paid for it again. Entropy mode, which never consults `f`, still runs on any
+prior.
 
 The refusal carries the `train` command that ends it, so both front ends can hand
 it over as it stands: the terminal prints it and exits 2 rather than a traceback,
@@ -872,10 +871,11 @@ combination whose cache is missing.
 
 Per prior combination, shipped shapes, each with its own fitted form, 20,000
 answers. Answers are drawn from *the solver's own prior*, so each row asks "if
-this model of the editor is right, how well does the solver do?" — exact within
-a row (the two modes see byte-identical answers), but the rows are **not**
-comparable to each other, since a concentrated prior makes the game genuinely
-easier. The opening word and the solve rate are the expected-guesses mode's:
+this model of the editor is right, how well does the solver do?" That is exact
+within a row, where the two modes see byte-identical answers. The rows are
+**not** comparable to each other, since a concentrated prior makes the game
+genuinely easier. The opening word and the solve rate are the expected-guesses
+mode's:
 
 | priors | form | opening | entropy mean | expected mean | solve rate |
 | --- | --- | --- | --- | --- | --- |

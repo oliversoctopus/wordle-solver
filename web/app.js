@@ -3,8 +3,8 @@
  * All the thinking happens on the server.  The page keeps an editable copy of
  * the board -- every row, not just the one being typed, since an earlier row
  * can be corrected in place -- and sends the whole thing back whenever it is
- * submitted.  The reply is the board as the solver accepted it, and the
- * editable copy is rebuilt from that, so the two cannot drift apart.
+ * submitted.  What comes back is the board as the solver accepted it, and the
+ * editable copy is rebuilt from that.  The two cannot drift apart.
  */
 
 const MAX_GUESSES = 6;
