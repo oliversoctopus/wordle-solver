@@ -112,6 +112,18 @@ function applyState(next) {
 const rowFilled = (row) => row.letters.filter(Boolean).length;
 const rowWord = (row) => row.letters.join("");
 
+/** The last row with anything written in it, or -1 on an empty board. */
+const lastFilledRow = () =>
+  rows.reduce((last, row, r) => (rowFilled(row) ? r : last), -1);
+
+/** Where the suggestion goes: the row after the last real word, or -1 when
+    there is no room for one.  It is a shadow rather than a row of its own, so
+    deleting the word above it brings it up instead of stranding it below. */
+const openRow = () => {
+  const next = lastFilledRow() + 1;
+  return next < rows.length ? next : -1;
+};
+
 /** Rows the server has not seen in their present state. */
 function dirtyRows() {
   const dirty = new Set();
@@ -175,7 +187,9 @@ function backspace() {
   // leftwards only, so the first letters can go without the last ones
   cursor.atEnd = false;
   clearMessage();
+  trimRows();
   renderLocal();
+  refreshAfterRemoval();   // the last letter of a word is a word coming off
 }
 
 /** gray -> yellow -> green -> gray, on whichever tile is selected. */
@@ -206,8 +220,9 @@ function fill(word) {
 /** The suggestion always goes in the row being played, wherever the cursor
     happens to have wandered off to. */
 function acceptSuggestion() {
-  if (!suggestion() || !rows.length) return;
-  cursor = { row: rows.length - 1, col: 0, atEnd: false };
+  const open = openRow();
+  if (!suggestion() || open < 0) return;
+  cursor = { row: open, col: 0, atEnd: false };
   fill(suggestion());
 }
 
@@ -265,19 +280,46 @@ function resend() {
   });
 }
 
-/** Empty the row the cursor is on, leaving its place free.  Local until Enter,
-    like every other edit.  On the row being typed it means the last filled one. */
+/** One free row after the last word, and never fewer rows than the server holds.
+    A row emptied by hand would otherwise leave the free row stranded below it,
+    selectable and past the end of the board the shadow now describes. */
+function trimRows() {
+  const keep = Math.max(state ? state.rows.length : 0, lastFilledRow() + 2);
+  if (keep >= rows.length) return;
+  rows.length = keep;
+  cursor = { row: Math.min(cursor.row, rows.length - 1), col: cursor.col,
+             atEnd: false };
+}
+
+/** Taking a word off the board is a retraction rather than a proposal, so it
+    goes back to the solver at once instead of waiting for Enter: what is left
+    has to be the board those words alone would have made, shadow and panel
+    included.  A hole still open in the middle waits, that being a board the
+    solver refuses anyway. */
+function refreshAfterRemoval() {
+  if (busy || !state) return;
+  const words = rows.filter((row) => rowFilled(row)).length;
+  if (words >= state.rows.length) return;   // nothing the solver knows of is gone
+  const played = lastFilledRow();
+  if (rows.some((row, r) => r < played && rowFilled(row) === 0)) return;
+  submit();
+}
+
+/** Empty the row the cursor is on, leaving its place free.  On the row being
+    typed it means the last filled one. */
 function deleteRow() {
   if (busy || !rows.length) return;
-  const played = rows.reduce((last, row, r) => (rowFilled(row) ? r : last), -1);
-  if (played < 0) return;
+  const played = lastFilledRow();
+  if (played < 0) return;   // only the shadow is showing, and it is not a row
   const target = Math.min(cursor.row, played);
   if (rowFilled(rows[target]) === 0) return;   // already a gap
 
   rows[target] = emptyRow();
   cursor = { row: target, col: 0, atEnd: false };
   clearMessage();
+  trimRows();
   renderLocal();
+  refreshAfterRemoval();
 }
 
 /* -------------------------------------------------------------- messages */
@@ -312,8 +354,9 @@ function renderBoard() {
 function renderSolveBoard() {
   board.textContent = "";
   const dirty = dirtyRows();
-  const ghost = rows.length && rowFilled(rows[rows.length - 1]) === 0 ? suggestion() : "";
-  const ghostRow = ghost ? rows.length - 1 : -1;
+  const open = openRow();
+  const ghost = open >= 0 ? suggestion() : "";
+  const ghostRow = ghost ? open : -1;
 
   for (let r = 0; r < MAX_GUESSES; r++) {
     const row = document.createElement("div");

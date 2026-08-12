@@ -128,13 +128,18 @@ there. You never have to delete the rows under it first.
 
 ### Editing the board
 
-The page keeps its own copy of every row, and every change to it — typing,
-coloring, deleting — is local until Enter sends the whole board back. The solver
-only ever sees complete boards, which is what makes correcting an earlier row
-the same operation as playing a new one. Rows the solver has not been told about
-yet are drawn with a dashed border.
+The page keeps its own copy of every row, and typing and coloring are local until
+Enter sends the whole board back. The solver only ever sees complete boards,
+which is what makes correcting an earlier row the same operation as playing a new
+one. Rows the solver has not been told about yet are drawn with a dashed border.
 
-Four rules fall out of that, and they are the answers to the things that used to
+Taking a word off is the exception, and goes back on its own. Writing one is a
+proposal, which is what Enter is for; removing one is not, since a board cannot
+half-forget a word it is no longer showing. However the word goes — *Delete row*,
+or backspaced away letter by letter — what remains has to be the board those
+words alone would have made, down to the shadow and every number in the panel.
+
+Five rules fall out of that, and they are the answers to the things that used to
 go wrong:
 
 **A color belongs to the letter under it.** Clearing a letter clears its color,
@@ -150,7 +155,10 @@ Retyping a rejected guess from scratch therefore means clearing the row first.
 
 **Backspace only ever deletes leftwards** — the tile under the cursor, then the
 one before it. Letters to the right of the cursor are left alone, so the first
-few letters of a row can go without disturbing the last ones.
+few letters of a row can go without disturbing the last ones. The backspace that
+empties the row is the one that takes the word off the board, and it counts as a
+deletion: a row cleared by hand is a row deleted, and the two cannot look
+different afterwards.
 
 **Delete row empties the row in place and leaves the gap.** The rows under it
 stay where they were played, so the word that should have been there goes
@@ -167,7 +175,27 @@ shifting rows up would change what the solver recommends.
 An empty row with nothing under it is a different thing — it is the row waiting
 to be played, so it is simply not sent. That is what makes *Delete row* on the
 last guess an undo, and what clears the board back to the opening
-recommendation.
+recommendation. Only that gap-free case goes back on its own; a hole higher up
+waits for the word that fills it, because the board it makes is one the solver
+refuses anyway.
+
+**The suggestion is a shadow, not a row.** The solver's pick is drawn faint in
+the row after the last real word, and it follows that word rather than standing
+at a fixed height. Take the last guess off and the board goes back, so what comes
+up into the vacated row is the pick for the shorter board — the board is a row
+shorter and says so. *Delete row* cannot touch the shadow itself, there being
+nothing there to delete. Take it — click it, or press Enter on an empty row — and
+it stops being a shadow: it is then a word in a row, and deletes like any other.
+
+There is exactly one free row, and the shadow is in it. Otherwise a row emptied
+by hand leaves a second free row under it, still selectable and sitting past the
+end of the board the shadow describes, and typing in that one makes the shadow
+vanish from a row you are not even in. The board is trimmed back to the last word
+and its free row.
+
+The rules are one promise between them. Three words with the third taken off
+leaves exactly what two words played from the start would leave, and nothing on
+the page can tell you which of the two happened.
 
 One request is in flight at a time, since the solver is behind a single lock
 anyway. A second one made meanwhile is *held*, not dropped. Dropping it used to

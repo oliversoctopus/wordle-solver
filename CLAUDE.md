@@ -66,15 +66,20 @@ real edit disappears into a whole-file diff.
 
 ## Running it
 
+**The dependencies live in `.venv`, and nowhere else.** The system Python has no
+`numba`, so `python web.py` dies on the import; run `.venv/Scripts/python.exe`
+instead, or activate the environment first.
+
 ```
-pip install -r requirements.txt
+.venv/Scripts/activate            PowerShell: .venv\Scripts\Activate.ps1
 python web.py                     the page, on http://127.0.0.1:8000
 python wordle_solver.py play      the solver in the terminal
 python wordle_game.py             a game in the terminal
 ```
 
 `requirements.txt` splits in two: the solver needs `numpy` and `numba`, and the
-last two lines are for the one-off builders only.
+last two lines are for the one-off builders only. It is what `.venv` was built
+from; installing into the system Python is not the setup here.
 
 Startup loads `feedback_table.npy` (167 MB) and compiles the numba kernels,
 which takes a while. `web.py` warms both in a background thread and the page
@@ -162,9 +167,18 @@ rows already played instead of clearing them. Only the answer box deals a new ga
 Nothing on the server has to be kept in step with the switches; do not add a
 setting that is remembered at `/api/new` time.
 
-Every board edit — typing, coloring, deleting a row — is local until Enter.
-`README.md` § *Editing the board* has the rules that follow from this and why
-they are what they are; they are not obvious and they were each a bug once.
+Typing and coloring are local until Enter. Taking a word off is not, whether by
+*Delete row* or by backspacing the row empty: `refreshAfterRemoval` submits the
+shorter board itself, since a shadow and a panel still describing the word just
+removed read as no removal at all. A hole still open in the middle stays local,
+there being no valid board to send.
+
+The rule that follows is worth stating whole: **a board reached by taking words
+off is indistinguishable from the same board played straight** — shadow, cursor,
+panel, and which rows can be typed in. `trimRows` is the last of those: exactly
+one free row after the last word, so nothing selectable is left below the shadow.
+`README.md` § *Editing the board* has the rest, with why they are what they are;
+they are not obvious and they were each a bug once.
 
 Requests are serialized: one in flight, and a second made meanwhile is held, not
 dropped. Dropping it used to leave a view with nothing in it.
