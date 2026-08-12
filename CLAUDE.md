@@ -36,6 +36,19 @@ change, no measurement tables in source. The reasoning and the numbers go in
 `README.md`; the comment says what the line does. File headers explaining what a
 module is are the exception and are welcome.
 
+**Vary how sentences are built.** One shape should not carry a whole paragraph:
+a clause, a comma, and a tail. "X, so Y", "X, rather than Y", ", which …", an
+em-dash aside. Each of those is good English by itself, and the trouble is only
+the rate at which it recurs. Mix in sentences that open on a subordinate clause,
+sentences joining two full clauses, and sentences that state a thing and stop.
+Chopping the long ones into short ones is not the fix; it reads worse than what
+it replaced. `SOLVER_EXPLAINED.md` §0–3 is the sound to aim for.
+
+**Hold that one loosely.** It is a smell worth checking when a paragraph reads
+badly, and not a rule to enforce by counting. Three sentences in a row can take
+the same shape if they read well, and prose that already works is better left
+alone than rewritten to a quota.
+
 **Point at code by name, never by line number.** `priors.build_weights`, not
 `priors.py:221`. Line references go stale on the next edit and nothing checks
 them; a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted.
