@@ -128,18 +128,24 @@ class ExactEndgame:
         if m == 2:
             # guess the likelier one; if wrong the other is known
             return int(candidates[heaviest]), 2.0 - p_max
+        key = (candidates.tobytes(), turns)
+        cached = self.memo.get(key)
+        if cached is not None:
+            return cached
+
+        # the same two-turn position is reached along many different guess
+        # orders -- four calls in five are repeats -- so it is memoized like any
+        # other, and the closed form below runs once per distinct position
         if turns == 2:
             pool = candidates if self.hard else None
             scores = kernels.two_turn_scores(self.feedback_table, candidates,
                                              weights, self.loss_penalty, pool=pool)
             best = int(scores.argmin())
             guess = int(candidates[best]) if self.hard else best
-            return guess, float(scores[best])
-
-        key = (candidates.tobytes(), turns)
-        cached = self.memo.get(key)
-        if cached is not None:
-            return cached
+            result = (guess, float(scores[best]))
+            if len(self.memo) < self.memo_limit:
+                self.memo[key] = result
+            return result
 
         self.nodes += 1
         if self.nodes > self.max_nodes:
@@ -153,10 +159,12 @@ class ExactEndgame:
                                                  weights, self.bound_penalty,
                                                  pool=candidates)
         else:
-            bounds = kernels.two_turn_scores(self.feedback_table, candidates,
-                                             weights, self.bound_penalty)
+            # bound only the representatives: they are about a quarter of the
+            # pool, and scoring the rest would be scoring duplicate splits
             representatives = self._distinct_partitions(candidates)
-            rep_bounds = bounds[representatives]
+            rep_bounds = kernels.two_turn_scores(self.feedback_table, candidates,
+                                                 weights, self.bound_penalty,
+                                                 pool=representatives)
         order = np.argsort(rep_bounds)
         if self.max_branch is not None:
             # keep only the most promising splits.  Where the dedupe already

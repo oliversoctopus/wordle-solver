@@ -46,9 +46,10 @@ class WordleSolver:
 
     ``lookahead`` puts a width-limited expectimax above that, expanding the best
     ``beam_width`` guesses and scoring each by what its buckets are really worth
-    rather than by f alone.  It is off by default: one ply is worth about 0.016
-    guesses over 20 000 paired games and costs roughly 10x the wall clock, and
-    two plies costs minutes per position.  See the README for the numbers.
+    rather than by f alone.  It is off by default: one ply measures
+    -0.0034 +- 0.0041 guesses over 20,000 paired games, which is nothing at 0.9
+    sigma, for roughly 10x the wall clock, and two plies costs minutes per
+    position.  See the README for the numbers.
 
     ``hard`` restricts every guess to a word that could still be the answer,
     which is a strictly smaller choice than the ~13k words the solver usually

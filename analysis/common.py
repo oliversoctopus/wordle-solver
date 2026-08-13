@@ -88,6 +88,31 @@ def paired(a, b):
     return d.mean(), d.std(ddof=1) / np.sqrt(len(d)), d
 
 
+MAX_GUESSES = 6
+
+
+def every_answer(solver, max_guesses=MAX_GUESSES):
+    """Guesses taken with each of the 12,947 words in turn as the answer.
+
+    The solver is deterministic, so a game's outcome is a pure function of the
+    answer: this is the entire sample space, not a draw from it.  A loss counts
+    as one guess over the limit, the convention every measured result here uses.
+    """
+    out = np.empty(len(solver.weights))
+    for answer in range(len(out)):
+        guesses, _ = solver.play(answer, max_guesses=max_guesses,
+                                 deadline=max_guesses)
+        solved = guesses[-1] == answer
+        out[answer] = len(guesses) if solved else max_guesses + 1
+    return out
+
+
+def exact_stats(lengths, weights, max_guesses=MAX_GUESSES):
+    """Prior-weighted mean and loss probability -- computed, not estimated."""
+    lost = lengths > max_guesses
+    return float(weights @ lengths), float(weights[lost].sum())
+
+
 def effective_support(weight):
     """2^H of a weight vector: how many equally likely words it spreads over."""
     p = np.asarray(weight, dtype=float)

@@ -1,9 +1,9 @@
 # analysis/
 
 Every measured number in `README.md` and `SOLVER_EXPLAINED.md` about the two
-priors, about which form of `f` is the default, and about what hard mode costs,
-comes from one of these. They read `data/` and the estimator cache and print;
-they write nothing.
+priors, about which form of `f` is the default, about what hard mode costs, and
+about the loss penalty comes from one of these. They read `data/` and the
+estimator cache and print; they write nothing.
 
 ```
 python analysis/regime.py           the regime table and the pool arithmetic
@@ -11,18 +11,33 @@ python analysis/repeat_shapes.py    prequential comparison of repeat shapes
 python analysis/drift.py            is the source window moving?
 python analysis/curation_shapes.py  prequential comparison of curation shapes
 python analysis/hard_mode.py        what the hard-mode restriction costs
+python analysis/lookahead.py        what one ply of lookahead is worth
+python analysis/lookahead_accuracy.py   how well the two valuations price a position
+python analysis/lookahead_accuracy.py --decisions   what is at stake in the choice
+python analysis/loss_penalty.py     the penalty and the endgame search's reach
+python analysis/loss_penalty.py --policies    entropy against the estimator
+python analysis/loss_penalty.py --cost        what reaching further costs in time
 python analysis/replay.py           what the shapes are worth in guesses (slow)
 python analysis/form_default.py     which form to fit by default (slower)
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
 ```
 
-The first four are seconds. `hard_mode.py` is 15 s for the default prior and two
-minutes for `--all-priors`, both arms at 20,000 games — cheap because the
-restriction it measures is also what makes a turn cheap to score. `replay.py`
-plays a few thousand real games and takes a few minutes; `form_default.py`
-replays 45 fitted policies and takes longer again; `results_tables.py` is an
-hour and a quarter at its default sizes, most of it the flat-prior rows, where
-more candidates survive each guess and the endgame search runs on bigger sets.
+The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`,
+both arms over every word — cheap because the restriction it measures is also
+what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over
+the four priors and thirteen with `--decisions`, which plays out ten guesses at
+each position rather than one. `loss_penalty.py` is nine minutes for both
+sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and
+well under one for `--policies`; `--cost` is a timing probe rather than a
+measurement and takes about six. `replay.py` is 80 s over the regime's real
+games, `results_tables.py` about three minutes, and `form_default.py` ten, which
+makes it the slow one — it replays 45 fitted policies where the others replay
+one or two.
+
+Those are wall clocks on one machine and they are all far shorter than the sizes
+suggest, for the reason `loss_penalty.py` documents below: the memos saturate
+after a few thousand positions and the rest of a run comes out of cache. Judge a
+run by whether it finishes, not by a stopwatch.
 
 | script | backs |
 | --- | --- |
@@ -31,6 +46,9 @@ more candidates survive each guess and the endgame search runs on bigger sets.
 | `drift.py` | the closing paragraph of README *Sharpening the repeat prior* |
 | `curation_shapes.py` | SOLVER_EXPLAINED §4.3 including why the hedge is flat, the opening of README *Shaping the two priors* |
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
+| `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
+| `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §12 |
+| `loss_penalty.py` | the whole of README *Losing less*, SOLVER_EXPLAINED §9 and §10 |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results* |
@@ -49,6 +67,42 @@ README carried before the 2026-08-10 update — uniform −134.5, binned −116.
 18. If those still come out, a number that moved moved because the data did.
 `regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s
 uniform baseline (−9.27) are fixed points for the same reason.
+
+## Enumerating instead of sampling
+
+`hard_mode.py`, `loss_penalty.py`, `results_tables.py` and `form_default.py` do
+not draw answers and report a standard error. They do not have to: the solver is
+deterministic, so a game's outcome is a pure function of the answer, and playing
+all 12,947 words once with the prior as weights *computes* the mean and the loss
+probability. There is no sampling distribution left to put an interval around,
+and `common.every_answer` is the one implementation they share.
+
+It matters most where the effect is small. The loss penalty is worth about
++0.0005 guesses, while a 20,000-game sample carries an error near 0.009 — twenty
+times larger, and only pairing ever made those figures readable. Removing the
+noise also moved conclusions, not just digits: under the flat prior the nine
+forms of `f` span 0.0013 guesses rather than the 0.0110 a 3,000-answer holdout
+showed, which is most of what used to separate them.
+
+Three things change shape in the output. A loss *rate* becomes the exact prior
+mass on the words that lose, which is not the fraction of words that lose. "Which
+games changed" becomes a list of words. And a block sd or a holdout seed stops
+existing, so a ranking is a fact about the prior rather than something that might
+move on a rerun — which makes a small gap harder to dismiss, not easier.
+
+Enumerating is usually the cheaper option too. The memos in `WordleSolver` and
+`ExactEndgame` saturate after a few thousand positions, so most of a sweep runs
+out of cache — the marginal rate climbs past 4,000 games a second, and the arm
+that looks slowest from a cold start is not the one that costs the most.
+
+`replay.py` is the exception that stays sampled, and for a good reason: it
+replays the *real* answer sequence, so its sample is a historical record rather
+than a draw from the prior. There is nothing to enumerate.
+
+`lookahead_accuracy.py` sits between the two. Every value it reports is exact — a
+position played out once per candidate answer — but which positions it visits,
+and how heavily each counts, comes from a sample of games. Its means carry a
+sampling error that the enumerated ones do not.
 
 ## `replay.py` lost its uniform-shape arms
 
@@ -71,7 +125,13 @@ before that. The same holds for `form_default.py`: it scores the fits in
 `hard_mode.py` is the one that survives a refit, and it is worth knowing why: its
 two arms play the *same* `f`, so a refit moves both columns together and mostly
 cancels in the paired difference. Read the difference across refits; read the
-two means only against each other.
+two means only against each other. `lookahead.py` does *not* get that protection
+even though it also pairs two arms on one fit: what it measures is how much room
+the base policy leaves above itself, so a better-fitted `f` shrinks it directly.
+
+Two claims in README *Lookahead* have no script: that width 25 measures no
+better, and that two plies costs 205 s for the opening position alone. Each needs
+a position sample as well as a method, and that sample was not kept.
 
 Three rows of the README *Shaping the two priors* table are history now, not
 output: `wordlebot` alone, `binned` alone, and the uniform baseline they are

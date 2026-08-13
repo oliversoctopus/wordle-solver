@@ -183,24 +183,24 @@ off-list rate is 8.9%. Over all 1,879 puzzles they'd be 1.1% and 2.5% — roughl
 used up and ~334 are consumed a year, so the pool empties in about 1.5 years.
 Repeats and off-list picks are both the editor's response to that.
 
-**The prior is where the wins are.** 20,000 answers per row, drawn from that
+**The prior is where the wins are.** Every word as the answer, weighted by that
 row's own prior, each row playing the form of `f` fitted for it:
 
 | priors on | entropy | expected-guess mode |
 | --- | --- | --- |
-| none | 4.0786 | 4.0668 |
-| repeat only | 4.0732 | 4.0168 |
-| curation only | 3.7826 | **3.4952** |
-| both | 3.6805 | **3.0791** |
+| none | 4.0794 | 4.0718 |
+| repeat only | 4.0639 | 4.0111 |
+| curation only | 3.7802 | **3.4903** |
+| both | 3.6815 | **3.0770** |
 
-Read *down* a column, not across a row: the answers come from each row's own
-prior, so a row is exact internally, but a concentrated prior makes the game
-genuinely easier and the rows are not comparable to each other. What the shapes
+Read *down* a column, not across a row: the weights come from each row's own
+prior, so a row is exact under the model it assumes, but a concentrated prior
+makes the game genuinely easier and the rows are not comparable to each other. What the shapes
 below are worth needs a different measurement entirely, which is §4.6.
 
 The column to look at is the gap between the two. With both priors on, the
 expected-guess objective beats entropy by 0.60 guesses. With no prior at all it
-beats it by 0.012 — fifty times less, for exactly the same machinery. §6 shows
+beats it by 0.0076 — eighty times less, for exactly the same machinery. §6 shows
 why that collapse is not a coincidence but an identity.
 
 Splitting the words into three groups says *how much* mass each group gets. It
@@ -623,14 +623,14 @@ $$E(g,S) = 1 + a(1 - p_{\text{win}}) + b\big(H(S) - \mathrm{IG}(g)\big)$$
 
 That identity is testable, because `loglinear` is a form of `f` that *is* linear
 in `x`, so by the argument above it should score exactly "entropy plus the
-bonus" — and it does. Under the shipped shapes greedy entropy scores 3.6802,
-`loglinear` 3.1190, and the best form 3.0789. So the gap splits:
+bonus" — and it does. Under the shipped shapes greedy entropy scores 3.6815,
+`loglinear` 3.1179, and the best form 3.0770. So the gap splits:
 
 | | worth |
 | --- | --- |
-| the possible-answer bonus | **0.561** |
-| curvature in `f` | **0.040** |
-| total, entropy → best | 0.601 |
+| the possible-answer bonus | **0.564** |
+| curvature in `f` | **0.041** |
+| total, entropy → best | 0.605 |
 
 Nearly all of the improvement over a standard entropy solver is the free discount
 for guessing a word that might be the answer. The fitted curve's shape — the
@@ -642,8 +642,8 @@ Wordle's own **hard mode** is the cleanest test of the identity, because it
 isolates the bonus from everything else. Hard mode requires every guess to be a
 word that could still be the answer, so restricting greedy entropy to it forces
 `p_win` up without touching entropy's scoring rule at all. It gains
-**0.176 ± 0.005 guesses** (3.6785 → 3.5021 over 20,000 games,
-`analysis/hard_mode.py`) — a third of what the objective gets by *pricing* the
+**0.1813 guesses** (3.6815 → 3.5002, `analysis/hard_mode.py`) — a third of what
+the objective gets by *pricing* the
 same bonus rather than imposing it. The objective does better because it takes
 the bonus **and** keeps the probes: it plays a non-candidate whenever the split
 is worth more than the win chance given up, which is exactly the trade hard mode
@@ -820,28 +820,46 @@ the true one, so this is optimal-within-the-cap, not provably optimal.
 ## 10. Why the penalty is 5 and not 1
 
 Risk neutrality (`penalty = 1`) is the principled default, so it takes evidence to
-move off it. The evidence is a good piece of diagnosis. Losses are
-not endgame blunders — over 20,000 games per prior, the expected losses given the
-positions reached (`Σ 1−p_max`) match the actual loss counts closely (42.2
-predicted vs 46 actual, and so on). The solver isn't fumbling the last guess;
-it's *arriving* at positions it can't win, holding a one-letter family like
-`vills`/`jills`/`zills` with no turns left to separate them. The fix is to spend a
-turn separating instead of gambling, and that's what the penalty buys:
+move off it. Start with what the losses are. They aren't endgame blunders: at the
+sizes these positions reach, `exact.ExactEndgame` solves them outright, so the
+guess played is optimal. The solver is backing its prior. Holding
+`batty`/`catty`/`natty`/`patty`/`ratty`/`tatty` with four turns left it plays
+`tatty`, which carries 75% of the family's mass, and it turns down `bronc` — a
+word that splits the six of them five ways — because separating spends a turn to
+insure against a 0.4% case. A loss is the prior being confidently wrong, and the
+penalty is what makes that insurance worth buying:
 
-| penalty | losses / 80k | mean (loss = 7) |
+| penalty | loss probability | mean (loss = 7) |
 | --- | --- | --- |
-| 1 | 137 | 3.7160 |
-| **5** | **81** | **3.7161** |
-| 30 | 74 | 3.7175 |
+| 1 | 0.1168% | 3.6621 |
+| **5** | **0.0458%** | **3.6626** |
+| 30 | 0.0357% | 3.6635 |
 
-Two fifths of all losses vanish for **+0.0001 guesses**. Widening `--exact-max`
-from 24 to 60 takes it to 60 losses. Total: **137 → 60, a 56% reduction, with the
-mean unchanged.**
+Three fifths of the loss probability vanishes for **+0.0005 guesses**. Widening
+`--exact-max` from 24 to 60 adds the rest, and the two together — risk-neutral
+play at the narrow reach against the shipped pair — run **0.1198% → 0.0458%, a
+62% reduction, with the mean improving by 0.0019** on the way, because reaching
+deeper replaces an estimate with a true value instead of trading one good for
+another.
 
-Every loss in every run was a *non-curated* word. Wordle is
-provably solvable in five guesses, but that theorem is about the 2,309 curated
-words — here 9% of the prior mass sits on 10,638 never-curated ones. Played
-against all 2,309 curated words as answers, the solver loses **0 out of 2,309**.
+That last column can't pick the penalty, though, and the reason is instructive.
+Scoring a loss at 7 is precisely the objective `penalty = 1` optimizes, so ranking
+settings by it can only ever favor risk neutrality — the comparison is circular.
+Name the price of a loss instead, `L` guesses, and every setting becomes a line in
+`L`. Penalty 1 wins below `L` = 7.1, 2 up to 9.0, **5 from 9.0 to 13.7**, 10 to
+22.1, and 30 above that. So 5 is right if a lost game costs between nine and
+fourteen guesses, and little rides on it: across that whole range the best setting
+beats the next by under 0.0002 guesses.
+
+Losses collect on the never-curated words — 290 of the 300 the shipped prior can
+lose on. Wordle is provably solvable in five guesses, but that theorem is about a
+solver that knows the answer is one of the 2,309 curated words, and this one
+spreads 9% of its mass over the other 10,638. Swept uniformly over the curated
+list it loses 10 of 2,309, every one of them a word that has already been an
+answer — which is §4.2's repeat prior calling them unlikely, by construction.
+
+Every piece of the guess rule is now on the table; §11 puts them in the order the
+solver applies them.
 
 ## 11. Putting it together — one turn of play
 
@@ -864,33 +882,44 @@ is no longer allowed to make.
 
 The heuristic `E(g,S)` is genuinely a **fallback**: it only runs where the game is
 too wide to solve outright. With both priors on and the shapes that ship, over
-30,000 unseen answers, the whole thing averages **3.0789 guesses** and opens with
-`salet`.
+every word the answer could be, the whole thing averages **3.0770 guesses** and
+opens with `salet`.
 
 ## 12. The result worth framing
 
 This is the thread running through the whole project, and it's the most
 interesting thing in it:
 
-> **Better valuation is not better decisions.**
+> **Better decisions, worth almost nothing.**
 
-One-ply lookahead values positions **three times more accurately** than
-`min_g E(g,S)` — RMSE 0.0216 vs 0.0663, measured against ground truth computed by
-playing positions out exactly. It changes the chosen guess in ~17% of games. And
-those changes split **2,414 better vs 2,167 worse**, netting −0.0158 guesses for
-~10× the wall clock.
+One-ply lookahead values positions **ten times more accurately** than
+`min_g E(g,S)` — RMSE 0.0111 vs 0.1122, measured against ground truth computed by
+playing positions out exactly. That accuracy converts: it disagrees about the
+guess in **half** of all games, and it is right to, giving up 0.0013 guesses
+where the estimator gives up 0.0115. It moves the outcome in a quarter of games,
+those changes splitting **2,644 better vs 2,597 worse**, and nets −0.0034 ±
+0.0041 guesses — nothing, at 0.9σ — for ~10× the wall clock.
 
-The reason is that you're taking an `argmin`. The estimator's errors are largely
-**common-mode** across the guesses being compared *at the same position* — every
-guess at a wide position is scored by the same slightly-off `f` — so the errors
-mostly cancel in the comparison and the ranking survives. Improving accuracy
-fixes an error that was already canceling.
+The tempting explanation is that you're taking an `argmin`, so the estimator's
+errors are **common-mode** across the guesses at one position and cancel in the
+comparison, leaving the ranking intact. They don't. The estimator ranks the ten
+guesses lookahead re-ranks at a correlation of **+0.54** with their true values
+and picks the best of them just over half the time — a valuation whose errors
+cancelled would not be overruled half the time by an accurate one.
 
-The same result holds four separate times here: deep exact search (+0.0007 ±
+What is true instead is that the top of the ranking is a **plateau**. Those ten
+guesses spread 0.0941 guesses between best and worst, and the estimator's pick
+gives up 0.0115 of that, an eighth of the range, while ordering the middle of it
+almost at random. It finds the plateau reliably and can't tell one spot on it
+from another, which costs a hundredth of a guess because there's little there to
+tell apart. `analysis/lookahead_accuracy.py --decisions` is where those come from.
+
+The same outcome holds four separate times here: deep exact search (+0.0007 ±
 0.0029, i.e. nothing), one-ply lookahead, turn-conditioned `f` (+0.0005 ±
 0.0007), and the sharpened repeat prior *on its own* (+0.0056 ± 0.0294, despite
-being 4.4σ better as a prior). The solver has been **decision-limited, not
-valuation-limited**, for a while.
+being 4.4σ better as a prior). Only lookahead's has been taken apart at the level
+of the decision; the other three are measured at the outcome. What the solver has
+been short of is **somewhere better to go**, not a better map.
 
 The exceptions are what sharpen the rule, and they have a common shape: every one
 of them changes *what the solver is choosing between* rather than how well it
@@ -903,12 +932,12 @@ all — so it is a decision-side change wearing valuation-side clothes.
 
 Hard mode is the same thing in its bluntest form, and it makes the distinction
 hard to argue with. It improves no valuation whatsoever; it deletes words from
-the choice set. Under greedy entropy that is worth **−0.176 ± 0.005** guesses, an
-order of magnitude more than one-ply lookahead buys by valuing positions three
-times better. Take a choice away from a policy that was pricing it wrong and you
+the choice set. Under greedy entropy that is worth **−0.1813** guesses,
+where one-ply lookahead buys nothing at all by valuing positions ten times
+better. Take a choice away from a policy that was pricing it wrong and you
 gain more than by pricing everything else right. Under the expected-guesses
 objective, which already prices it correctly, the identical restriction *costs*
-+0.029 ± 0.003 — same intervention, opposite sign, entirely because of what the
++0.0269 — same intervention, opposite sign, entirely because of what the
 objective was already getting right.
 
 Which is the honest reading of the headline number too. The 0.60-guess gain over

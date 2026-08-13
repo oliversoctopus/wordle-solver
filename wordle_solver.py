@@ -268,9 +268,9 @@ def build_parser():
                              "on a hard position")
     common.add_argument("--lookahead", type=int, default=0,
                         help="plies of width-limited lookahead above the exact "
-                             "search (default %(default)s, off).  1 buys about "
-                             "0.016 guesses for ~10x the wall clock; 2 is not "
-                             "affordable")
+                             "search (default %(default)s, off).  1 measures "
+                             "-0.0034 +- 0.0041 guesses, which is nothing, for "
+                             "~10x the wall clock; 2 is not affordable")
     common.add_argument("--beam-width", type=int, default=DEFAULT_BEAM_WIDTH,
                         help="guesses expanded per position when --lookahead is on "
                              "(default %(default)s; widening to 25 measured no "
