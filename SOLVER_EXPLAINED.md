@@ -914,12 +914,20 @@ almost at random. It finds the plateau reliably and can't tell one spot on it
 from another, which costs a hundredth of a guess because there's little there to
 tell apart. `analysis/lookahead_accuracy.py --decisions` is where those come from.
 
-The same outcome holds four separate times here: deep exact search (+0.0007 ±
-0.0029, i.e. nothing), one-ply lookahead, turn-conditioned `f` (+0.0005 ±
-0.0007), and the sharpened repeat prior *on its own* (+0.0056 ± 0.0294, despite
-being 4.4σ better as a prior). Only lookahead's has been taken apart at the level
-of the decision; the other three are measured at the outcome. What the solver has
-been short of is **somewhere better to go**, not a better map.
+The endgame search says the same thing from the other end, and says it harder,
+because where it reaches its value isn't a better estimate but the truth — a
+disagreement there is the estimator being wrong, full stop. Over the positions it
+takes over, the estimator picks a different guess **38.8%** of the time and gives
+up **0.0053 guesses** doing it. At three and four candidates every single
+disagreement is a tie: a different word of equal value, nothing to improve on.
+The ties thin as the set grows, and by 11–60 candidates most disagreements are
+real, which is the whole of that 0.0053. Two valuations, a plateau under each.
+
+Turn-conditioned `f` is the third case (+0.0005 ± 0.0007), measured at the
+outcome only — the implementation was reverted, so refreshing it means building
+it again.
+
+What the solver has been short of is **somewhere better to go**, not a better map.
 
 The exceptions are what sharpen the rule, and they have a common shape: every one
 of them changes *what the solver is choosing between* rather than how well it
@@ -929,6 +937,13 @@ The shapes of §4 are the first. Together they are worth −0.064 ± 0.032, whic
 small but is more than deeper search and better lookahead managed between them. A
 prior changes the quantity being optimized — which words are plausible answers at
 all — so it is a decision-side change wearing valuation-side clothes.
+
+The sharpened repeat prior taken alone (+0.0056 ± 0.0294, despite being 4.4σ
+better as a prior) belongs here rather than above, and the reason is worth being
+precise about. Changing the weights changes what a position is *worth*, so the
+two arms have no common ground truth and no scale on which one guess is better
+than the other. A better model of the editor is not a better estimate of a fixed
+quantity; it is a different quantity.
 
 Hard mode is the same thing in its bluntest form, and it makes the distinction
 hard to argue with. It improves no valuation whatsoever; it deletes words from

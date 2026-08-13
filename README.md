@@ -628,10 +628,30 @@ better. 30,000 unseen answers, paired:
 
 Only the free part (t ≤ 2) shows a consistent sign. Deeper search moves the mean
 by less than the noise floor at up to 88× the wall clock; what it does move is
-the loss rate, 50 → 39. Per decision over 3,000 games the estimator differs from
-the search on 18.9% of the states it reaches, at a mean regret of **0.0026
-guesses** — and at 3–4 candidates it differs 16.4% of the time with *exactly
-zero* regret, which are genuine ties.
+the loss rate, 50 → 39.
+
+Per decision it is sharper, and this is the one place a valuation can be checked
+against the truth rather than against a better guess at it. Over 1,200 positions
+the search takes over, weighted by how often play reaches them
+(`analysis/exact_decisions.py`), the estimator picks a different guess **38.8%**
+of the time and gives up **0.0053 guesses** by it. What that costs depends
+entirely on how much is left:
+
+| candidates | positions | the two differ | estimator regret | of which are ties |
+| --- | --- | --- | --- | --- |
+| 3–4 | 296 | 32.3% | 0.0000 | all of them |
+| 5–10 | 406 | 44.5% | 0.0034 | 39.4% |
+| 11–60 | 498 | 38.1% | 0.0086 | 11.2% |
+
+At three and four candidates every disagreement is a tie — a different word of
+equal value, where `f` cannot be improved on because there is nothing to improve.
+The ties thin out as the set grows, and by 11–60 most disagreements are real,
+which is where the 0.0053 comes from.
+
+The search's own regret reads 0.0004 rather than zero, and that is the loss
+penalty rather than any limit of the search: it optimizes a penalized score while
+this column measures mean guesses. At `--loss-penalty 1` it is 0.0000 exactly,
+which also says the branch cap costs nothing at these sizes.
 
 Refitting `f` under the search moves the curve by under 0.03 guesses everywhere
 (fit RMSE 0.63) and does not change measured play, so `train` keeps only the free

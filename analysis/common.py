@@ -113,6 +113,95 @@ def exact_stats(lengths, weights, max_guesses=MAX_GUESSES):
     return float(weights @ lengths), float(weights[lost].sum())
 
 
+# ------------------------------------------------- positions and their values
+#
+# What a position is worth is computable rather than estimable: the policy is
+# deterministic, so playing it out once per candidate answer and weighting by
+# the prior *is* its expected guesses.  These are the shared parts of
+# `lookahead_accuracy.py` and `exact_decisions.py`.
+
+# a deadline-free playout ends when one candidate is left, so this is a backstop
+# against a bug rather than a real limit
+PLAYOUT_CAP = 12
+
+
+def collect_positions(solver, answers, keep):
+    """Distinct positions from real games where ``keep(solver, candidates,
+    turns_left)`` holds, and how many of the games reach each.
+
+    Turn 1 is skipped: it is the same position in every game, and its value
+    costs a playout per word in the list.
+    """
+    index, out, counts = {}, [], []
+    for answer in answers:
+        answer = int(answer)
+        candidates = solver.all_candidates()
+        for turn in range(1, MAX_GUESSES + 1):
+            left = MAX_GUESSES - turn + 1
+            if turn > 1 and keep(solver, candidates, left):
+                key = candidates.tobytes()
+                if key in index:
+                    counts[index[key]] += 1
+                else:
+                    index[key] = len(out)
+                    out.append((turn, candidates))
+                    counts.append(1)
+            guess, _ = solver.best_guess(candidates, left)
+            if guess == answer:
+                break
+            candidates = solver.filter(guess, solver.feedback(guess, answer), candidates)
+    return out, np.array(counts, dtype=float)
+
+
+def playout(solver, candidates, answer):
+    """Guesses this solver's policy needs from here, with no deadline."""
+    for used in range(1, PLAYOUT_CAP + 1):
+        guess, _ = solver.best_guess(candidates, None)
+        if guess == answer:
+            return used
+        candidates = solver.filter(guess, solver.feedback(guess, answer), candidates)
+    return PLAYOUT_CAP
+
+
+def position_value(solver, candidates):
+    """Expected guesses from here under this policy: computed, not estimated."""
+    weights = solver.weights[candidates]
+    used = np.array([playout(solver, candidates, int(a)) for a in candidates],
+                    dtype=float)
+    return float(weights @ used / weights.sum())
+
+
+def guess_value(solver, candidates, guess):
+    """True expected guesses from playing ``guess`` here, then following the
+    solver's policy.  Every guess is continued the same way, so the difference
+    between two of them is the decision at this position and nothing else."""
+    weights = solver.weights[candidates]
+    used = np.empty(len(candidates), dtype=float)
+    for i, answer in enumerate(candidates):
+        answer = int(answer)
+        if guess == answer:
+            used[i] = 1.0
+            continue
+        rest = solver.filter(guess, solver.feedback(guess, answer), candidates)
+        used[i] = 1.0 + playout(solver, rest, answer)
+    return float(weights @ used / weights.sum())
+
+
+def shortlist(solver, candidates, k):
+    """The k best guesses by this solver's own heuristic score, best first."""
+    pool = solver.guess_pool(candidates)
+    scores = solver.score_all(candidates, pool=pool)
+    order = np.argsort(scores)[:k]
+    words = [int(i) if pool is None else int(pool[i]) for i in order]
+    return words, scores[order]
+
+
+def weighted(values, weights):
+    """Weighted mean, i.e. the per-game figure rather than the per-position one."""
+    w = np.asarray(weights, dtype=float)
+    return float(np.asarray(values, dtype=float) @ w / w.sum())
+
+
 def effective_support(weight):
     """2^H of a weight vector: how many equally likely words it spreads over."""
     p = np.asarray(weight, dtype=float)

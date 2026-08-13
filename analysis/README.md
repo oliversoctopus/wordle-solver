@@ -14,6 +14,7 @@ python analysis/hard_mode.py        what the hard-mode restriction costs
 python analysis/lookahead.py        what one ply of lookahead is worth
 python analysis/lookahead_accuracy.py   how well the two valuations price a position
 python analysis/lookahead_accuracy.py --decisions   what is at stake in the choice
+python analysis/exact_decisions.py  the same question asked of the endgame search
 python analysis/loss_penalty.py     the penalty and the endgame search's reach
 python analysis/loss_penalty.py --policies    entropy against the estimator
 python analysis/loss_penalty.py --cost        what reaching further costs in time
@@ -26,7 +27,8 @@ The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`,
 both arms over every word — cheap because the restriction it measures is also
 what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over
 the four priors and thirteen with `--decisions`, which plays out ten guesses at
-each position rather than one. `loss_penalty.py` is nine minutes for both
+each position rather than one; `exact_decisions.py` is under a minute, since the
+positions it asks about are the small ones. `loss_penalty.py` is nine minutes for both
 sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and
 well under one for `--policies`; `--cost` is a timing probe rather than a
 measurement and takes about six. `replay.py` is 80 s over the regime's real
@@ -48,6 +50,7 @@ run by whether it finishes, not by a stopwatch.
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §12 |
+| `exact_decisions.py` | the per-decision table under README *The exact endgame*, SOLVER_EXPLAINED §12 |
 | `loss_penalty.py` | the whole of README *Losing less*, SOLVER_EXPLAINED §9 and §10 |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
@@ -99,10 +102,12 @@ that looks slowest from a cold start is not the one that costs the most.
 replays the *real* answer sequence, so its sample is a historical record rather
 than a draw from the prior. There is nothing to enumerate.
 
-`lookahead_accuracy.py` sits between the two. Every value it reports is exact — a
-position played out once per candidate answer — but which positions it visits,
-and how heavily each counts, comes from a sample of games. Its means carry a
-sampling error that the enumerated ones do not.
+`lookahead_accuracy.py` and `exact_decisions.py` sit between the two. Every value
+they report is exact — a position played out once per candidate answer — but
+which positions they visit, and how heavily each counts, comes from a sample of
+games. Their means carry a sampling error that the enumerated ones do not. The
+machinery is shared: `common.collect_positions`, `common.guess_value` and their
+neighbors are the one implementation both read.
 
 ## `replay.py` lost its uniform-shape arms
 
