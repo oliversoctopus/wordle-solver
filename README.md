@@ -616,19 +616,23 @@ brute-force implementation of the recursion over random candidate sets.
 
 From the first state the search takes over, the whole continuation is optimal,
 so it cannot be worse than the estimator in expectation. It is also barely
-better. 30,000 unseen answers, paired:
+better. Every word played as the answer under the shipped prior
+(`analysis/loss_penalty.py --search`):
 
-| policy | mean | paired Δ | solve rate | wall clock |
+| policy | mean | loss probability | solve rate | wall clock |
 | --- | --- | --- | --- | --- |
-| greedy entropy | 3.6879 | — | 99.930% | 8 s |
-| expected, no exact search | 3.1827 | — | 99.833% | 9 s |
-| exact for t ≤ 2 only | 3.1826 | −0.0001 ± 0.0002 | 99.847% | 9 s |
-| exact for m ≤ 10 | 3.1835 | +0.0008 ± 0.0029 | 99.853% | 41 s |
-| exact for m ≤ 24 | 3.1834 | +0.0007 ± 0.0032 | 99.870% | 793 s |
+| greedy entropy | 3.6815 | 0.0034% | 99.9966% | 4 s |
+| expected, no exact search | 3.0773 | 0.0671% | 99.9329% | 4 s |
+| exact for t ≤ 2 only | 3.0774 | 0.0283% | 99.9717% | 4 s |
+| exact for m ≤ 10 | 3.0773 | 0.0258% | 99.9742% | 5 s |
+| exact for m ≤ 24 | 3.0772 | 0.0250% | 99.9750% | 7 s |
+| **exact for m ≤ 60 (default)** | **3.0770** | **0.0240%** | **99.9760%** | **10 s** |
 
-Only the free part (t ≤ 2) shows a consistent sign. Deeper search moves the mean
-by less than the noise floor at up to 88× the wall clock; what it does move is
-the loss rate, 50 → 39.
+The mean spans four ten-thousandths of a guess across that entire column, from
+no search at all to the default. What the search moves is the loss probability,
+and nearly all of that movement is in the part that costs nothing: `t ≤ 2` alone
+takes 0.0671% to 0.0283%, nine tenths of the whole reduction, at no wall clock.
+Everything deeper buys the remaining tenth for 2.5× the time.
 
 Per decision it is sharper, and this is the one place a valuation can be checked
 against the truth rather than against a better guess at it. Over 1,200 positions

@@ -44,6 +44,8 @@ parser.add_argument("--skip-reach", action="store_true",
                     help="the penalty sweep alone")
 parser.add_argument("--policies", action="store_true",
                     help="the policy comparison and the curated sweep instead")
+parser.add_argument("--search", action="store_true",
+                    help="what the search adds, by how far it is allowed to reach")
 parser.add_argument("--cost", action="store_true",
                     help="time the reach instead of scoring it")
 parser.add_argument("--cost-games", type=int, default=400,
@@ -140,6 +142,43 @@ def policies():
               f"losses {len(lost)} / {len(curated_idx)}")
         if lost:
             print(f"      {' '.join(sorted(lost))}")
+
+
+def search():
+    """What the endgame search adds, by how far it is allowed to reach.
+
+    Every row plays the same 12,947 answers under the shipped prior, so a
+    difference between two rows is the reach and nothing else.  `exact_max=0`
+    leaves only the part that is free -- two turns or fewer, which costs one pass
+    over the guesses either way.  The penalty is inert in the first two rows,
+    since it only ever enters through the search.
+    """
+    config = PriorConfig()
+    rows = {
+        "greedy entropy": WordleSolver(data=data, config=config, mode=ENTROPY),
+        "expected, no exact search": WordleSolver(
+            data=data, config=config, mode=EXPECTED, use_exact=False),
+        "expected, exact for t <= 2 only": WordleSolver(
+            data=data, config=config, mode=EXPECTED, exact_max=0),
+        "expected, exact for m <= 10": WordleSolver(
+            data=data, config=config, mode=EXPECTED, exact_max=10),
+        "expected, exact for m <= 24": WordleSolver(
+            data=data, config=config, mode=EXPECTED, exact_max=24),
+        "expected, exact for m <= 60 (default)": WordleSolver(
+            data=data, config=config, mode=EXPECTED),
+    }
+
+    common.header("What the endgame search is worth, over every word as the answer")
+    print(f"  {'policy':<38} {'mean':>8} {'loss prob':>10} "
+          f"{'solve rate':>11} {'wall':>7}")
+    for label, solver in rows.items():
+        start = time.perf_counter()
+        lengths, weights = play_all(solver)
+        elapsed = time.perf_counter() - start
+        row = stats(lengths, weights)
+        print(f"  {label:<38} {row['mean_penalized']:8.4f} "
+              f"{row['loss_prob'] * 100:9.4f}% {(1 - row['loss_prob']) * 100:10.4f}% "
+              f"{elapsed:6.0f}s")
 
 
 def costs():
@@ -266,6 +305,8 @@ def sweep(label, settings, run, baseline_key):
 
 if args.cost:
     costs()
+elif args.search:
+    search()
 elif args.policies:
     policies()
 else:

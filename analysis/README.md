@@ -17,6 +17,7 @@ python analysis/lookahead_accuracy.py --decisions   what is at stake in the choi
 python analysis/exact_decisions.py  the same question asked of the endgame search
 python analysis/loss_penalty.py     the penalty and the endgame search's reach
 python analysis/loss_penalty.py --policies    entropy against the estimator
+python analysis/loss_penalty.py --search      what the search adds, by its reach
 python analysis/loss_penalty.py --cost        what reaching further costs in time
 python analysis/replay.py           what the shapes are worth in guesses (slow)
 python analysis/form_default.py     which form to fit by default (slower)
@@ -30,8 +31,8 @@ the four priors and thirteen with `--decisions`, which plays out ten guesses at
 each position rather than one; `exact_decisions.py` is under a minute, since the
 positions it asks about are the small ones. `loss_penalty.py` is nine minutes for both
 sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and
-well under one for `--policies`; `--cost` is a timing probe rather than a
-measurement and takes about six. `replay.py` is 80 s over the regime's real
+well under one for `--policies` and about half for `--search`; `--cost` is a
+timing probe rather than a measurement and takes about six. `replay.py` is 80 s over the regime's real
 games, `results_tables.py` about three minutes, and `form_default.py` ten, which
 makes it the slow one — it replays 45 fitted policies where the others replay
 one or two.
@@ -51,7 +52,7 @@ run by whether it finishes, not by a stopwatch.
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §12 |
 | `exact_decisions.py` | the per-decision table under README *The exact endgame*, SOLVER_EXPLAINED §12 |
-| `loss_penalty.py` | the whole of README *Losing less*, SOLVER_EXPLAINED §9 and §10 |
+| `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, SOLVER_EXPLAINED §9 and §10 |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results* |
