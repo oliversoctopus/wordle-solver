@@ -56,6 +56,7 @@ for a large amount of time:
 import numpy as np
 
 import kernels
+from memo import Memo
 
 MAX_TURNS = 6
 # above this many candidates the packed signature no longer fits in an int64
@@ -94,8 +95,7 @@ class ExactEndgame:
         self.bound_penalty = min(self.loss_penalty, 1.0)
         self.max_nodes = max_nodes
         self.max_branch = max_branch
-        self.memo_limit = memo_limit
-        self.memo = {}
+        self.memo = Memo(memo_limit)
         self.nodes = 0
         self.searches = 0
 
@@ -143,8 +143,7 @@ class ExactEndgame:
             best = int(scores.argmin())
             guess = int(candidates[best]) if self.hard else best
             result = (guess, float(scores[best]))
-            if len(self.memo) < self.memo_limit:
-                self.memo[key] = result
+            self.memo.put(key, result)
             return result
 
         self.nodes += 1
@@ -183,8 +182,7 @@ class ExactEndgame:
                 best_value, best_guess = value, guess
 
         result = (best_guess, float(best_value))
-        if len(self.memo) < self.memo_limit:
-            self.memo[key] = result
+        self.memo.put(key, result)
         return result
 
     def _evaluate(self, guess, candidates, weights, total, turns, cutoff):

@@ -5,6 +5,7 @@ import numpy as np
 import estimator
 import kernels
 from exact import DEFAULT_MAX_BRANCH, MAX_TURNS, ExactEndgame, SearchBudgetExceeded
+from memo import Memo
 from priors import PriorConfig, build_weights
 from wordle_data import WIN_PATTERN, load_data
 
@@ -27,6 +28,9 @@ DEFAULT_BEAM_WIDTH = 10
 
 # cost of running out of turns, on top of the six spent; 1.0 is risk neutral
 DEFAULT_LOSS_PENALTY = 5.0
+
+# positions a memo holds before it starts dropping the least recently used
+DEFAULT_MEMO_LIMIT = 200_000
 
 
 class WordleSolver:
@@ -86,8 +90,8 @@ class WordleSolver:
             self.params = estimator.default_params(self.form)
 
         self._codes, self._knots, self._base = self.form.arrays()
-        self._memo = {}
-        self._beam_memo = {}
+        self._memo = Memo(DEFAULT_MEMO_LIMIT)
+        self._beam_memo = Memo(DEFAULT_MEMO_LIMIT)
 
         self.lookahead = int(lookahead)
         self.beam_width = int(beam_width)
@@ -109,6 +113,19 @@ class WordleSolver:
             self.form = estimator.get_form(form)
             self._codes, self._knots, self._base = self.form.arrays()
         self.params = np.asarray(params, dtype=np.float64)
+        self._memo.clear()
+        self._beam_memo.clear()
+
+    def reset_memo(self):
+        """Drop the cached guesses, for a sweep playing many independent
+        configurations in one process.
+
+        The memo is capped, and once full it stops caching altogether -- so the
+        positions that recur inside the run in front of it get recomputed, which
+        is exactly where it pays.  Clearing between runs keeps it small and
+        useful.  The exact search's memo is left alone: its values depend only on
+        the weights, so they stay valid and stay worth sharing.
+        """
         self._memo.clear()
         self._beam_memo.clear()
 
@@ -180,8 +197,7 @@ class WordleSolver:
             return hit
 
         result = self._best_guess_uncached(candidates, guesses_left)
-        if len(self._memo) < 200000:
-            self._memo[key] = result
+        self._memo.put(key, result)
         return result
 
     def _exact_applies(self, m, turns, cap=None):
@@ -322,8 +338,7 @@ class WordleSolver:
                 best_value, best_guess = value, guess
 
         result = (best_guess, float(best_value))
-        if len(self._beam_memo) < 200000:
-            self._beam_memo[key] = result
+        self._beam_memo.put(key, result)
         return result
 
     def solved_exactly(self, candidates, guesses_left=None):

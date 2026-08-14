@@ -102,6 +102,7 @@ out. Entropy mode needs no fit and runs on anything.
 | `solver.py` | scoring and guess choice; `WordleSolver` is the entry point |
 | `kernels.py` | the numba inner loops |
 | `exact.py` | exact endgame search |
+| `memo.py` | the bounded LRU both of those cache positions in |
 | `estimator.py` | `f(n)`, its forms, and fitting |
 | `train.py` | policy iteration that fits `f` |
 | `priors.py` | the repeat and curation priors |

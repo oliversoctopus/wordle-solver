@@ -38,10 +38,17 @@ games, `results_tables.py` about three minutes, and `form_default.py` ten, which
 makes it the slow one — it replays 45 fitted policies where the others replay
 one or two.
 
-Those are wall clocks on one machine and they are all far shorter than the sizes
-suggest, for the reason `loss_penalty.py` documents below: the memos saturate
-after a few thousand positions and the rest of a run comes out of cache. Judge a
-run by whether it finishes, not by a stopwatch.
+Those are wall clocks on one machine, and they are far shorter than the sizes
+suggest for one reason: the memos fill after a few thousand positions and the
+rest of a run comes out of cache. Behind a fixed opening the 12,947 answers reach
+at most 243 distinct positions, so the memo turns a 12,947-wide computation into
+a 240-wide one, and that ratio is most of why any of this finishes at all.
+
+Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Memo`
+drops its least recently used entry rather than refusing new ones once full, and
+why `WordleSolver.reset_memo` is there for a sweep that wants each run
+independent of the last. A run taking far longer than its row above is worth
+interrupting and diagnosing rather than waiting out.
 
 | script | backs |
 | --- | --- |
