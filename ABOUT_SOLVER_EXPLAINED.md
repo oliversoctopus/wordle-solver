@@ -17,11 +17,11 @@ accept; you get the "which guess shrinks the set most usefully?" question first,
 then counting, then bits, then the chain rule that makes information gain
 computable. The same for the prior, for `f`, and for the endgame search.
 
-It assumes no background in solvers, search, or information theory. It assumes
-you are comfortable with logarithms and averages, and it re-derives everything
-past that. Twelve display equations appear, and every one of them is also stated
-in words in the surrounding prose, so a viewer without math support costs you
-nothing but elegance.
+It assumes no background in solvers, search, or information theory, and re-derives
+everything past the mathematics named in *Who it is written for* below. Twelve
+display equations appear, and every one of them is also stated in words in the
+surrounding prose, so a viewer without math support costs you nothing but
+elegance.
 
 Two things it deliberately is **not**:
 
@@ -29,6 +29,47 @@ Two things it deliberately is **not**:
   you want *what the program does*, that is `README.md`.
 * **Not a summary of `README.md`, and `README.md` is not a summary of it.** They
   are two different jobs over the same solver, and both are kept current.
+
+## Who it is written for
+
+One reader, and the level is calibrated to them. It is written down here so that
+a later edit calibrates to the same person rather than to whoever is writing.
+
+* A high schooler, with mathematics through **AP Calculus BC** and **AP
+  Statistics**.
+* Competition mathematics: **AIME** three times, by the AMC 10 route, and not
+  past it.
+* Competitive programming: **USACO Silver**.
+* AI competitions: the **USA AI Olympiad** national camp, and a silver medal at
+  the **International AI Olympiad**.
+
+That last line is the one to be careful with, and the reader has said so plainly:
+a young competition needs less advanced mathematics than its results suggest. A
+medal there is not a claim to linear algebra or measure theory. The general form
+of it, which matters more than any single entry above: **do not infer knowledge
+of a subject from success at a competition that does not examine that subject.**
+
+What follows for this document:
+
+**Fair to assume.** Logarithms and exponentials. Expected value, mean, standard
+deviation, the normal distribution, and the difference between a sample and the
+thing it estimates — AP Statistics covers these and the derivation leans on them
+constantly. Fitting a line by least squares, residuals, and correlation as a
+number between −1 and 1. Derivatives and integrals, though little here needs
+them. Recursion, sorting, and simple dynamic programming.
+
+**Not fair to assume, so derived here.** Information theory entire: entropy,
+bits, information gain (§3). What a prior is and what it means to weight a word
+list (§4). Value functions, policies, and policy iteration (§7). Game-tree search
+— expectimax, and pruning a search with bounds (§9). None of that appears in AP
+Statistics, in AIME, or in USACO Silver.
+
+**Needs a sentence of gloss at first use.** Statistics past the AP syllabus, and
+especially where it resembles something on it: rank correlation is not the `r`
+taught there, and RMSE wants saying out loud as the root-mean-square of the
+residuals. A standard error written `± 0.004` should be explained once. So should
+notation that is ordinary in code and unusual in a classroom — `argmin`, `Σ` over
+buckets, `O(n)`.
 
 ## How to view it
 
@@ -91,8 +132,8 @@ Read start to finish the first time. The order is the argument.
 
 If you have ten minutes rather than an evening: **§2, §6, §12**. §2 is the idea
 the solver is built on, §6 is where it stops being a standard entropy solver, and
-§12 is the finding worth carrying away — *better valuation is not better
-decisions*, which held four separate times here and cost real work to learn.
+§12 is the finding worth carrying away — *better decisions, worth almost
+nothing*, which held four separate times here and cost real work to learn.
 
 If you want the punchline first, §12 reads fine cold and will send you back for
 the parts you want.
@@ -101,6 +142,7 @@ the parts you want.
 
 | document | the question it answers |
 | --- | --- |
+| `ABOUT_SOLVER_EXPLAINED.md` | this file: who the long one is for, how to view it, what order to read it in |
 | `SOLVER_EXPLAINED.md` | **why** the solver is built this way, from the ground up |
 | `README.md` | **what** it does: the flags, the priors, every measured result, the tables |
 | `analysis/README.md` | **how the numbers were measured**, and which script reproduces each |

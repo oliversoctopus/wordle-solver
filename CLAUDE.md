@@ -5,9 +5,10 @@ fitted by policy iteration, an exact endgame search, two terminal front ends and
 a web page that does both.
 
 `README.md` is the reference — priors, objective, endgame, results. Read
-`SOLVER_EXPLAINED.md` for the derivation from scratch. Neither is a summary of
-the other and both are kept current; if you change behavior, update the one that
-documents it.
+`SOLVER_EXPLAINED.md` for the derivation from scratch, by way of
+`ABOUT_SOLVER_EXPLAINED.md`, which says who it is written for and in what order
+to read it. Neither is a summary of the other and both are kept current; if you
+change behavior, update the one that documents it.
 
 `ABOUT_SOLVER_EXPLAINED.md` is the front door to the second of those: what it is
 for, how to view its LaTeX, and the route through its sections. The viewing
