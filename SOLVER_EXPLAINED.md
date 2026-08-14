@@ -276,10 +276,15 @@ identical. The test that matters is whether an *old* copy predicts *later*
 answers, and the Wayback Machine has a snapshot from **2023-10-12**, frozen
 almost three years ago:
 
-Of the 41 off-list answers used since that snapshot, **39** were already in it,
-the two misses being `loris` and `kefir`. And of the 84 words added to the list
-in the meantime, those same two are the only ones ever to have been an answer. So
-it predicts forward at about 95%, and its growth is not backfilling.
+| snapshot 2023-10-12 | |
+| --- | --- |
+| off-list answers used after it | 41 |
+| ...already in the snapshot | **39** |
+| the misses | `loris`, `kefir` |
+| words added to the list since | 84 |
+| ...of those, ever an answer | **2** (the same two) |
+
+So it predicts forward at about 95%, and its growth is not backfilling.
 
 The shape follows directly: **95%** of the off-list mass goes to the listed words
 in proportion to their published weight, and the remaining **5%** spreads over
@@ -317,15 +322,30 @@ Depending on somebody else's site is a fine thing to vendor and a bad thing to
 has. The curated list is 2,309 labeled examples of "a word an editor considered
 answerable", independent of the 46 off-list events, so `answer_like.py` fits a
 logistic regression with those as positives and the non-curated words as
-negatives, then scores the unused words by its log-odds. Word frequency and a
-cross-lingual test for proper names carry most of it, with plural and past-tense
-endings counting heavily against — though the fit needs all thirteen of its
-features to reproduce, not just those four.
+negatives, then scores the unused words by its log-odds. Four of its thirteen
+weights carry the model, and those four are legible:
 
-It promotes `squid` and `maven`, both real off-list answers, and demotes `karks`
-and `xylyl`, both behind recorded losses in §14. At the temperature it ships at
-it scores −8.13 against WordleBot's −6.46 above: worse, and the price of owing
-nobody a scrape.
+| feature | weight | reading |
+| --- | --- | --- |
+| Zipf frequency | **+4.00** | common words get picked |
+| ends in `s` | **−5.87** | 37% of the pool is a plural; 9% of off-list answers are |
+| ends in `ed` | −5.09 | past tenses do not get picked either |
+| foreign lift | −1.16 | as common abroad as at home ⇒ a name, not a word |
+
+The other nine still matter: a fit keeping only these four correlates at r ≈ 0.98
+with the shipped table while reproducing none of it. Against the flat weight the
+shape replaces, at the temperature that ships:
+
+| promoted | | demoted | |
+| --- | --- | --- | --- |
+| `squid` | 8.5× | `karks` | 0.014× |
+| `maven` | 4.4× | `fents` | 0.014× |
+| `aloha` | 4.0× | `xylyl` | 0.10× |
+| `kazoo` | 2.4× | `faffy` | 0.096× |
+
+Every word on the left is a real off-list answer, every one on the right behind a
+recorded loss in §14. The shape scores −8.13 against WordleBot's −6.46 above:
+worse, and the price of owing nobody a scrape.
 
 ## 6. Measuring a prior without fooling yourself
 
@@ -639,17 +659,22 @@ f(n) = 0.955 + 0.372·x − 0.112·(x−2)₊ − 0.138·(x−4)₊ − 0.104·(
 ```
 
 Every knot bends it flatter and none bends it back — the sixth, at `x = 8`, was
-dropped altogether by the monotonicity guard §10 describes. Concretely:
-`f(2)=1.33`, `f(3)=1.54`, `f(10)=2.04`, `f(100)=2.47`, `f(1000)=2.53`,
-`f(12947)=2.60`. Going from 100 candidates to 1,000 costs **0.06 guesses**, and
-from 1,000 to the whole word list another 0.07. That is the honest shape of the
-game, and precisely what a linear `f` cannot express.
+dropped altogether by the monotonicity guard §10 describes. Concretely, beside
+the curve fitted under the flat shapes (`0.61 + 0.77·√x`):
 
-It is also much flatter than the curve fitted under the flat shapes
-(`0.61 + 0.77·√x`, running 2.58 → 3.02 → 3.42 over those last three points),
-which is the prior changing what `f` even has to model: with the mass
-concentrated, the effective size rarely reaches the range where a saturating
-curve has gone flat, so saturation stopped being the liability it used to be.
+| n | 2 | 3 | 10 | 100 | 1,000 | 12,947 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `f(n)`, shipped shapes | 1.33 | 1.54 | 2.04 | **2.47** | **2.53** | **2.60** |
+| `f(n)`, flat shapes | | | | 2.58 | 3.02 | 3.42 |
+
+Going from 100 candidates to 1,000 costs **0.06 guesses** on the shipped curve,
+and from 1,000 to the whole word list another 0.07. That is the honest shape of
+the game, and precisely what a linear `f` cannot express. Over that whole stretch
+the shipped curve climbs 0.13 where the flat-shape one climbs 0.84, which is more
+than a rescaling: it is the prior changing what
+`f` even has to model: with the mass concentrated, the effective size rarely
+reaches the range where a saturating curve has gone flat, so saturation stopped
+being the liability it used to be.
 
 One caveat that matters when reading any of this: `f` is fitted **per prior**, so
 the curve above is the default prior's and no other. Turn a prior off and a
