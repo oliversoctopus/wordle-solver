@@ -3,8 +3,8 @@
 The curated list is 2,309 labeled examples of "a word an editor considered
 answerable" and it is independent of the off-list events, so fit a logistic
 regression with the curated words as positives and the non-curated words as
-negatives and keep the log-odds.  `SOLVER_EXPLAINED.md` 5.3 has the derivation
-and reads the fitted weights.
+negatives and keep the log-odds.  `SOLVER_EXPLAINED.md` 5.3 says why the shape
+exists and what it is worth against the shipped one.
 
 This reproduces the shipped `answer_like.json` exactly.  It writes nothing
 unless you pass `--write`, since the solver reads the file.

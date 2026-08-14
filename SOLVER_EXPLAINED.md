@@ -276,17 +276,13 @@ identical. The test that matters is whether an *old* copy predicts *later*
 answers, and the Wayback Machine has a snapshot from **2023-10-12**, frozen
 almost three years ago:
 
-| snapshot 2023-10-12 | |
-| --- | --- |
-| off-list answers used after it | 41 |
-| ...already in the snapshot | **39** |
-| the misses | `loris`, `kefir` |
-| words added to the list since | 84 |
-| ...of those, ever an answer | **2** (the same two) |
+Of the 41 off-list answers used since that snapshot, **39** were already in it,
+the two misses being `loris` and `kefir`. And of the 84 words added to the list
+in the meantime, those same two are the only ones ever to have been an answer. So
+it predicts forward at about 95%, and its growth is not backfilling.
 
-So it predicts forward at about 95%, and its growth is not backfilling. The shape
-follows directly: **95%** of the off-list mass goes to the listed words in
-proportion to their published weight, and the remaining **5%** spreads over
+The shape follows directly: **95%** of the off-list mass goes to the listed words
+in proportion to their published weight, and the remaining **5%** spreads over
 everything else — a hedge set at the measured miss rate, and what stops a `loris`
 from being a blindside.
 
@@ -314,48 +310,22 @@ answer-likeness and would get **0.32×** the flat share. Over the only two event
 that have ever needed the hedge, shaping it is worth −0.13 nats — flat being the
 honest expression of not knowing which word the list is short of.
 
-### 5.3 The fallback: guessing what is answer-like
+### 5.3 The fallback that needs no scrape
 
-The WordleBot shape depends on a third-party scrape of somebody else's site — a
-fine thing to vendor and a bad thing to *need*. So there is a fallback built from
-the word lists already in the repo plus a published frequency corpus
-(`wordfreq`). It is not what ships; it is what you would turn on to be rid of the
-scrape.
+Depending on somebody else's site is a fine thing to vendor and a bad thing to
+*need*, so there is an alternative shape built only from what the repo already
+has. The curated list is 2,309 labeled examples of "a word an editor considered
+answerable", independent of the 46 off-list events, so `answer_like.py` fits a
+logistic regression with those as positives and the non-curated words as
+negatives, then scores the unused words by its log-odds. Word frequency and a
+cross-lingual test for proper names carry most of it, with plural and past-tense
+endings counting heavily against — though the fit needs all thirteen of its
+features to reproduce, not just those four.
 
-The trick is that the curated list is 2,309 labeled examples of "a word an editor
-considered answerable", completely independent of the 46 off-list events. So
-`answer_like.py` fits a logistic regression with the curated words as positives
-and the non-curated as negatives, then scores the unused words by its log-odds.
-Four of the thirteen weights carry the model, and those four are legible:
-
-| feature | weight | reading |
-| --- | --- | --- |
-| Zipf frequency | **+4.00** | common words get picked |
-| ends in `s` | **−5.87** | 37% of the pool is a plural; 9% of off-list answers are |
-| ends in `ed` | −5.09 | past tenses do not get picked either |
-| foreign lift | −1.16 | as common abroad as at home ⇒ a name, not a word |
-
-The other nine are not decoration even where they sit near zero: a fit keeping
-only these four still correlates at r ≈ 0.98 with the shipped table while
-reproducing none of it.
-
-The weight is `exp(t × score)`, and the temperature `t` matters because the model
-answers a slightly different question than the one asked — "would have been
-*curated*", not "will be tomorrow's *off-list* answer" — so at face value
-(`t = 1`) the effective support collapses to 554 words. Fitting `t` against the
-real off-list events gives ≈0.5, and end to end 0.20, 0.35 and 0.50 land within
-**0.004 guesses** of each other; **0.35** is the middle of a flat optimum.
-Against the flat weight it replaces:
-
-| promoted | | demoted | |
-| --- | --- | --- | --- |
-| `squid` | 8.5× | `karks` | 0.014× |
-| `maven` | 4.4× | `fents` | 0.014× |
-| `aloha` | 4.0× | `xylyl` | 0.10× |
-| `kazoo` | 2.4× | `faffy` | 0.096× |
-
-Every word on the left is a real off-list answer; every one on the right is
-behind a recorded loss in §14.
+It promotes `squid` and `maven`, both real off-list answers, and demotes `karks`
+and `xylyl`, both behind recorded losses in §14. At the temperature it ships at
+it scores −8.13 against WordleBot's −6.46 above: worse, and the price of owing
+nobody a scrape.
 
 ## 6. Measuring a prior without fooling yourself
 
@@ -413,39 +383,22 @@ measurement.
 
 ### 6.3 Do the two shapes need each other?
 
-The argument for shipping them as a pair was that they looked *superadditive*:
-each close to nothing alone, the pair far more than the sum, which is a strong
-reason to ship two things at once. On current data it is gone — the three
-configurations blend to −0.044, −0.022 and −0.064 against a sum of −0.066, which
-is **additive, within noise**. (`wordlebot` alone once carried a **+0.611**
-penalty on the repeat arm against +0.143 now, and that penalty is what made the
-pair look worth so much more than its parts.)
+No: they are **additive, within noise**. The three configurations blend to
+−0.044, −0.022 and −0.064 against a sum of −0.066, and each shape independently
+beats flat at its own job by a margin the prequential scoring *can* resolve —
++1.14 ± 0.21 nats per event for `binned` (§5.1), −6.46 against −9.27 for
+`wordlebot` (§5.2). Both ship because each earns its place alone.
 
-What survives is a mechanism, worth following because its arithmetic is checkable
-where the guess counts are not. Concentrating the off-list mass onto its ~870
-effective words gives each about **1.0×10⁻⁴**, where a used word under flat
-repeat mass has 0.10/1,858 = **5.4×10⁻⁵**. Sharpening curation alone therefore
-promotes any off-list word above any past answer, nearly two to one — on average
-not far wrong, the observed rates justifying about 1.5, but wrong *word by word*,
-since flat repeat mass spreads evenly over 1,858 words when 19 of the 21 repeats
-came from the first 300. The solver stops attending to `cigar`, and when the
-answer *is* `cigar`, it pays.
-
-That predicts a cost on the repeat arm from sharpening curation alone, and there
-is one: `wordlebot` alone is **+0.143 ± 0.078**, the two rows containing it being
-the only ones that lose ground there at all. It also predicts the binned shape
-relieves that cost, and on this the data is silent — the pair scores
-**+0.095 ± 0.228**, better than +0.143 by a fifth of its own error bar. Reaching
-±0.05, enough to call a 0.1-guess repair, needs some 340 repeats: roughly 3,000
-puzzles at the regime's rate, or eight years of Wordle.
-
-So: **a reason to expect interference, not evidence of it.** Which does not argue
-against shipping both, because the pair never needed the interaction to justify
-it. Each shape independently beats flat at its own job by a margin the
-prequential scoring *can* resolve: +1.14 ± 0.21 nats per event for `binned`
-(§5.1), −6.46 against −9.27 for `wordlebot` (§5.2). Two separately justified
-improvements, adding up — a smaller claim than the one they were adopted on, and
-the one the data supports.
+There is a mechanism that predicts otherwise, and it is worth knowing about even
+though the data cannot see it. Sharpening one side makes the other's flatness the
+larger error in the weights: concentrating the off-list mass onto its ~870
+effective words gives each about **1.0×10⁻⁴** where a used word under flat repeat
+mass has **5.4×10⁻⁵**, so curation alone promotes every off-list word above every
+past answer, and when the answer is a `cigar` that costs. Whether the repeat
+shape buys it back is not a question 21 events can answer — that arm carries
+±0.17–0.23 however it is analyzed, and resolving a 0.1-guess effect on it needs
+some 340 repeats, eight years of Wordle. A reason to expect interference, not
+evidence of it.
 
 ## 7. Effective size: making a weighted set have a "count"
 
@@ -875,18 +828,13 @@ So `memo.Memo` caches results keyed on the position. The key is
 `candidates.tobytes()` — the raw bytes of the candidate index array, which is
 cheap to produce and exact — together with the number of turns left, since the
 right guess genuinely depends on how many are remaining and a value found with
-four turns left is wrong for two. There are three of these with different
-lifetimes:
+four turns left is wrong for two.
 
-| memo | holds | invalidated by |
-| --- | --- | --- |
-| `WordleSolver._memo` | the chosen guess per position | a new `f` |
-| `WordleSolver._beam_memo` | lookahead values | a new `f` |
-| `ExactEndgame.memo` | true values from the search | nothing — see below |
-
-The last one is the interesting case. The exact search's values depend only on
-the prior weights, never on the estimator, so refitting `f` leaves every cached
-value correct. It survives a change that invalidates the other two.
+There are three of them, and they do not all expire together. `WordleSolver`
+keeps two, one for the guess it chose and one for lookahead values, and both are
+dropped whenever `f` is refitted. `ExactEndgame.memo` is not, and that asymmetry
+is worth noticing: the search returns true values, which depend only on the prior
+weights and never on the estimator, so a refit leaves every one of them correct.
 
 ### Why it evicts rather than jams
 
