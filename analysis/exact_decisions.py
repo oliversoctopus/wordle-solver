@@ -51,6 +51,9 @@ parser.add_argument("--loss-penalty", type=float, default=DEFAULT_LOSS_PENALTY,
                          "its residual regret here; 1 is risk neutral")
 parser.add_argument("--seed", type=int, default=4242)
 parser.add_argument("--shipped-only", action="store_true")
+parser.add_argument("--who-decides", action="store_true",
+                    help="count which valuation takes each decision, by turns "
+                         "left, instead of scoring the choices")
 args = parser.parse_args()
 
 data = load_data()
@@ -99,7 +102,77 @@ def report(title, rows, weights):
     print()
 
 
+DECIDERS = ("f", "exact search", "closed form", "one candidate")
+
+
+def decider(solver, candidates, turns_left):
+    """Which of the four actually produces the guess at this position."""
+    m = len(candidates)
+    if m == 1:
+        return "one candidate"
+    if m == 2:
+        return "closed form"
+    return "exact search" if solver.solved_exactly(candidates, turns_left) else "f"
+
+
+def who_decides():
+    """Where each valuation is consulted, by turns left.
+
+    Conditioning `f` on turns remaining can only change play where `f` is the one
+    deciding *and* the deadline is close enough to bind.  Rather than fit such a
+    curve to find out, this counts the positions: every decision in every game,
+    not deduplicated, since what matters is how often a row is read.
+    """
+    total = {t: dict.fromkeys(DECIDERS, 0) for t in range(1, MAX_TURNS + 1)}
+    for config in configs:
+        solver = WordleSolver(data=data, config=config, mode=EXPECTED,
+                              exact_max=args.exact_max,
+                              loss_penalty=args.loss_penalty)
+        answers = sample_answers(solver.weights, args.games, seed=args.seed)
+        counts = {t: dict.fromkeys(DECIDERS, 0) for t in range(1, MAX_TURNS + 1)}
+        for answer in answers:
+            answer = int(answer)
+            candidates = solver.all_candidates()
+            for turn in range(1, MAX_TURNS + 1):
+                left = MAX_TURNS - turn + 1
+                who = decider(solver, candidates, left)
+                counts[left][who] += 1
+                total[left][who] += 1
+                guess, _ = solver.best_guess(candidates, left)
+                if guess == answer:
+                    break
+                candidates = solver.filter(guess, solver.feedback(guess, answer),
+                                           candidates)
+        report_deciders(f"{config.slug}: who decides, over {args.games} games",
+                        counts)
+    if len(configs) > 1:
+        report_deciders(f"all {len(configs)} priors, {args.games} games each",
+                        total)
+
+
+def report_deciders(title, counts):
+    common.header(title)
+    print(f"  {'turns left':>10} " + " ".join(f"{d:>13}" for d in DECIDERS)
+          + f" {'total':>8}")
+    for left in range(MAX_TURNS, 0, -1):
+        row = counts[left]
+        n = sum(row.values())
+        if not n:
+            continue
+        print(f"  {left:>10} " + " ".join(f"{row[d]:>13,}" for d in DECIDERS)
+              + f" {n:>8,}")
+    binding = sum(counts[t]["f"] for t in (1, 2, 3))
+    reached = sum(sum(counts[t].values()) for t in (1, 2, 3))
+    print(f"\n  with three or fewer turns left, f decides {binding:,} of "
+          f"{reached:,} positions\n")
+
+
 KEYS = ("spread", "heur", "exact", "moved", "rho", "size")
+
+if args.who_decides:
+    who_decides()
+    raise SystemExit
+
 pooled = {key: [] for key in KEYS}
 pooled_weights = []
 

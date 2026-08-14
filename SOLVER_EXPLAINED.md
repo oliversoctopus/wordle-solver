@@ -923,11 +923,15 @@ disagreement is a tie: a different word of equal value, nothing to improve on.
 The ties thin as the set grows, and by 11–60 candidates most disagreements are
 real, which is the whole of that 0.0053. Two valuations, a plateau under each.
 
-Turn-conditioned `f` is the third case (+0.0005 ± 0.0007), measured at the
-outcome only — the implementation was reverted, so refreshing it means building
-it again.
+Turn-conditioned `f` is the third case, and it never stood a chance. A curve
+conditioned on turns remaining differs from the flat one only where the deadline
+binds, and `f` is consulted **once in 11,338** positions with three or fewer
+turns left — the search has taken every other one. The +0.0005 ± 0.0007 it
+measured is a fact about an implementation since removed; the reason it could not
+have come out otherwise is structural, and still holds.
 
-What the solver has been short of is **somewhere better to go**, not a better map.
+What the solver has been short of is **somewhere better to go**, not a better
+map.
 
 The exceptions are what sharpen the rule, and they have a common shape: every one
 of them changes *what the solver is choosing between* rather than how well it

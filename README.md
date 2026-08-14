@@ -885,13 +885,28 @@ apart at the level of the decision, the other three measured at the outcome.
 
 `f(n)` estimates guesses-to-finish with no turn limit, so a position with four
 turns left is scored as one with two. Fitting `f` once per turn count produces
-curves with a large turn effect (a 2,000-candidate bucket worth 4.97 with three
-turns left against 3.04 with five) and changes nothing: over 80,000 paired games,
-losses 81 → 79 and mean +0.0005 ± 0.0007. By the time the deadline binds the
-exact search has already taken the decision — over 16,000 games, with three turns
-left `f` decides 10 positions against the search's 2,764, and with two or fewer
-it decides none. The rows where turn-conditioning would matter are the rows
-nobody reads.
+curves with a large turn effect — a 2,000-candidate bucket worth 4.97 with three
+turns left against 3.04 with five — and changes nothing.
+
+It could not have done. Where those curves differ is where the deadline binds,
+and the exact search has taken that decision long before. Counting every decision
+in 16,000 games (`analysis/exact_decisions.py --who-decides`):
+
+| turns left | `f` | exact search | closed form | one candidate |
+| --- | --- | --- | --- | --- |
+| 6 | 16,000 | 0 | 0 | 0 |
+| 5 | 13,169 | 2,747 | 40 | 44 |
+| 4 | 775 | 11,198 | 1,245 | 2,078 |
+| 3 | 1 | 2,849 | 1,537 | 4,317 |
+| 2 | 0 | 288 | 369 | 1,612 |
+| 1 | 0 | 4 | 9 | 352 |
+
+`f` takes **one** decision in 11,338 with three or fewer turns left, and none at
+all below three; the 775 at four turns left are the last of them. Every row where
+a turn-conditioned curve would say something different is a row nobody reads. The
+outcome measured when it was tried, over 80,000 paired games, was losses 81 → 79
+and a mean of +0.0005 ± 0.0007 — a fact about an implementation since removed,
+where the table above is a fact about the solver as it stands.
 
 ## Forms of f
 

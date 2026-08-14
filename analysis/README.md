@@ -15,6 +15,7 @@ python analysis/lookahead.py        what one ply of lookahead is worth
 python analysis/lookahead_accuracy.py   how well the two valuations price a position
 python analysis/lookahead_accuracy.py --decisions   what is at stake in the choice
 python analysis/exact_decisions.py  the same question asked of the endgame search
+python analysis/exact_decisions.py --who-decides   which valuation takes each turn
 python analysis/loss_penalty.py     the penalty and the endgame search's reach
 python analysis/loss_penalty.py --policies    entropy against the estimator
 python analysis/loss_penalty.py --search      what the search adds, by its reach
@@ -51,7 +52,7 @@ run by whether it finishes, not by a stopwatch.
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §12 |
-| `exact_decisions.py` | the per-decision table under README *The exact endgame*, SOLVER_EXPLAINED §12 |
+| `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §12 |
 | `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, SOLVER_EXPLAINED §9 and §10 |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
