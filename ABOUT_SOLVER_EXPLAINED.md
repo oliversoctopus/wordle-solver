@@ -60,9 +60,11 @@ them. Recursion, sorting, and simple dynamic programming.
 
 **Not fair to assume, so derived here.** Information theory entire: entropy,
 bits, information gain (§3). What a prior is and what it means to weight a word
-list (§4). Value functions, policies, and policy iteration (§7). Game-tree search
-— expectimax, and pruning a search with bounds (§9). None of that appears in AP
-Statistics, in AIME, or in USACO Silver.
+list (§4–§5). Value functions, policies, and policy iteration (§10). Game-tree
+search — expectimax, and pruning a search with bounds (§12). None of that appears
+in AP Statistics, in AIME, or in USACO Silver. Nor does anything about the
+machine underneath: cache lines and memory-bound loops, what a compiler is
+allowed to reorder, and cache eviction policy (§8, §13).
 
 **Needs a sentence of gloss at first use.** Statistics past the AP syllabus, and
 especially where it resembles something on it: rank correlation is not the `r`
@@ -120,23 +122,29 @@ Read start to finish the first time. The order is the argument.
 | 1 | the feedback rule, why duplicate letters make it subtle, and why 167 MB of table is worth it |
 | 2 | the reframe everything rests on: **a guess is a partition of the candidate set** |
 | 3 | entropy and information gain, built up from counting rather than quoted |
-| 4 | the answer is not drawn uniformly — the repeat and curation priors, their shapes, and (4.6) how to measure a prior without fooling yourself |
-| 5 | effective size: giving a weighted set an honest "count", and the rearrangement that makes it cheap |
-| 6 | the real objective, `E(g, S)`, and **why minimizing it is not entropy in disguise** |
-| 7 | where `f` comes from, since it is defined in terms of the play it decides — policy iteration |
-| 8 | the six-guess deadline, and what losing should cost |
-| 9 | the endgame search, and the four ideas that make brute force affordable |
-| 10 | why the loss penalty is 5 when 1 is the principled answer |
-| 11 | one full turn of play, with every piece above in its place |
-| 12 | the result worth framing |
+| 4 | the answer is not drawn uniformly — the editor model, and the regime that justifies its two rates |
+| 5 | how the mass is spread *inside* each group: the repeat histogram, WordleBot's weights, and the fallback that needs no scrape |
+| 6 | how to measure a prior without fooling yourself, and the one question the data cannot settle |
+| 7 | effective size: giving a weighted set an honest "count", and the rearrangement that makes it cheap |
+| 8 | the scoring loop, and the two cost assumptions that turned out to be wrong |
+| 9 | the real objective, `E(g, S)`, and **why minimizing it is not entropy in disguise** |
+| 10 | where `f` comes from, since it is defined in terms of the play it decides — policy iteration |
+| 11 | the six-guess deadline, and what losing should cost |
+| 12 | the endgame search, and the four ideas that make brute force affordable |
+| 13 | why positions are memoized, and why the cache evicts rather than jams |
+| 14 | why the loss penalty is 5 when 1 is the principled answer |
+| 15 | one full turn of play, with every piece above in its place |
+| 16 | the result worth framing |
+| 17 | the five ideas that make any of it finish, collected |
 
-If you have ten minutes rather than an evening: **§2, §6, §12**. §2 is the idea
-the solver is built on, §6 is where it stops being a standard entropy solver, and
-§12 is the finding worth carrying away — *better decisions, worth almost
+If you have ten minutes rather than an evening: **§2, §9, §16**. §2 is the idea
+the solver is built on, §9 is where it stops being a standard entropy solver, and
+§16 is the finding worth carrying away — *better decisions, worth almost
 nothing*, which held four separate times here and cost real work to learn.
 
-If you want the punchline first, §12 reads fine cold and will send you back for
-the parts you want.
+If you want the punchline first, §16 reads fine cold and will send you back for
+the parts you want. §17 is the same lesson from the engineering side and reads
+cold too.
 
 ## How it sits next to the other documents
 
@@ -177,31 +185,34 @@ paragraphs disagree, one of them is a patch and should not exist.
 
 **Keep superseded numbers only where the contrast is the lesson.** The
 possible-answer bonus growing 0.46 → 0.56 as the prior sharpens is evidence for
-§12's thesis, so it stays — as a clause, inside the current statement. "An
+§16's thesis, so it stays — as a clause, inside the current statement. "An
 earlier version of this table reported −8.08" teaches nothing and goes. The test:
 does the old number explain something about the solver, or only about the repo?
 
 **Never let the document talk about itself.** No "the claim this section used to
 make is dead", no "this section has been updated", no dates of revision. Where
-the project was wrong and the error is instructive — §4.5's superadditivity,
-§4.6's `sqrt` trap — tell it as something that happened to the *project*, in the
-past tense, as part of the argument. The reader should never be made aware they
-are reading a file with a git history.
+the project was wrong and the error is instructive — §6.3's superadditivity,
+§6.1's `sqrt` trap, the `fastmath` bug in §8 — tell it as something that happened
+to the *project*, in the past tense, as part of the argument. The reader should
+never be made aware they are reading a file with a git history.
 
 **Put a new finding where the argument needs it, not at the end.** Hard mode
-earns its place in §6 because it is the cleanest test of the entropy identity;
-it appears again in §9 and §11 only as a consequence, and in §12 as an example of
-the thesis. It is not a section of its own. Ask what a new result is *evidence
-for*, and put it next to the claim it supports.
+earns its place in §9 because it is the cleanest test of the entropy identity;
+it appears again in §12 and §15 only as a consequence, and in §16 as an example
+of the thesis. It is not a section of its own. Ask what a new result is *evidence
+for*, and put it next to the claim it supports. The one deliberate exception is
+§17, which collects patterns the reader has already met in place — it adds no new
+material, and if it ever starts to, that material belongs upstream.
 
 **Say each thing once.** The warning that the §4 table is not comparable across
 rows belongs at that table and nowhere else. A caveat repeated in three sections
 is three places to forget to update.
 
 **Every section should hand off.** End by naming the question the next one
-answers — §0 lists what §1–§3 must supply, §3 sets up why §4 is the long one, §6
-ends "where `f` comes from is §7's problem." The order is the argument; a section
-that could be moved without anyone noticing is not carrying its weight.
+answers — §0 lists what §1–§3 must supply, §7 ends on the loop §8 then takes
+apart, §9 ends "where `f` comes from is §10's problem." The order is the
+argument; a section that could be moved without anyone noticing is not carrying
+its weight.
 
 **Point at code by name, never by line number** — `priors.build_weights`, not
 `priors.py:221`. One pass found seven references that had silently drifted.

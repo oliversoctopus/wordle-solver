@@ -56,16 +56,16 @@ interrupting and diagnosing rather than waiting out.
 
 | script | backs |
 | --- | --- |
-| `regime.py` | README *Both defaults describe a regime six months old*, SOLVER_EXPLAINED §4.1 |
-| `repeat_shapes.py` | README *Sharpening the repeat prior* table, SOLVER_EXPLAINED §4.2 |
+| `regime.py` | README *Both defaults describe a regime six months old*, SOLVER_EXPLAINED §4 |
+| `repeat_shapes.py` | README *Sharpening the repeat prior* table, SOLVER_EXPLAINED §5.1 |
 | `drift.py` | the closing paragraph of README *Sharpening the repeat prior* |
-| `curation_shapes.py` | SOLVER_EXPLAINED §4.3 including why the hedge is flat, the opening of README *Shaping the two priors* |
+| `curation_shapes.py` | SOLVER_EXPLAINED §5.2 including why the hedge is flat, the opening of README *Shaping the two priors* |
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
-| `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §12 |
-| `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §12 |
-| `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §12 |
-| `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, SOLVER_EXPLAINED §9 and §10 |
+| `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §16 |
+| `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §16 |
+| `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §16 |
+| `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, SOLVER_EXPLAINED §12 and §14 |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results* |

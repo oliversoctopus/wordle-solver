@@ -10,7 +10,7 @@ along with what this document is for and what order to read it in.
 > the code references are plain text.
 
 Read it start to finish the first time — the order is the argument. In ten
-minutes instead: §2, §6, §12.
+minutes instead: §2, §9, §16.
 
 ---
 
@@ -77,6 +77,20 @@ of a string comparison. This is the same instinct as a prefix-sum table: pay
 O(n²) once so every query is O(1). Every hot loop in the project is a scan over
 one row of this table.
 
+Two things follow from that shape, and both come back later.
+
+**The table is read along rows, and that is not an accident.** Row `guess` is
+laid out contiguously in memory, so scanning it for a *whole* candidate set walks
+straight through memory. Scanning it for a *scattered* handful does not, and §8
+is where that bill arrives.
+
+**The loops that scan it are compiled, not interpreted.** `kernels.py` is
+decorated with numba's `@njit`, which translates each function to machine code
+the first time it runs — Python's own loops would be a hundred times too slow for
+13,000 guesses × 13,000 candidates. `cache=True` writes the compiled code to
+disk, so only the first run of a fresh checkout pays for it. That compile, plus
+loading the 167 MB table, is the startup wait the web page hides behind its veil.
+
 ## 2. A guess is a partition
 
 Fix the candidate set `S` and a guess `g`. Every candidate in `S` produces *some*
@@ -97,7 +111,7 @@ at most 243 buckets*, and the only thing that matters about a guess is the shape
 of that partition.
 
 Two words with the same partition are the same move. That sounds like a
-throwaway observation; it is what makes the endgame search affordable in §9.
+throwaway observation; it is what makes the endgame search affordable in §12.
 
 Bad guesses leave one huge bucket. Good guesses chop `S` into many small ones.
 Now we need to make "many small ones" precise.
@@ -151,8 +165,8 @@ That is the baseline, and the rest of this document is about beating it. There
 are two ways to try. One is to search harder — look further ahead, solve the
 endgame exactly. The other is to notice that the question in §0 was never quite
 right: it assumed every word is equally likely to be the answer, and no word ever
-was. The second turns out to be worth far more than the first, which is §12's
-punchline and the reason §4 is the longest section here.
+was. The second turns out to be worth far more than the first, which is §16's
+punchline.
 
 ## 4. Not all words are equally likely (the priors)
 
@@ -160,28 +174,22 @@ punchline and the reason §4 is the longest section here.
 That's badly wrong, and fixing it turns out to be worth more than *any* search
 improvement in the project.
 
-`priors.build_weights` models the editor as a two-step process:
-
-1. With probability **0.10**, reuse a word that has already been an answer
-   (among the ~1,858 used ones).
-2. Otherwise pick an unused word, which is **off** the curated list with
-   probability **0.10**.
-
-So the weight vector has three groups: used words, unused-and-curated, and
-unused-and-non-curated. Every word gets strictly positive weight, so nothing is
-ever ruled out entirely.
-
-Note the conditioning: the off-list probability is *conditional on not being a
-repeat*, because the model is sequential. Computing it against all puzzles rather
-than non-repeat puzzles understates it.
+`priors.build_weights` models the editor as a two-step process: with probability
+**0.10** reuse a word that has already been an answer (among the ~1,858 used
+ones), otherwise pick an unused word, which is **off** the curated list with
+probability **0.10**. That gives three groups — used, unused-and-curated,
+unused-and-non-curated — each word keeping strictly positive weight, so nothing
+is ever ruled out. Note the conditioning: the off-list probability is
+*conditional on not being a repeat*, the model being sequential, so computing it
+against all puzzles rather than non-repeat ones understates it.
 
 Those two 0.10s look aggressive against Wordle's full history, and the reason
-they aren't is a regime change: measured over the **current editorial regime
-(Wordle #1690 onward, from 2026-02-02)**, the repeat rate is 11.1% and the
-off-list rate is 8.9%. Over all 1,879 puzzles they'd be 1.1% and 2.5% — roughly
-10× and 4× lower. What drives it is mechanical: 1,812 of 2,309 curated words are
-used up and ~334 are consumed a year, so the pool empties in about 1.5 years.
-Repeats and off-list picks are both the editor's response to that.
+they aren't is a regime change. Over the **current editorial regime (Wordle #1690
+onward, from 2026-02-02)** the repeat rate is 11.1% and the off-list rate 8.9%;
+over all 1,879 puzzles they'd be 1.1% and 2.5%, roughly 10× and 4× lower. What
+drives it is mechanical: 1,812 of 2,309 curated words are used up and ~334 are
+consumed a year, so the pool empties in about 1.5 years, and both rates are the
+editor's response to that.
 
 **The prior is where the wins are.** Every word as the answer, weighted by that
 row's own prior, each row playing the form of `f` fitted for it:
@@ -193,35 +201,25 @@ row's own prior, each row playing the form of `f` fitted for it:
 | curation only | 3.7802 | **3.4903** |
 | both | 3.6815 | **3.0770** |
 
-Read *down* a column, not across a row: the weights come from each row's own
-prior, so a row is exact under the model it assumes, but a concentrated prior
-makes the game genuinely easier and the rows are not comparable to each other. What the shapes
-below are worth needs a different measurement entirely, which is §4.6.
+Read *down* a column, never across a row: each row's weights are its own prior's,
+so a concentrated prior makes the game genuinely easier and no two rows are
+comparable. What the columns show is the gap between the two objectives — 0.60
+guesses with both priors on, 0.0076 with none, eighty times less for exactly the
+same machinery. §9 shows why that collapse is an identity rather than a
+coincidence.
 
-The column to look at is the gap between the two. With both priors on, the
-expected-guess objective beats entropy by 0.60 guesses. With no prior at all it
-beats it by 0.0076 — eighty times less, for exactly the same machinery. §6 shows
-why that collapse is not a coincidence but an identity.
+Three groups says how much mass each one gets, not how it spreads *within* one,
+and the obvious answer — flat — is wrong twice over. It says `cigar` (Wordle #1)
+and `sandy` (#1227) are equally likely to come round again, and that `squid` and
+`xylyl` are equally likely to be tomorrow's answer. The second is the expensive
+one: that group is 10,638 of the 12,947 words, so it dominates the candidate
+*count* at almost every position while holding only 9% of the mass. Call the
+within-group spread the group's **shape**; both were uniform in the original
+design and both are now sharpened, which is §5.
 
-Splitting the words into three groups says *how much* mass each group gets. It
-says nothing about how that mass is spread within a group, and that is the rest
-of §4.
+## 5. Shaping the mass inside each group
 
-### 4.1 The shape problem
-
-The obvious answer — spread it flat — is wrong twice over.
-
-Flat inside the used group says `cigar` (Wordle #1) and `sandy` (#1227) are
-equally likely to come round again. Flat inside the non-curated group says
-`squid` and `xylyl` are equally likely to be tomorrow's answer. Neither is close
-to true, and the second is the expensive one: the non-curated group is 10,638 of
-the 12,947 words, so it dominates the candidate *count* at almost every position
-even while holding only 9% of the mass.
-
-Call the within-group spread the group's **shape**. Both shapes were uniform in
-the original design; both are now sharpened, and the next two sections are how.
-
-### 4.2 Sharpening the repeat group
+### 5.1 The repeat group: a smoothed histogram
 
 There are 21 repeats in Wordle's history, and they are not drawn from the used
 pool evenly. Nineteen come from Wordle #1–#297 (median #116); only `sandy`
@@ -234,53 +232,49 @@ number where they first appeared, 200 wide, and give bin *b* the weight
 
 $$w_b = \frac{r_b + \alpha}{n_b}, \qquad \alpha = 0.5$$
 
-where `r_b` is how many repeats have come out of that bin and `n_b` is how many
-used words live in it; then spread each bin's share evenly over its members. The
-`α` is what keeps a bin that has never produced a repeat from being written off
-entirely — it is the "maybe next time" term, and it is why no word's weight ever
-reaches zero.
+where `r_b` is how many repeats came out of that bin and `n_b` how many used
+words live in it; then spread each bin's share evenly over its members. The `α`
+keeps a bin that has never produced a repeat from being written off entirely —
+the "maybe next time" term, and the reason no word's weight reaches zero. `cigar`
+ends up with about **6×** the flat repeat weight, and late words fall below it.
 
 Fixed bins rather than a sliding window is deliberate, and the reason is a small
-lesson in overfitting. A window needs a boundary; a boundary is a parameter; and
+lesson in overfitting: a window needs a boundary, a boundary is a parameter, and
 that parameter has to be tuned on the same 21 events you are trying to predict.
 Scored prequentially — each repeat predicted from the ones before it only, so no
 parameter ever sees the event it is scored on — flat gives a log-likelihood of
-**−157.1** over the 21 events and the binned histogram gives **−133.1**, about
-**+1.14 nats per event**. The best of sixteen tuned windows reaches only −143.6,
-and an age-based shape whose rate is refit as the events arrive lands at −150.1.
-Twenty-odd events cannot pin a rate down, and the histogram has nothing to pin.
+**−157.1** against the histogram's **−133.1**, about **+1.14 ± 0.21 nats per
+event**. That `±` is a standard error: how far the estimate itself would wander
+if the same 21 events were drawn again, so a gap several times its own `±` is one
+to believe and a smaller one is not. Here it is five times. The best of sixteen
+tuned windows reaches only −143.6 and an age-based shape refit as events arrive
+lands at −150.1: twenty-odd events cannot pin a rate down, and the histogram has
+nothing to pin.
 
-In practice `cigar` ends up with about **6×** the flat repeat weight, and words
-that first appeared late fall below it.
+### 5.2 The off-list group: WordleBot's own weights
 
-### 4.3 Sharpening the off-list group: WordleBot's own weights
+This is the interesting group, because "which words could be off-list answers"
+turns out to be *knowable* rather than guessable.
 
-The off-list group is the interesting one, because "which words could be
-off-list answers" turns out to be *knowable* rather than guessable.
+The first clue is in `solutions.json` itself. Its `id` field is not an opaque key
+— it is the **1-based index into `wordles.json`**. Every off-list answer has an id
+past the curated list's 2,309, and 44 of the 46 land in **2310–2397**. Sorted by
+id they come out in alphabetical runs: twelve consecutive at 2318–2331 (`beaut
+laser mommy muggy nervy pious primp shred spate taupe tinge tizzy`), seven more
+at 2343–2352. A run of twelve in order by chance is 1/12! ≈ 2×10⁻⁹. So the NYT
+appended words to the same internal list in alphabetically-sorted batches, and
+off-list answers are drawn from a block of roughly ninety — not from 10,638.
 
-The first clue is in `solutions.json` itself. Its `id` field is not an opaque
-key — it is the **1-based index into `wordles.json`**. Every off-list answer has
-an id past the curated list's 2,309, and 44 of the 46 land in **2310–2397**.
-Sorted by id they come out in alphabetical runs: twelve consecutive at 2318–2331
-(`beaut laser mommy muggy nervy pious primp shred spate taupe tinge tizzy`),
-seven more at 2343–2352. A run of twelve in order by chance is 1/12! ≈ 2×10⁻⁹.
-So the NYT appended words to the same internal list in alphabetically-sorted
-batches, and off-list answers are drawn from a block of roughly ninety — not
-from 10,638.
-
-Knowing the block is small does not name its members. But somebody has already
-published a list that does: **WordleBot**, the NYT's own solver, carries a
+Knowing the block is small does not name its members, but somebody has already
+published a list that does. **WordleBot**, the NYT's own solver, carries a
 per-word weight, scraped and published at
-`wordletools.azurewebsites.net/weightedbottles`. It is 3,209 words with weights
-from 0.226% to 58% (2,110 of them pinned at the 58% cap). Of those, 3,194 are
-words this solver can guess: 2,302 curated, **892 not**, and all 46 off-list
-answers to date among them.
-
-That last fact proves nothing on its own — a list that absorbed answers after
-they were used would look identical. The test that matters is whether an *old*
-copy predicts *later* answers. The Wayback Machine has a snapshot from
-**2023-10-12** — 3,158 words, 841 of them non-curated, frozen almost three
-years ago:
+`wordletools.azurewebsites.net/weightedbottles`: 3,209 words with weights from
+0.226% to 58%, of which 3,194 are guessable here — 2,302 curated, **892 not**,
+and all 46 off-list answers to date among them. That last fact proves nothing on
+its own, since a list that absorbed answers after they were used would look
+identical. The test that matters is whether an *old* copy predicts *later*
+answers, and the Wayback Machine has a snapshot from **2023-10-12**, frozen
+almost three years ago:
 
 | snapshot 2023-10-12 | |
 | --- | --- |
@@ -290,59 +284,49 @@ years ago:
 | words added to the list since | 84 |
 | ...of those, ever an answer | **2** (the same two) |
 
-So it predicts forward at about 95%, and its growth is not backfilling.
+So it predicts forward at about 95%, and its growth is not backfilling. The shape
+follows directly: **95%** of the off-list mass goes to the listed words in
+proportion to their published weight, and the remaining **5%** spreads over
+everything else — a hedge set at the measured miss rate, and what stops a `loris`
+from being a blindside.
 
-The shape follows directly: give **95%** of the off-list mass to the listed
-words in proportion to their published weight, and spread the remaining **5%**
-over everything else. The hedge is not decoration — the snapshot missed 2 of 41,
-so 5% is the measured miss rate, and it is what stops a `loris` from being a
-blindside.
+Scored prequentially on the 42 post-snapshot events, each shape at the constant
+that actually ships:
 
-Scored prequentially on the 42 post-snapshot events, in nats per event, each
-shape at the constant that actually ships:
-
-| shape | per event | effective support |
+| shape | nats per event | effective support |
 | --- | --- | --- |
 | uniform | −9.27 | 10,638 |
-| answer-like frequency (§4.4), `t` = 0.35 | −8.13 | 4,857 |
+| answer-like frequency (§5.3), `t` = 0.35 | −8.13 | 4,857 |
 | **WordleBot, 5% hedge** | **−6.46** | **911** |
 
-"Effective support" is `2^H` from §5 applied to the prior itself: how many
-equally likely words the shape is really spreading over; `answer_like.py` prints
-the middle row's on every run. Restricting to
-post-snapshot events barely matters — over all 46 off-list events WordleBot also
-scores −6.46, so it is not winning by having quietly absorbed the early ones.
-Score each shape at its *fitted* constant instead of its shipped one and both
-middle and bottom rows improve, which is why the table specifies: a shape has to
-be scored as it will actually run.
+"Effective support" is `2^H` from §7 applied to the prior itself: how many
+equally likely words the shape is really spreading over. WordleBot scores −6.46
+over all 46 events too, so it is not winning by having quietly absorbed the early
+ones. Score each shape at its *fitted* constant instead and the lower two rows
+both improve, which is why the table specifies: a shape has to be scored as it
+will actually run.
 
 **The 5% hedge stays flat, and that is deliberate.** Weighting it by
-answer-likeness (§4.4) is the obvious refinement and it fails on the population
-that matters. Scored over all 46 off-list answers as though the hedge had had to
-cover them it looks strong, +1.32 nats/event at a median 3.95× the flat share —
-but those are words WordleBot *does* list. The hedge only fires on a word the
-list is missing, and a word is missing because it is odd: `loris` sits at the
-53rd percentile of answer-likeness and would get **0.32×** the flat share,
-`kefir` at the 87th and would get 2.36×. Over the only two events that have ever
-needed it, shaping the hedge is worth −0.13 nats. Flat is the honest expression
-of not knowing which word the list is short of; `analysis/curation_shapes.py`
-prints the comparison.
+answer-likeness is the obvious refinement and it fails on the population that
+matters, because the hedge only fires on a word the list is *missing*, and a word
+is missing because it is odd. `loris` sits at the 53rd percentile of
+answer-likeness and would get **0.32×** the flat share. Over the only two events
+that have ever needed the hedge, shaping it is worth −0.13 nats — flat being the
+honest expression of not knowing which word the list is short of.
 
-### 4.4 The fallback: guessing what is answer-like
+### 5.3 The fallback: guessing what is answer-like
 
-The WordleBot shape depends on a third-party scrape of somebody else's site.
-That is a fine thing to vendor and a bad thing to *need*, so there is a fallback
-that depends on nobody's scrape — built from the word lists already in the repo
-and a published frequency corpus (`wordfreq`).
+The WordleBot shape depends on a third-party scrape of somebody else's site — a
+fine thing to vendor and a bad thing to *need*. So there is a fallback built from
+the word lists already in the repo plus a published frequency corpus
+(`wordfreq`). It is not what ships; it is what you would turn on to be rid of the
+scrape.
 
-The trick is that the curated list is 2,309 labeled examples of "a word an
-editor considered answerable", and it is completely independent of the 46
-off-list events. So fit a logistic regression with the curated words as
-positives and the non-curated words as negatives, and use its log-odds to score
-the words the editor has not used yet. The features are word frequency (Zipf,
-from `wordfreq`), a cross-lingual "is this actually a name" lift, suffix flags
-and duplicate letters. Four of the thirteen weights carry the model, and those
-four are legible:
+The trick is that the curated list is 2,309 labeled examples of "a word an editor
+considered answerable", completely independent of the 46 off-list events. So
+`answer_like.py` fits a logistic regression with the curated words as positives
+and the non-curated as negatives, then scores the unused words by its log-odds.
+Four of the thirteen weights carry the model, and those four are legible:
 
 | feature | weight | reading |
 | --- | --- | --- |
@@ -351,22 +335,17 @@ four are legible:
 | ends in `ed` | −5.09 | past tenses do not get picked either |
 | foreign lift | −1.16 | as common abroad as at home ⇒ a name, not a word |
 
-The other nine are a Zipf square, a zero-frequency flag, the maximum foreign
-Zipf, the suffixes `es`/`er`/`y`/`ly` and a duplicate-letter count, and three of
-them sit near zero. They are not decoration: `answer_like.py` is the definition
-of this score, and a fit that keeps only the four legible features still
-correlates at r ≈ 0.98 with the shipped table while reproducing none of it.
+The other nine are not decoration even where they sit near zero: a fit keeping
+only these four still correlates at r ≈ 0.98 with the shipped table while
+reproducing none of it.
 
-The score is a log-odds running −19.8 to +4.6, and the weight is
-`exp(t × score)`. The temperature `t` matters because the model answers a
-slightly different question than the one asked: it predicts "would have been
-*curated*", not "will be tomorrow's *off-list* answer". Taking it at face value
-(`t = 1`) collapses the effective support to 554 words, over-committing to a
-question nobody asked. Fitting `t` against the actual off-list events gives
-≈0.5; end to end, `t` of 0.20, 0.35 and 0.50 land within **0.004 guesses** of
-each other. It is a flat optimum, and **0.35** is simply the middle of it.
-
-At `t = 0.35`, relative to the flat weight it replaces:
+The weight is `exp(t × score)`, and the temperature `t` matters because the model
+answers a slightly different question than the one asked — "would have been
+*curated*", not "will be tomorrow's *off-list* answer" — so at face value
+(`t = 1`) the effective support collapses to 554 words. Fitting `t` against the
+real off-list events gives ≈0.5, and end to end 0.20, 0.35 and 0.50 land within
+**0.004 guesses** of each other; **0.35** is the middle of a flat optimum.
+Against the flat weight it replaces:
 
 | promoted | | demoted | |
 | --- | --- | --- | --- |
@@ -375,90 +354,42 @@ At `t = 0.35`, relative to the flat weight it replaces:
 | `aloha` | 4.0× | `xylyl` | 0.10× |
 | `kazoo` | 2.4× | `faffy` | 0.096× |
 
-Every word on the left is a real off-list answer; every word on the right is one
-of the words behind a recorded loss in §10.
+Every word on the left is a real off-list answer; every one on the right is
+behind a recorded loss in §14.
 
-### 4.5 Do the two shapes need each other?
+## 6. Measuring a prior without fooling yourself
 
-These two shapes arrived together, and the argument for shipping them as a pair
-was that they looked *superadditive*: the WordleBot shape measured a wash on its
-own, the binned repeat shape close to nothing on its own, and the pair far more
-than the sum of the two. That is a strong reason to ship two things at once.
+Two traps, then a question the data cannot settle.
 
-On current data it is gone. The three configurations blend to −0.044, −0.022 and
-−0.064 (§4.6), against a sum of −0.066: **additive, within noise.** So the
-question in the heading has to be asked again from scratch.
+### 6.1 The form of `f` has to be refitted per shape
 
-What survives is a mechanism, and it is worth following because the arithmetic
-behind it is checkable even where the guess counts are not. Concentrating the
-off-list mass onto its ~870 effective words gives each about **1.0×10⁻⁴**, where
-a used word under flat repeat mass has 0.10/1,858 = **5.4×10⁻⁵**. Sharpening the
-curation side alone therefore promotes any off-list word above any past answer,
-nearly two to one. On average that is not far wrong — the observed rates justify
-≈9.1×10⁻⁵ against ≈6.0×10⁻⁵, a ratio of 1.5 — but it is wrong *word by word*,
-because flat repeat mass spreads evenly over 1,858 words when 19 of the 21
-repeats came from the first 300. The solver stops attending to `cigar` and
-attends to ~870 off-list candidates instead, and when the answer *is* `cigar`, it
-pays.
+`f` (§10) is queried at its largest arguments exactly once per game — at the
+opening, where the bucket is the whole word list, which is the extrapolated tail
+of the fit. Sharpening the prior shifts every effective size into that tail, and
+the ranking of opening words flips: under `sqrt`, the form chosen for the
+*uniform* shapes, a sharpened prior picks `raise` over `salet`. `raise` is
+genuinely worse — forcing it under the unchanged uniform prior costs
+**+0.034 ± 0.028** — so this is estimator error, not a real preference. The three
+best-fitting forms under the sharpened prior all pick `salet` (`invonly`,
+`saturating` and `spline`), and so does one-ply lookahead. This is why the shape
+is part of the cache key.
 
-That predicts two things, and the data treats them very differently:
+Fit quality is not the criterion, though. Rank the forms by **RMSE** — the
+root-mean-square of the residuals, the typical distance between the fitted curve
+and the points it was fitted to, so smaller is closer — and the ranking does not
+predict the opening at all: `anchored2` has the worst RMSE of any form at 0.70
+and picks `salet` anyway, while `anchored` fits a hair *better* than `sqrt`
+(0.5041 against 0.5047) and still picks `raise`. What decides the opening word is
+concavity in `x` (§9), not how closely the curve tracks its own fitting data.
 
-* **Sharpening curation alone should cost something on repeats.** It does:
-  `wordlebot` alone is **+0.143 ± 0.078** on the repeat arm, and the two rows
-  containing `wordlebot` are the only ones that lose ground there at all. About
-  1.8σ — suggestive, not settled.
-* **Adding the binned repeat shape should relieve that cost.** Here the data has
-  nothing to say. The pair scores **+0.095 ± 0.228** on the same arm: better than
-  +0.143, by a fifth of its own error bar.
+### 6.2 The evaluation needs three arms, one of them repeats
 
-That second interval is the whole problem, and no amount of cleverness fixes it.
-Twenty-one repeat events carry ±0.17–0.23 however they are analyzed. Reaching
-±0.05, enough to call a 0.1-guess repair, needs about sixteen times the events —
-some 340 repeats, which at the regime's 11.1% rate is roughly 3,000 puzzles.
-Eight years of Wordle.
-
-So the honest answer is: **a reason to expect interference, not evidence of it.**
-Sharpening one side does make the other's flatness the larger error in the
-weights; that part is arithmetic. Whether it costs measurable guesses, and
-whether the second shape buys them back, is a question twenty-one events cannot
-answer.
-
-None of which argues against shipping both, because the pair never needed the
-interaction to justify it. Each shape independently beats flat at its own job, by
-a margin the prequential scoring *can* resolve: +1.14 ± 0.21 nats per event for
-`binned` (§4.2), −6.46 against −9.27 for `wordlebot` (§4.3). Two separately
-justified improvements, adding up. That is a smaller claim than the one they were
-adopted on, and it is the one the data supports.
-
-### 4.6 Measuring any of this without fooling yourself
-
-Two traps, both of which hid the effect at first.
-
-**The form of `f` has to be refitted per shape.** `f` (§7) is queried at its
-largest arguments exactly once per game — at the opening, where the bucket is
-the whole word list, which is the extrapolated tail of the fit. Sharpening the
-prior shifts every `n_eff` into that tail, and the ranking of opening words
-flips: under `sqrt`, the form chosen for the *uniform* shapes, a sharpened prior
-picks `raise` over `salet`. `raise` is genuinely worse — forcing it under the
-unchanged uniform prior costs **+0.034 ± 0.028** — so this is estimator error,
-not a real preference. The three best-fitting forms under the sharpened prior all
-pick `salet` (`invonly`, `saturating` and `spline`, at fit RMSE 0.486–0.490
-against `sqrt`'s 0.505), and so does one-ply lookahead. This is why the shape is
-part of the cache key.
-
-Fit quality is not the criterion, though, and that is worth seeing plainly:
-`anchored2` has the worst RMSE of any form at 0.70 and picks `salet` anyway,
-while `anchored` fits a hair *better* than `sqrt` (0.5041 against 0.5047) and
-still picks `raise`. What decides the opening word is concavity in `x` (§6), not
-how closely the curve tracks the pairs it was fitted to.
-
-**The evaluation needs three arms, one of them repeats.** A shape can only be
-judged on answers that actually happened, never on answers sampled from its own
-belief — a prior scored against its own prior is grading its own homework, and
-that swing is larger than the effect being measured. The three arms are the **21
-real repeats** and the **46 off-list answers**, each replayed with the prior
-rebuilt from strictly earlier puzzles, plus the **497 curated words still
-unused**, blended at the current regime's own mixture of 11.1% / 7.9% / 81.1%:
+A shape can only be judged on answers that actually happened, never on answers
+sampled from its own belief — a prior scored against its own prior is grading its
+own homework, and that swing is larger than the effect being measured. The arms
+are the **21 real repeats** and the **46 off-list answers**, each replayed with
+the prior rebuilt from strictly earlier puzzles, plus the **497 curated words
+still unused**, blended at the regime's own 11.1% / 7.9% / 81.1%:
 
 | shapes | repeat (21) | off-list (46) | fresh (497) | blended |
 | --- | --- | --- | --- | --- |
@@ -467,37 +398,59 @@ unused**, blended at the current regime's own mixture of 11.1% / 7.9% / 81.1%:
 | `binned` + `frequency` | −0.286 ± 0.184 | −0.522 ± 0.145 | −0.002 ± 0.018 | **−0.074 ± 0.028** |
 | `binned` + `wordlebot` | +0.095 ± 0.228 | −0.826 ± 0.150 | −0.012 ± 0.018 | **−0.064 ± 0.032** |
 
-Unlike the table in §4, **these columns are comparable across rows**: every row
-is scored against the same real answers, so the blend is a genuine paired
-comparison rather than each prior being asked how it fares in a world of its own
-devising.
+Unlike §4's table, **these columns are comparable across rows**: every row is
+scored against the same real answers, so the blend is a genuine paired comparison
+rather than each prior being asked how it fares in a world of its own devising.
+They are comparable to nothing outside it, though, the estimator having been
+refitted since. What `analysis/replay.py` measures now is the one contrast both
+surviving fits support: `frequency` against `wordlebot` head to head, at
+**−0.010 ± 0.025** blended.
 
-The table's provenance limits what it can be set beside. It comes from a solver
-whose estimator has since been refitted, and every configuration's winning form
-moved in that refit, so the policy changed underneath the measurement as well as
-the data: these numbers are comparable to each other and to nothing else. The top
-three rows can no longer be recomputed from what the repo carries either, since
-they need fits for the uniform shapes and a prior with no fit refuses to play
-(§7). What `analysis/replay.py` measures now is the one contrast
-both surviving fits support, `frequency` against `wordlebot` head to head:
-**−0.010 ± 0.025** blended, the same distance the bottom two rows sit apart,
-reached without the baseline in between.
+The repeat arm is the loosest term in every blend at ±0.17–0.23, leaving the
+bottom two rows well inside one standard error of each other. Choosing between
+them rests more on whether you want a vendored scrape in the repo than on the
+measurement.
 
-The repeat column is also where §4.5 lives, and it has softened considerably
-since it was first measured: `wordlebot` alone carried a **+0.611** penalty
-there, against +0.143 now, and blended to a wash at +0.009. That penalty is what
-made the pair look worth so much more than its parts.
+### 6.3 Do the two shapes need each other?
 
-Which leaves the honest caveat, the width of that arm. Twenty-one events carry
-±0.17–0.23, making it the loosest term in every blend and leaving
-`binned + frequency` and `binned + wordlebot` well inside one sigma of each
-other. The choice between them rests more on whether you want a vendored scrape
-in the repo than on the measurement.
+The argument for shipping them as a pair was that they looked *superadditive*:
+each close to nothing alone, the pair far more than the sum, which is a strong
+reason to ship two things at once. On current data it is gone — the three
+configurations blend to −0.044, −0.022 and −0.064 against a sum of −0.066, which
+is **additive, within noise**. (`wordlebot` alone once carried a **+0.611**
+penalty on the repeat arm against +0.143 now, and that penalty is what made the
+pair look worth so much more than its parts.)
 
-## 5. Effective size: making a weighted set have a "count"
+What survives is a mechanism, worth following because its arithmetic is checkable
+where the guess counts are not. Concentrating the off-list mass onto its ~870
+effective words gives each about **1.0×10⁻⁴**, where a used word under flat
+repeat mass has 0.10/1,858 = **5.4×10⁻⁵**. Sharpening curation alone therefore
+promotes any off-list word above any past answer, nearly two to one — on average
+not far wrong, the observed rates justifying about 1.5, but wrong *word by word*,
+since flat repeat mass spreads evenly over 1,858 words when 19 of the 21 repeats
+came from the first 300. The solver stops attending to `cigar`, and when the
+answer *is* `cigar`, it pays.
 
-Unequal weights break something the last section quietly relied on. "This bucket
-has 40 candidates" is misleading — 40 candidates with one of them at 90%
+That predicts a cost on the repeat arm from sharpening curation alone, and there
+is one: `wordlebot` alone is **+0.143 ± 0.078**, the two rows containing it being
+the only ones that lose ground there at all. It also predicts the binned shape
+relieves that cost, and on this the data is silent — the pair scores
+**+0.095 ± 0.228**, better than +0.143 by a fifth of its own error bar. Reaching
+±0.05, enough to call a 0.1-guess repair, needs some 340 repeats: roughly 3,000
+puzzles at the regime's rate, or eight years of Wordle.
+
+So: **a reason to expect interference, not evidence of it.** Which does not argue
+against shipping both, because the pair never needed the interaction to justify
+it. Each shape independently beats flat at its own job by a margin the
+prequential scoring *can* resolve: +1.14 ± 0.21 nats per event for `binned`
+(§5.1), −6.46 against −9.27 for `wordlebot` (§5.2). Two separately justified
+improvements, adding up — a smaller claim than the one they were adopted on, and
+the one the data supports.
+
+## 7. Effective size: making a weighted set have a "count"
+
+Unequal weights break something the last three sections quietly relied on. "This
+bucket has 40 candidates" is misleading — 40 candidates with one of them at 90%
 probability is much easier than 40 equally likely ones. Everything from here on
 needs a size that knows the difference.
 
@@ -559,9 +512,7 @@ x = np.log2(mass) - wlw / mass      # in _bucket_guesses — this x *is* H
 
 Cost, for a position with `m` candidates scored against all 12,947 guesses: the
 naive version needs `12,947 × m` logarithms, the split version needs `m`. At a
-wide position (`m` ≈ 12,947) that's 167 million logs against thirteen thousand —
-which is why the module docstring says this alone was most of the cost of scoring
-a wide position.
+wide position (`m` ≈ 12,947) that's 167 million logs against thirteen thousand.
 
 **One more consequence.** Since `n_eff = 2^H`, that `x` is exactly `log₂(n_eff)` —
 already in the units `f` wants. That's why `f_eval_x` is parameterized by `x`
@@ -576,10 +527,87 @@ direct : 2.331157535638251
 split  : 2.3311575356382495     # agree to 1.3e-15
 ```
 
-With a size that respects the prior, the objective can finally be stated in the
-units the game actually scores.
+## 8. The scoring loop, and where the time actually goes
 
-## 6. The real objective: minimize expected guesses
+Removing those logarithms exposed what was underneath, and it was not what the
+arithmetic suggested. This section is the rest of what `kernels.py` does, and it
+is worth its own space because the reasoning generalizes: the obvious cost model
+was wrong twice.
+
+**First wrong assumption: that wide positions are the expensive ones.** They are
+the expensive *individual* calls, but small candidate sets are scored far more
+often — every node of the endgame search and every late turn of every training
+rollout scans a handful of candidates against all ~13k guesses. The aggregate
+cost lives in the small cases, so that is where to optimize.
+
+That matters because of how the reduce is written. After accumulating mass per
+pattern, something has to walk the buckets and total them up, and the obvious
+walk is over all 243 patterns — which costs 243 whether there were 12,000
+candidates or five. With five candidates, at most five buckets are non-empty and
+the other 238 checks are pure waste, repeated for every one of 13,000 guesses.
+
+So below `kernels._RESCAN_MAX` (128 candidates) the reduce **walks the candidates
+a second time instead**, taking each bucket the first time it is reached and
+zeroing it on the spot. Zeroing there is what makes it work: it both clears the
+accumulator for the next guess and stops the bucket being counted twice when a
+later candidate lands in it. The reduce *and* the clear then both cost `m` rather
+than 243.
+
+| candidates | reduce over patterns | reduce over candidates |
+| --- | --- | --- |
+| 5 | 243 | 5 |
+| 20 | 243 | 20 |
+| 128 | 243 | 128 |
+| 12,947 | 243 | (not used — the sweep is cheaper) |
+
+**Second wrong assumption: that the cost is arithmetic.** It is memory. Modern
+processors do not fetch single bytes; they fetch a **cache line**, a contiguous
+block of 64 bytes, and keep it in fast memory near the core. `feedback_table[guess, c]`
+for scattered `c` therefore pulls 64 bytes to use one of them, and a small
+*scattered* candidate set costs several times what the same number of *adjacent*
+candidates would. That is the real bill at every small position, and it is why
+the second pass above is nearly free — it re-reads exactly what the first pass
+already pulled into cache. It is also why there is little further to win here
+short of storing the table transposed as well.
+
+Two smaller things, both about not repeating setup work:
+
+- **Accumulators are allocated once per block of guesses, not once per guess.**
+  A block is at most `kernels._MAX_BLOCK` = 64 guesses, so the four 243-element
+  arrays are zeroed once and then reused 64 times.
+- **Work is split into `4 × get_num_threads()` blocks** and handed to numba's
+  `prange`, a parallel loop that spreads iterations across cores. Several blocks
+  per thread rather than exactly one means a thread that draws slow work does not
+  hold everyone up at the end.
+
+### The optimization that had to be taken back out
+
+Numba offers a `fastmath` flag that lets the compiler reorder floating-point
+arithmetic for speed, on the reasoning that addition is associative. It is not
+associative in floating point, but the reordering is usually harmless.
+
+Here it was not. The reduce reads a bucket and then zeroes it for the next guess;
+under `fastmath`, LLVM moved the store ahead of the load, so **every bucket
+maximum read back as zero**. It surfaced as `two_turn_scores` returning exactly
+3.0 for every guess and the search confidently preferring nonsense words. The
+other two scorers happened to survive, but only because a logarithm or a function
+call in their reduce blocked the same transform — which is not a thing to rely
+on. None of the kernels carry the flag now. It costs nothing on the widest
+positions and up to about 10% in the middle, which is a small price for scores
+that are what they claim to be.
+
+### Scoring fewer guesses
+
+Every kernel takes a `pool` of table rows and returns one score per entry, with
+`pool=None` meaning all 12,947. That parameter is what keeps deeper search
+affordable: a lookahead exploring the replies to a bucket of ninety candidates
+does not need all 13k of them, and hard mode (§9) is the same mechanism with the
+pool set to the candidate set itself.
+
+With a size that respects the prior and a loop that computes it quickly, the
+objective can finally be stated in the units the game actually scores.
+
+## 9. The real objective: minimize expected guesses
 
 Entropy answers "which guess is most *informative*." But the game doesn't score
 you on bits — it scores you on **guesses**. Those aren't the same thing, and the
@@ -606,7 +634,7 @@ carry real weight:
   candidates are worth `2 − p_max` (guess the likelier one; if wrong, you now
   know the other).
 
-Where `f` comes from is §7's problem. What it has to *look like* is settled here,
+Where `f` comes from is §10's problem. What it has to *look like* is settled here,
 and the answer is sharper than it sounds.
 
 ### Why this isn't just entropy in disguise
@@ -634,9 +662,9 @@ bonus" — and it does. Under the shipped shapes greedy entropy scores 3.6815,
 
 Nearly all of the improvement over a standard entropy solver is the free discount
 for guessing a word that might be the answer. The fitted curve's shape — the
-thing §7 works hardest for — contributes about a fifteenth of it. Under the flat
+thing §10 works hardest for — contributes about a fifteenth of it. Under the flat
 shapes the same split read 0.462 and 0.041: the bonus grows as the prior sharpens
-and curvature is worth what it always was, which is the first hint of §12.
+and curvature is worth what it always was, which is the first hint of §16.
 
 Wordle's own **hard mode** is the cleanest test of the identity, because it
 isolates the bonus from everything else. Hard mode requires every guess to be a
@@ -658,7 +686,7 @@ f(n) = 0.955 + 0.372·x − 0.112·(x−2)₊ − 0.138·(x−4)₊ − 0.104·(
 ```
 
 Every knot bends it flatter and none bends it back — the sixth, at `x = 8`, was
-dropped altogether by the monotonicity guard §7 describes. Concretely:
+dropped altogether by the monotonicity guard §10 describes. Concretely:
 `f(2)=1.33`, `f(3)=1.54`, `f(10)=2.04`, `f(100)=2.47`, `f(1000)=2.53`,
 `f(12947)=2.60`. Going from 100 candidates to 1,000 costs **0.06 guesses**, and
 from 1,000 to the whole word list another 0.07. That is the honest shape of the
@@ -674,7 +702,7 @@ One caveat that matters when reading any of this: `f` is fitted **per prior**, s
 the curve above is the default prior's and no other. Turn a prior off and a
 different curve, in a different functional form, is what scores the guesses.
 
-## 7. Where does `f` come from? Policy iteration
+## 10. Where does `f` come from? Policy iteration
 
 Circular problem: to play well you need `f`, but `f` is defined as the cost
 *under good play*. This is the same chicken-and-egg as value functions in
@@ -709,13 +737,16 @@ You can watch it converge in
 
 Essentially all the gain arrives in one iteration; the rest is a small limit
 cycle, so the loop caches the parameters whose *measured play* was best rather
-than the last fit (a greedy policy can oscillate).
+than the last fit (a greedy policy can oscillate). Those cached parameters are
+themselves an optimization worth naming — fitting takes seconds and there is no
+reason to repeat it per run, so the fit for each prior combination is written to
+`estimator_cache/` and loaded thereafter.
 
 Three constraints worth flagging:
 
 - **Training games are played with no 6-turn deadline.** Otherwise a game that
   runs long gets truncated at 6, biasing the targets downward. The deadline is a
-  constraint layered *on top* of `f`, not part of it — which is §8.
+  constraint layered *on top* of `f`, not part of it — which is §11.
 - **`f` must be non-decreasing** on `[1, 12947]` (`estimator._is_monotone`). If a
   bigger candidate set could score *cheaper*, the search would prefer
   uninformative guesses that dump everything into one bucket. When the full basis
@@ -727,10 +758,10 @@ Three constraints worth flagging:
   estimator raises and names the `train` command that fixes it. Entropy mode
   never consults `f` and runs on anything.
 
-## 8. The deadline, and what losing costs
+## 11. The deadline, and what losing costs
 
 Everything so far has quietly ignored the fact that real Wordle gives you only
-**six turns**. `f` estimates guesses-to-finish with no deadline at all, which §7
+**six turns**. `f` estimates guesses-to-finish with no deadline at all, which §10
 explained is deliberate — but the next section's formulas need a cost for running
 out, so define it here before using it.
 
@@ -752,13 +783,13 @@ position is worth `loss_penalty` (`exact.py`). No separate deadline objective, n
 risk weighting — one recursion covers both "win fast" and "don't lose."
 
 Raising the penalty above 1 buys solve rate at the expense of the mean, by making
-the search willing to spend a turn on safety. **The default is 5**, and §10
+the search willing to spend a turn on safety. **The default is 5**, and §14
 explains why that number and not 1 — but the value is just a knob, and every
 formula below holds for any setting of it. Note that it is a *decision-time*
 price only: measured results always score a lost game as 7, whatever the penalty
 was set to, or rows run at different penalties could not be compared.
 
-## 9. The endgame: stop estimating, start solving
+## 12. The endgame: stop estimating, start solving
 
 `f` is a fitted approximation. But when few candidates remain, you don't need
 approximation — you can compute the true answer by brute force (`exact.py`).
@@ -778,12 +809,19 @@ branching factor is the number of *distinct partitions* rather than 12,947. With
 ≤7 candidates the whole feedback vector packs into one int64 (8 bits per
 candidate) and equal keys are provably equal partitions; above that it's an FNV
 hash with an explicit collision check, so a collision costs a redundant
-representative but never a missing one (`kernels.distinct_partitions`). Nice safety property:
-a guess that could itself be the answer *always* splits distinctly, since only it
-produces `GGGGG` — so a real candidate can never get merged away into a probe.
-(Which is also why hard mode skips this step entirely: if every guess must be a
-candidate, no two of them can split `S` the same way, and there is nothing to
-merge.)
+representative but never a missing one (`kernels.distinct_partitions`).
+
+The hash is worth a word, since the direct approach is right there: `np.unique`
+can group the feedback *vectors* themselves, which needs no collision check at
+all. It is a lexicographic sort, one pass per candidate, and it costs an order of
+magnitude more than hashing each vector to 64 bits and grouping those. The
+collision check buys the exactness back for one extra comparison per guess.
+
+Nice safety property: a guess that could itself be the answer *always* splits
+distinctly, since only it produces `GGGGG` — so a real candidate can never get
+merged away into a probe. (Which is also why hard mode skips this step entirely:
+if every guess must be a candidate, no two of them can split `S` the same way,
+and there is nothing to merge.)
 
 This only bites while `S` is tiny, though: at 12 candidates, 12.7k of the 13k
 guesses already split differently, so beyond that the branching factor is
@@ -799,7 +837,9 @@ $$V(g,2) = 1 + \frac{A + (A - B)\cdot\text{penalty}}{\text{total}}$$
 with `A` the mass and `B` the sum of bucket maxima over non-winning buckets.
 That's *one pass over the guesses* — exactly what heuristic scoring costs. So
 **two turns or fewer is always solved exactly, for free, at any candidate
-count.**
+count.** The same two-turn position is reached along many different guess orders,
+about four calls in five being a repeat, so even this closed form is cached
+rather than recomputed (§13).
 
 **(c) Branch and bound.** That two-turn value is also a valid **lower bound** on
 `V(S,t)` for larger `t`. (Why: under this convention `V` is non-*decreasing* in
@@ -813,11 +853,77 @@ tighten fastest. Standard search pruning, on a well-chosen admissible bound.
 at all. The justification is sharp: branch and bound finds the best guess early
 and then spends nearly all its time *proving* nothing beats it. The cap buys the
 answer and skips the proof. Over 1,275 real positions, caps of 25 and 50 pick the
-uncapped-optimal guess **every single time**, while wall clock drops 322 s → 8 s.
-The honest caveat, which the code states: the returned value is an upper bound on
-the true one, so this is optimal-within-the-cap, not provably optimal.
+uncapped-optimal guess **every single time**, while wall clock drops 322 s → 8 s
+and the worst single position from 30 s to 1.9 s. The honest caveat, which the
+code states: the returned value is an upper bound on the true one, so this is
+optimal-within-the-cap, not provably optimal.
 
-## 10. Why the penalty is 5 and not 1
+## 13. Remembering positions
+
+The four ideas above cut the cost of solving a position. This one is about not
+solving it twice, and it is the largest single speedup in the project.
+
+The reason it works is a fact about the game rather than about the code. Fix the
+opening word, and the answer decides the feedback — but feedback only comes in
+243 varieties, so **all 12,947 possible answers lead to at most 243 distinct
+positions** at turn two. Playing every word as the answer to measure an opening
+therefore looks like a 12,947-wide computation and is really a ~240-wide one,
+repeated. The same collapse happens at every depth: many different paths arrive
+at the same candidate set.
+
+So `memo.Memo` caches results keyed on the position. The key is
+`candidates.tobytes()` — the raw bytes of the candidate index array, which is
+cheap to produce and exact — together with the number of turns left, since the
+right guess genuinely depends on how many are remaining and a value found with
+four turns left is wrong for two. There are three of these with different
+lifetimes:
+
+| memo | holds | invalidated by |
+| --- | --- | --- |
+| `WordleSolver._memo` | the chosen guess per position | a new `f` |
+| `WordleSolver._beam_memo` | lookahead values | a new `f` |
+| `ExactEndgame.memo` | true values from the search | nothing — see below |
+
+The last one is the interesting case. The exact search's values depend only on
+the prior weights, never on the estimator, so refitting `f` leaves every cached
+value correct. It survives a change that invalidates the other two.
+
+### Why it evicts rather than jams
+
+A cache needs a cap or it grows without limit. The obvious way to write one is to
+stop accepting entries once full:
+
+```python
+if len(memo) < limit:       # the tempting version
+    memo[key] = value
+```
+
+That is the wrong way round, and the wrongness is not gradual. What such a cache
+declines to store are the *most recent* positions, which are exactly the ones the
+run in front of it is about to reuse; it ends up holding a frozen souvenir of
+whatever it happened to see first. Cross the limit and the ~50× collapse above
+disappears all at once.
+
+`memo.Memo` instead drops the **least recently used** entry — LRU, the standard
+policy of evicting whatever has gone longest without being touched, on the
+reasoning that it is the least likely to be wanted next. `get` counts as a use,
+which is the whole difference between LRU and simply dropping the oldest
+insertion: a position looked up constantly stays resident however long ago it was
+first computed.
+
+The bookkeeping is not free — every read moves an entry to the back of an
+`OrderedDict` — but the comparison is lopsided. Relinking costs on the order of
+100 ns, while the miss it prevents costs a scoring pass over ~13k guesses,
+several milliseconds. The overhead is roughly ten thousand times smaller than the
+thing it buys, which is not a close call.
+
+One consequence for anything that sweeps many configurations: a finished run's
+positions are dead weight, and under LRU they are evicted only after competing
+with live ones for a while. That is why `WordleSolver.reset_memo` exists, and why
+it clears only the two memos that depend on the estimator — the search's entries
+stay valid across everything and stay worth sharing.
+
+## 14. Why the penalty is 5 and not 1
 
 Risk neutrality (`penalty = 1`) is the principled default, so it takes evidence to
 move off it. Start with what the losses are. They aren't endgame blunders: at the
@@ -846,22 +952,22 @@ That last column can't pick the penalty, though, and the reason is instructive.
 Scoring a loss at 7 is precisely the objective `penalty = 1` optimizes, so ranking
 settings by it can only ever favor risk neutrality — the comparison is circular.
 Name the price of a loss instead, `L` guesses, and every setting becomes a line in
-`L`. Penalty 1 wins below `L` = 7.1, 2 up to 9.0, **5 from 9.0 to 13.7**, 10 to
-22.1, and 30 above that. So 5 is right if a lost game costs between nine and
-fourteen guesses, and little rides on it: across that whole range the best setting
-beats the next by under 0.0002 guesses.
+`L`: penalty 1 wins below `L` = 7.1, **5 from 9.0 to 13.7**, and 30 above 22.1. So
+5 is right if a lost game costs between nine and fourteen guesses, and little
+rides on it, since across that whole range the best setting beats the next by
+under 0.0002 guesses.
 
 Losses collect on the never-curated words — 290 of the 300 the shipped prior can
 lose on. Wordle is provably solvable in five guesses, but that theorem is about a
 solver that knows the answer is one of the 2,309 curated words, and this one
 spreads 9% of its mass over the other 10,638. Swept uniformly over the curated
 list it loses 10 of 2,309, every one of them a word that has already been an
-answer — which is §4.2's repeat prior calling them unlikely, by construction.
+answer — which is §5.1's repeat prior calling them unlikely, by construction.
 
-Every piece of the guess rule is now on the table; §11 puts them in the order the
+Every piece of the guess rule is now on the table; §15 puts them in the order the
 solver applies them.
 
-## 11. Putting it together — one turn of play
+## 15. Putting it together — one turn of play
 
 ```
 candidates = all 12,947 words
@@ -874,18 +980,27 @@ each turn:
     show guess, read feedback, filter candidates
 ```
 
+`argmin` is "the argument that minimizes": not the smallest score but the *word*
+that achieves it, since what the solver needs back is a guess. It is one call to
+`kernels.expected_guesses_all` and one `.argmin()` on the array it returns.
+
 Every line that says 12,947 is the free choice of guess, and hard mode is the one
 variation on this dispatch: it replaces that pool with the candidate set itself
 and changes nothing else. `f` stays the one fitted for free play, so its scores
 read slightly optimistic under the restriction — it is pricing a probe the solver
 is no longer allowed to make.
 
+Under that dispatch sits most of this document. The lookup that reads the
+feedback is §1's table; the `argmin` line is §7's rearranged entropy inside §8's
+blocked, parallel, twice-scanned loop; `exact.solve` is §12's four ideas; and
+every branch consults §13's memo before doing any of it.
+
 The heuristic `E(g,S)` is genuinely a **fallback**: it only runs where the game is
 too wide to solve outright. With both priors on and the shapes that ship, over
 every word the answer could be, the whole thing averages **3.0770 guesses** and
 opens with `salet`.
 
-## 12. The result worth framing
+## 16. The result worth framing
 
 This is the thread running through the whole project, and it's the most
 interesting thing in it:
@@ -898,14 +1013,21 @@ playing positions out exactly. That accuracy converts: it disagrees about the
 guess in **half** of all games, and it is right to, giving up 0.0013 guesses
 where the estimator gives up 0.0115. It moves the outcome in a quarter of games,
 those changes splitting **2,644 better vs 2,597 worse**, and nets −0.0034 ±
-0.0041 guesses — nothing, at 0.9σ — for ~10× the wall clock.
+0.0041 guesses — nothing, at 0.9σ, meaning the measured difference is smaller
+than the standard error on it and so is not distinguishable from zero — for ~10×
+the wall clock.
 
 The tempting explanation is that you're taking an `argmin`, so the estimator's
 errors are **common-mode** across the guesses at one position and cancel in the
 comparison, leaving the ranking intact. They don't. The estimator ranks the ten
-guesses lookahead re-ranks at a correlation of **+0.54** with their true values
-and picks the best of them just over half the time — a valuation whose errors
-cancelled would not be overruled half the time by an accurate one.
+guesses lookahead re-ranks at a **rank correlation** of **+0.54** with their true
+values, and picks the best of them just over half the time. (Rank correlation
+asks whether two orderings agree, not whether two quantities lie on a line, so it
+is not the `r` of a least-squares fit: it is computed from positions in the
+sorted order, and +1 means identical rankings, 0 none at all. It is the right
+question here because the solver only ever uses `f` to *sort* guesses.) A
+valuation whose errors cancelled would not be overruled half the time by an
+accurate one.
 
 What is true instead is that the top of the ranking is a **plateau**. Those ten
 guesses spread 0.0941 guesses between best and worst, and the estimator's pick
@@ -926,11 +1048,14 @@ side.
 
 The opening says it a third time, and most starkly, since `f` decides that one
 alone — no search reaches a position of 12,947 candidates. Played out, `salet` is
-the best of the two hundred openings `f` likes best, at **zero** regret. Yet its
-ranking of the twelve leaders correlates with the truth at only **+0.371**,
-against +0.724 across the full two hundred. That is the shape of the whole
-result: `f` discriminates coarsely and orders finely very badly, and every
-decision it gets right is one where coarse was enough.
+the best of the two hundred openings `f` likes best, at **zero regret**, where
+regret is what a choice costs against the best available: the true value of the
+pick minus the true value of the best option, so zero means nothing on the
+shortlist would have been better. Yet `f`'s ranking of the twelve leaders
+correlates with the truth at only **+0.371**, against +0.724 across the full two
+hundred. That is the shape of the whole result: `f` discriminates coarsely and
+orders finely very badly, and every decision it gets right is one where coarse
+was enough.
 
 Turn-conditioned `f` is the fourth case, and it never stood a chance. A curve
 conditioned on turns remaining differs from the flat one only where the deadline
@@ -946,7 +1071,7 @@ The exceptions are what sharpen the rule, and they have a common shape: every on
 of them changes *what the solver is choosing between* rather than how well it
 scores the choices.
 
-The shapes of §4 are the first. Together they are worth −0.064 ± 0.032, which is
+The shapes of §5 are the first. Together they are worth −0.064 ± 0.032, which is
 small but is more than deeper search and better lookahead managed between them. A
 prior changes the quantity being optimized — which words are plausible answers at
 all — so it is a decision-side change wearing valuation-side clothes.
@@ -977,6 +1102,50 @@ search contributes the 0.04.
 
 Modeling the editor beat improving the search, every time.
 
+## 17. Why any of this finishes
+
+One thread has run underneath all of the above without being named. Choosing a
+guess means scoring ~13k words against a candidate set, the training loop does
+that a few million times, and `analysis/` sweeps run it over every word in the
+list — none of which would terminate on the naive reading of any formula here.
+Five ideas do the work, and each shows up more than once.
+
+**Precompute whatever does not vary.** The feedback for a (guess, answer) pair is
+fixed forever, so it becomes a 167 MB table (§1). `w log w` depends on the
+candidate but not the guess, so it leaves the inner loop entirely (§7). `f` is
+always reached through an entropy, so it takes `x = log₂ n` rather than `n` and
+saves a round trip through exponentiation (§7). In each case the trick is
+noticing that a quantity inside a doubly-nested loop only depends on the outer
+index.
+
+**Cache whatever recurs.** Positions repeat constantly — at most 243 of them
+behind a fixed opening — so results are memoized on the candidate set, which is
+worth about 50× and is the difference between an overnight sweep and a coffee
+break (§13). The compiled kernels are cached to disk (§1), and the fitted `f` to
+`estimator_cache/` (§10), for the same reason at longer timescales.
+
+**Bound before you compute exactly.** The two-turn value is exact, costs one pass,
+and is a valid lower bound on every deeper value, which makes it both a leaf and
+the ordering that prunes the search above it (§12). The branch cap then takes the
+observation one step further, cheerfully abandoning the *proof* of optimality
+while keeping the answer.
+
+**Collapse things that are secretly the same.** §2's reframe — a guess is nothing
+but its partition — is what lets the search treat thousands of words as one move
+(§12). Recognizing an equivalence is usually cheaper than exploiting a numerical
+shortcut, and it never costs accuracy.
+
+**Measure where the work actually is.** Two assumptions had to be given up here:
+that wide positions dominate (small ones are scored far more often), and that the
+cost is arithmetic (it is memory traffic, one cache line per scattered lookup).
+Both changed what the right optimization was, and the second is what stopped the
+search for further ones (§8).
+
+The through-line is that none of these made the solver cleverer. They made a
+fixed amount of thinking affordable enough to do at the scale the measurements in
+this document needed — which is its own version of §16's lesson, from the
+engineering side.
+
 ---
 
 ## Where to look in the code
@@ -987,15 +1156,16 @@ In reading order:
 | --- | --- |
 | `wordle_data.score_guess` | the feedback rule and the precomputed table (§1) |
 | `priors.build_weights` | the weight vector over answers (§4) |
-| `priors._repeat_shape` | the repeat shape, binned by first appearance (§4.2) |
-| `priors._curation_shape` | the curation shapes, WordleBot and frequency (§4.3, §4.4) |
+| `priors._repeat_shape` | the repeat shape, binned by first appearance (§5.1) |
+| `priors._curation_shape` | the curation shapes, WordleBot and frequency (§5.2, §5.3) |
 | `kernels._ig` | the entropy scorer (§3) |
-| `estimator.effective_size` | effective size, and the split-logarithm rearrangement (§5) |
-| `kernels._expected_guesses` | the expected-guesses scorer (§6) |
-| `estimator.FORMS`, `estimator.fit` | `f`, its functional forms, and the monotonicity guard (§6, §7) |
-| `train.policy_iteration` | policy iteration (§7) |
-| `exact.ExactEndgame` | the endgame search, and the loss penalty (§8, §9) |
-| `solver.WordleSolver._best_guess_uncached` | the dispatch deciding which of the above runs (§11) |
+| `estimator.effective_size` | effective size, and the split-logarithm rearrangement (§7) |
+| `kernels._expected_guesses` | the expected-guesses scorer, and the scoring loop (§8, §9) |
+| `estimator.FORMS`, `estimator.fit` | `f`, its functional forms, and the monotonicity guard (§9, §10) |
+| `train.policy_iteration` | policy iteration (§10) |
+| `exact.ExactEndgame` | the endgame search, and the loss penalty (§11, §12) |
+| `memo.Memo` | the bounded LRU every position cache uses (§13) |
+| `solver.WordleSolver._best_guess_uncached` | the dispatch deciding which of the above runs (§15) |
 
 Named rather than given as line numbers, which drift with every edit. Every
 entry is greppable: `grep -rn "def score_guess" .`

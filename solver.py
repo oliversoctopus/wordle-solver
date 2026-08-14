@@ -120,9 +120,9 @@ class WordleSolver:
         """Drop the cached guesses, for a sweep playing many independent
         configurations in one process.
 
-        The memo is capped, and once full it stops caching altogether -- so the
-        positions that recur inside the run in front of it get recomputed, which
-        is exactly where it pays.  Clearing between runs keeps it small and
+        A finished run's positions are dead weight: the memo evicts by least
+        recent use, so they linger and compete for the cap with the positions the
+        next run is actually reusing.  Clearing between runs keeps it small and
         useful.  The exact search's memo is left alone: its values depend only on
         the weights, so they stay valid and stay worth sharing.
         """

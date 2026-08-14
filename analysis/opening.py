@@ -19,7 +19,7 @@ Unlike its siblings this defaults to the shipped prior alone, since every prior
 is another `--top` full enumerations and the four together run for hours.
 
 Backs README *The opening is not where the estimator is weak*, and the third case
-in SOLVER_EXPLAINED section 12.  It moves with the fit, the ranking being `f`'s.
+in SOLVER_EXPLAINED section 16.  It moves with the fit, the ranking being `f`'s.
 """
 
 import argparse
@@ -119,9 +119,8 @@ for config in configs:
     means, losses = [], []
     for n, first in enumerate(words, start=1):
         # two openings partition the list differently, so almost nothing carries
-        # over between them; kept across all of them the memo fills its cap and
-        # then stops caching the positions that recur within one, which is a
-        # ~50x cliff rather than a slow decline
+        # over between them; kept across all of them, the finished openings'
+        # positions are dead weight competing for the cap with live ones
         solver.reset_memo()
         mean, loss = opening_value(solver, first, candidates)
         means.append(mean)
