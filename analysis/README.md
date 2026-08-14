@@ -16,6 +16,7 @@ python analysis/lookahead_accuracy.py   how well the two valuations price a posi
 python analysis/lookahead_accuracy.py --decisions   what is at stake in the choice
 python analysis/exact_decisions.py  the same question asked of the endgame search
 python analysis/exact_decisions.py --who-decides   which valuation takes each turn
+python analysis/opening.py          is the opening f picks the best one?
 python analysis/loss_penalty.py     the penalty and the endgame search's reach
 python analysis/loss_penalty.py --policies    entropy against the estimator
 python analysis/loss_penalty.py --search      what the search adds, by its reach
@@ -30,7 +31,10 @@ both arms over every word — cheap because the restriction it measures is also
 what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over
 the four priors and thirteen with `--decisions`, which plays out ten guesses at
 each position rather than one; `exact_decisions.py` is under a minute, since the
-positions it asks about are the small ones. `loss_penalty.py` is nine minutes for both
+positions it asks about are the small ones. `opening.py` is sixteen minutes for
+the two hundred openings it defaults to, about five seconds each, and
+`--every-word` holds that rate over all 12,947 — the best part of a day.
+`loss_penalty.py` is nine minutes for both
 sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and
 well under one for `--policies` and about half for `--search`; `--cost` is a
 timing probe rather than a measurement and takes about six. `replay.py` is 80 s over the regime's real
@@ -60,6 +64,7 @@ interrupting and diagnosing rather than waiting out.
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §12 |
 | `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §12 |
+| `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §12 |
 | `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, SOLVER_EXPLAINED §9 and §10 |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |

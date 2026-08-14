@@ -921,9 +921,18 @@ takes over, the estimator picks a different guess **38.8%** of the time and give
 up **0.0053 guesses** doing it. At three and four candidates every single
 disagreement is a tie: a different word of equal value, nothing to improve on.
 The ties thin as the set grows, and by 11–60 candidates most disagreements are
-real, which is the whole of that 0.0053. Two valuations, a plateau under each.
+real, which is the whole of that 0.0053. The same plateau, found from the other
+side.
 
-Turn-conditioned `f` is the third case, and it never stood a chance. A curve
+The opening says it a third time, and most starkly, since `f` decides that one
+alone — no search reaches a position of 12,947 candidates. Played out, `salet` is
+the best of the two hundred openings `f` likes best, at **zero** regret. Yet its
+ranking of the twelve leaders correlates with the truth at only **+0.371**,
+against +0.724 across the full two hundred. That is the shape of the whole
+result: `f` discriminates coarsely and orders finely very badly, and every
+decision it gets right is one where coarse was enough.
+
+Turn-conditioned `f` is the fourth case, and it never stood a chance. A curve
 conditioned on turns remaining differs from the flat one only where the deadline
 binds, and `f` is consulted **once in 11,338** positions with three or fewer
 turns left — the search has taken every other one. The +0.0005 ± 0.0007 it

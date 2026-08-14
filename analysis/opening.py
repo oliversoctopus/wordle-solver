@@ -18,8 +18,8 @@ settle it.
 Unlike its siblings this defaults to the shipped prior alone, since every prior
 is another `--top` full enumerations and the four together run for hours.
 
-Backs README *The opening is not the estimator's weak point*.  It moves with the
-fit, the ranking being `f`'s.
+Backs README *The opening is not where the estimator is weak*, and the third case
+in SOLVER_EXPLAINED section 12.  It moves with the fit, the ranking being `f`'s.
 """
 
 import argparse
@@ -127,9 +127,10 @@ for config in configs:
         means.append(mean)
         losses.append(loss)
         if n % 25 == 0:
+            leader = data.all_words[words[int(np.argmin(means))]]
             print(f"    {n}/{len(words)} openings, "
-                  f"{time.perf_counter() - start:.0f}s, best so far "
-                  f"{data.all_words[words[int(np.argmin(means))]]} {min(means):.4f}")
+                  f"{time.perf_counter() - start:.0f}s, "
+                  f"best so far {leader} {min(means):.4f}")
     print(f"  played out: {time.perf_counter() - start:.0f}s\n")
 
     report(solver, words, scores, means, losses)

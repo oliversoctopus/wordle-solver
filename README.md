@@ -908,6 +908,33 @@ outcome measured when it was tried, over 80,000 paired games, was losses 81 → 
 and a mean of +0.0005 ± 0.0007 — a fact about an implementation since removed,
 where the table above is a fact about the solver as it stands.
 
+## The opening is not where the estimator is weak
+
+Every game shares one position, and `f` decides it alone — the candidate set is
+the whole list, so nothing reaches down to it. It is also the widest position
+there is, which is where `f` ranks worst. Playing out the two hundred openings it
+likes best, once per answer and weighted by the prior
+(`analysis/opening.py`):
+
+| ranks by `f` | mean true value | worst | best in band |
+| --- | --- | --- | --- |
+| 1–10 | 3.1001 | 3.1175 | **salet 3.0770** |
+| 11–25 | 3.1140 | 3.1382 | taler 3.0993 |
+| 26–50 | 3.1257 | 3.1450 | trine 3.1038 |
+| 51–100 | 3.1336 | 3.1580 | parle 3.1195 |
+| 101–200 | 3.1428 | 3.1726 | riant 3.1240 |
+
+`salet` is the best of the two hundred and **nothing beats it**: the opening
+costs 0.0000 guesses of regret. Both columns climb with rank, the best in a band
+as steadily as the mean, so a rival from further down would have to beat every
+word in ranks 11–200 while `f` ranked it below all of them.
+
+What makes that worth stating is how badly `f` orders the very same words. Across
+the top twelve its rank correlation with the truth is **+0.371**; across the top
+two hundred it is **+0.724**. It cannot separate near-ties and it separates a
+range perfectly well — coarse discrimination and fine ordering are different
+jobs, and picking an opening needs only the first.
+
 ## Forms of f
 
 Any basis linear in its parameters works, so every fit is a single least-squares
