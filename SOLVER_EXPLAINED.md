@@ -521,13 +521,14 @@ each turn:
     elif exact search can reach it  -> exact.solve()          (true optimum)
          (turns <= 2 always; or <= 60 candidates deeper)
     elif last turn                  -> heaviest candidate
+    elif lookahead is on            -> value the replies first (§16, off by default)
     else                            -> argmin over 12,947 of E(g,S)
     show guess, read feedback, filter candidates
 ```
 
 `argmin` is "the argument that minimizes": not the smallest score but the *word* that achieves it, since what the solver needs back is a guess. It is one call to `kernels.expected_guesses_all` and one `.argmin()` on the array it returns.
 
-Every line that says 12,947 is the free choice of guess, and hard mode is the one variation on this dispatch: it replaces that pool with the candidate set itself and changes nothing else. `f` stays the one fitted for free play, so its scores read slightly optimistic under the restriction — it is pricing a probe the solver is no longer allowed to make.
+Every line that says 12,947 is the free choice of guess, and hard mode is the one variation on this dispatch: it replaces that pool with the candidate set itself, in the exact search as much as in the `argmin`, and changes nothing else about which branch runs. `f` stays the one fitted for free play, so its scores read slightly optimistic under the restriction — it is pricing a probe the solver is no longer allowed to make.
 
 Under that dispatch sits most of this document. The lookup that reads the feedback is §1's table; the `argmin` line is §7's rearranged entropy inside §8's blocked, parallel, twice-scanned loop; `exact.solve` is §12's four ideas; and every branch consults §13's memo before doing any of it.
 
