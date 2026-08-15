@@ -1,6 +1,6 @@
 # How to read this document
 
-This file is Markdown with twelve LaTeX display equations (`$$ ... $$`), so it wants a viewer with math support — a GitHub gist, StackEdit, HackMD, or `Ctrl+Shift+V` in VS Code. **`ABOUT_SOLVER_EXPLAINED.md` has the steps for each**, along with what this document is for and what order to read it in.
+This file is Markdown with LaTeX display equations (`$$ ... $$`), so it wants a viewer with math support — a GitHub gist, StackEdit, HackMD, or `Ctrl+Shift+V` in VS Code. **`ABOUT_SOLVER_EXPLAINED.md` has the steps for each**, along with what this document is for and what order to read it in.
 
 > If your viewer shows raw `$$` symbols, it simply lacks math support. Nothing is lost: every formula here is also stated in words in the surrounding prose, and the code references are plain text.
 

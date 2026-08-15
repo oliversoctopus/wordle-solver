@@ -8,7 +8,7 @@ It exists so that **you can understand the solver without reading the code**. No
 
 It is written as a derivation, not a description. Every section opens with a problem and closes with the machinery that answers it, and nothing is introduced before the question it exists to answer. Entropy is not presented as a formula to accept; you get the "which guess shrinks the set most usefully?" question first, then counting, then bits, then the chain rule that makes information gain computable. The same for the prior, for `f`, and for the endgame search.
 
-It assumes no background in solvers, search, or information theory, and re-derives everything past the mathematics named in *Who it is written for* below. Twelve display equations appear, and every one of them is also stated in words in the surrounding prose, so a viewer without math support costs you nothing but elegance.
+It assumes no background in solvers, search, or information theory, and re-derives everything past the mathematics named in *Who it is written for* below. Every display equation is also stated in words in the surrounding prose, so a viewer without math support costs you nothing but elegance.
 
 Two things it deliberately is **not**:
 
@@ -38,7 +38,7 @@ What follows for this document:
 
 ## How to view it
 
-The file is Markdown with twelve LaTeX display equations (`$$ ... $$`). Tables, code blocks and headings render in any Markdown viewer; the equations need a viewer with math support. Pick one:
+The file is Markdown with LaTeX display equations (`$$ ... $$`). Tables, code blocks and headings render in any Markdown viewer; the equations need a viewer with math support. Pick one:
 
 ### Option A — GitHub Gist (recommended)
 
