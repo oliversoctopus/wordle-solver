@@ -41,6 +41,8 @@ python wordle_game.py             a game in the terminal
 
 Startup loads `feedback_table.npy` (167 MB) and compiles the numba kernels, which takes a while. `web.py` warms both in a background thread and the page waits behind its veil; `/api/status` reports progress and flips `ready`. Poll that before assuming the server is usable.
 
+`WordleSolver(fused=True)`, or `WORDLE_FUSED=1` in the environment, builds a second answer-major copy of the table and dispatches mid-sized positions to `fused_kernels`. It is off by default and scores bit-identically either way, so it is a speed knob and never a behavior one. Worth 1.09× over whole games in expected mode and 1.63× in entropy, for 168 MB and 0.3 s at startup; `SOLVER_EXPLAINED.md` §8 says why it is a dispatch rather than a replacement.
+
 The whole solver sits behind one lock. Scoring ~13k guesses already uses every core, so concurrent requests would only make both slower, and the memo tables are not written for concurrent use.
 
 Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted` rather than inventing an `f`, so a prior combination assembled on the fly needs `train --this-config-only` first — the exception's message spells the command out. Entropy mode needs no fit and runs on anything.
@@ -51,6 +53,7 @@ Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
 | --- | --- |
 | `solver.py` | scoring and guess choice; `WordleSolver` is the entry point |
 | `kernels.py` | the numba inner loops |
+| `fused_kernels.py` | the same scores off an answer-major copy of the table; opt-in |
 | `exact.py` | exact endgame search |
 | `memo.py` | the bounded LRU both of those cache positions in |
 | `estimator.py` | `f(n)`, its forms, and fitting |

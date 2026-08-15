@@ -55,6 +55,7 @@ for a large amount of time:
 
 import numpy as np
 
+import fused_kernels
 import kernels
 from memo import Memo
 
@@ -85,8 +86,10 @@ class ExactEndgame:
 
     def __init__(self, feedback_table, weights, loss_penalty=1.0,
                  max_nodes=DEFAULT_MAX_NODES, memo_limit=500_000,
-                 max_branch=DEFAULT_MAX_BRANCH, hard=False):
+                 max_branch=DEFAULT_MAX_BRANCH, hard=False, transposed=None):
         self.feedback_table = feedback_table
+        # answer-major copy, or None to score the shipped way
+        self.transposed = transposed
         self.weights = weights
         self.hard = bool(hard)
         self.loss_penalty = float(loss_penalty)
@@ -138,8 +141,9 @@ class ExactEndgame:
         # other, and the closed form below runs once per distinct position
         if turns == 2:
             pool = candidates if self.hard else None
-            scores = kernels.two_turn_scores(self.feedback_table, candidates,
-                                             weights, self.loss_penalty, pool=pool)
+            scores = fused_kernels.two_turn_scores(
+                self.feedback_table, self.transposed, candidates, weights,
+                self.loss_penalty, pool=pool)
             best = int(scores.argmin())
             guess = int(candidates[best]) if self.hard else best
             result = (guess, float(scores[best]))
@@ -154,16 +158,16 @@ class ExactEndgame:
             # nothing for the dedupe to merge: only a candidate itself can come
             # back all-green, so no two of them split S the same way
             representatives = candidates
-            rep_bounds = kernels.two_turn_scores(self.feedback_table, candidates,
-                                                 weights, self.bound_penalty,
-                                                 pool=candidates)
+            rep_bounds = fused_kernels.two_turn_scores(
+                self.feedback_table, self.transposed, candidates, weights,
+                self.bound_penalty, pool=candidates)
         else:
             # bound only the representatives: they are about a quarter of the
             # pool, and scoring the rest would be scoring duplicate splits
             representatives = self._distinct_partitions(candidates)
-            rep_bounds = kernels.two_turn_scores(self.feedback_table, candidates,
-                                                 weights, self.bound_penalty,
-                                                 pool=representatives)
+            rep_bounds = fused_kernels.two_turn_scores(
+                self.feedback_table, self.transposed, candidates, weights,
+                self.bound_penalty, pool=representatives)
         order = np.argsort(rep_bounds)
         if self.max_branch is not None:
             # keep only the most promising splits.  Where the dedupe already

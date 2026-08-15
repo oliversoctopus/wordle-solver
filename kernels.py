@@ -26,9 +26,22 @@ and stays branch-free:
 What is left is bound by memory, not arithmetic.  ``feedback_table[guess, c]``
 for scattered ``c`` spends a whole cache line per candidate to use one byte of
 it, and a small scattered candidate set costs several times what the same number
-of adjacent candidates would.  The second pass above is nearly free for
-that reason, since it re-reads what the first pass has already pulled in, and
-short of storing the table transposed as well there is little further to win.
+of adjacent candidates would.  That is why the second pass above is nearly free:
+it re-reads what the first pass has already pulled in.
+
+That penalty is bounded at both ends, which is most of why the layout is what it
+is.  A row is 203 cache lines, so past a couple of hundred candidates a
+scattered set can touch no more of one than a dense set does, and below about
+twenty-five there is too little traffic either way to matter.  Indexing
+``[answer, guess]`` instead does make the reads contiguous, and over the
+positions in between it is worth between 1.2x and 2.4x on the sets real play
+produces.  What it cannot do is win the widest ones, and that part is
+structural: reducing a guess needs that guess's whole feedback vector, which
+that layout holds as a strided column, so it has to either keep every guess in
+the block accumulating at once -- putting the accumulator out of L1 -- or
+rebuild the vector by transposing a tile, and both are additive on top of a scan
+already reading the table a full cache line at a time.  Neither ordering
+dominates the other.  ``analysis/table_layout.py`` measures it.
 
 None of these carry ``fastmath``, and they must not.  The reduce reads a bucket
 and then zeroes it for the next guess; under fastmath LLVM reorders the store

@@ -3,6 +3,7 @@
 import numpy as np
 
 import estimator
+import fused_kernels
 import kernels
 from exact import DEFAULT_MAX_BRANCH, MAX_TURNS, ExactEndgame, SearchBudgetExceeded
 from memo import Memo
@@ -66,7 +67,8 @@ class WordleSolver:
                  use_exact=True, exact_max=DEFAULT_EXACT_MAX,
                  loss_penalty=DEFAULT_LOSS_PENALTY,
                  exact_max_branch=DEFAULT_MAX_BRANCH, hard=False,
-                 lookahead=0, beam_width=DEFAULT_BEAM_WIDTH, beam_exact_max=None):
+                 lookahead=0, beam_width=DEFAULT_BEAM_WIDTH, beam_exact_max=None,
+                 fused=None):
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
         self.data = data if data is not None else load_data()
@@ -99,9 +101,15 @@ class WordleSolver:
         self.exact_max = exact_max
         self.hard = bool(hard)
         self.beam_exact_max = exact_max if beam_exact_max is None else int(beam_exact_max)
+        # an answer-major copy of the table, or None to score the shipped way
+        if fused is None:
+            fused = fused_kernels.DEFAULT_ENABLED
+        self.transposed = (fused_kernels.build_transposed(self.data.feedback_table)
+                           if fused else None)
         self.exact = ExactEndgame(self.data.feedback_table, self.weights,
                                   loss_penalty=loss_penalty,
-                                  max_branch=exact_max_branch, hard=self.hard)
+                                  max_branch=exact_max_branch, hard=self.hard,
+                                  transposed=self.transposed)
         self.exact_hits = 0
         self.exact_bailouts = 0
 
@@ -169,9 +177,10 @@ class WordleSolver:
         table = self.data.feedback_table
         weights = self.weights[candidates]
         if self.mode == ENTROPY:
-            return kernels.ig_all(table, candidates, weights, pool=pool)
-        return kernels.expected_guesses_all(
-            table, candidates, weights, self.params,
+            return fused_kernels.ig_all(table, self.transposed, candidates,
+                                        weights, pool=pool)
+        return fused_kernels.expected_guesses_all(
+            table, self.transposed, candidates, weights, self.params,
             self._codes, self._knots, self._base, pool=pool,
         )
 
