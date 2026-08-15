@@ -1,84 +1,34 @@
 # Working in this repo
 
-A Wordle solver: a scoring engine over the full word list, an estimator `f(n)`
-fitted by policy iteration, an exact endgame search, two terminal front ends and
-a web page that does both.
+A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` fitted by policy iteration, an exact endgame search, two terminal front ends and a web page that does both.
 
-`README.md` is the reference — priors, objective, endgame, results. Read
-`SOLVER_EXPLAINED.md` for the derivation from scratch, by way of
-`ABOUT_SOLVER_EXPLAINED.md`, which says who it is written for and in what order
-to read it. Neither is a summary of the other and both are kept current; if you
-change behavior, update the one that documents it.
+`README.md` is the reference — priors, objective, endgame, results. Read `SOLVER_EXPLAINED.md` for the derivation from scratch, by way of `ABOUT_SOLVER_EXPLAINED.md`, which says who it is written for and in what order to read it. Neither is a summary of the other and both are kept current; if you change behavior, update the one that documents it.
 
-`ABOUT_SOLVER_EXPLAINED.md` is the front door to the second of those: what it is
-for, how to view its LaTeX, and the route through its sections. The viewing
-instructions live there and nowhere else — do not restore a copy of them to the
-top of `SOLVER_EXPLAINED.md`, and if you add or remove a section, its section map
-is the thing that goes stale.
+`ABOUT_SOLVER_EXPLAINED.md` is the front door to the second of those: what it is for, how to view its LaTeX, and the route through its sections. The viewing instructions live there and nowhere else — do not restore a copy of them to the top of `SOLVER_EXPLAINED.md`, and if you add or remove a section, its section map is the thing that goes stale.
 
-**Read its *If you edit it* rules before changing `SOLVER_EXPLAINED.md`.** That
-document decays by accretion. A result gets appended, then a paragraph
-reconciling it with the one above, and eventually the whole thing reads as a
-changelog instead of an explanation. It has been rewritten once to undo exactly
-that. The short version: edit the sentence that carries a number instead of
-adding one that says the number moved, and never let the document mention its own
-revision history.
+**Read its *If you edit it* rules before changing `SOLVER_EXPLAINED.md`.** That document decays by accretion. A result gets appended, then a paragraph reconciling it with the one above, and eventually the whole thing reads as a changelog instead of an explanation. It has been rewritten once to undo exactly that. The short version: edit the sentence that carries a number instead of adding one that says the number moved, and never let the document mention its own revision history.
 
 ## Conventions
 
-**American English**, everywhere: prose, comments, identifiers, CSS custom
-properties, UI strings. `color`, `gray`, `favor`, `labeled`, `modeled`,
-`minimize`/`normalize`/`optimize`. The project was written in British English
-and converted wholesale on 2026-08-09, so a British spelling in existing code is
-a leftover to fix, not a convention to match.
+**American English**, everywhere: prose, comments, identifiers, CSS custom properties, UI strings. `color`, `gray`, `favor`, `labeled`, `modeled`, `minimize`/`normalize`/`optimize`. The project was written in British English and converted wholesale on 2026-08-09, so a British spelling in existing code is a leftover to fix, not a convention to match.
 
-**Comments stay to a line or two.** No multi-paragraph blocks justifying a
-change, no measurement tables in source. The reasoning and the numbers go in
-`README.md`; the comment says what the line does. File headers explaining what a
-module is are the exception and are welcome.
+**Comments stay to a line or two.** No multi-paragraph blocks justifying a change, no measurement tables in source. The reasoning and the numbers go in `README.md`; the comment says what the line does. File headers explaining what a module is are the exception and are welcome.
 
-**Vary how sentences are built.** One shape should not carry a whole paragraph:
-a clause, a comma, and a tail. "X, so Y", "X, rather than Y", ", which …", an
-em-dash aside. Each of those is good English by itself, and the trouble is only
-the rate at which it recurs. Mix in sentences that open on a subordinate clause,
-sentences joining two full clauses, and sentences that state a thing and stop.
-Chopping the long ones into short ones is not the fix; it reads worse than what
-it replaced.
+**Vary how sentences are built.** One shape should not carry a whole paragraph: a clause, a comma, and a tail. "X, so Y", "X, rather than Y", ", which …", an em-dash aside. Each of those is good English by itself, and the trouble is only the rate at which it recurs. Mix in sentences that open on a subordinate clause, sentences joining two full clauses, and sentences that state a thing and stop. Chopping the long ones into short ones is not the fix; it reads worse than what it replaced.
 
-**Hold that one loosely.** It is a smell worth checking when a paragraph reads
-badly, and not a rule to enforce by counting. Three sentences in a row can take
-the same shape if they read well, and prose that already works is better left
-alone than rewritten to a quota.
+**Hold that one loosely.** It is a smell worth checking when a paragraph reads badly, and not a rule to enforce by counting. Three sentences in a row can take the same shape if they read well, and prose that already works is better left alone than rewritten to a quota.
 
-**Point at code by name, never by line number.** `priors.build_weights`, not
-`priors.py:221`. Line references go stale on the next edit and nothing checks
-them; a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted.
-A `module.function` name is stable, greppable, and fails loudly instead of
-quietly when the symbol is renamed.
+**Point at code by name, never by line number.** `priors.build_weights`, not `priors.py:221`. Line references go stale on the next edit and nothing checks them; a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted. A `module.function` name is stable, greppable, and fails loudly instead of quietly when the symbol is renamed.
 
-**Line endings are LF, everywhere, including `web/`.** They were mixed until
-2026-08-10 and the rule that described them ("CRLF in `web/`") was never true of
-either side of that line; the whole tree is normalized now.
+**Line endings are LF, everywhere, including `web/`.** They were mixed until 2026-08-10 and the rule that described them ("CRLF in `web/`") was never true of either side of that line; the whole tree is normalized now.
 
-Write JSON through `wordle_data.write_json`, which handles this. Anything else
-that rewrites a file must pass `newline=""` to `open` — Python's text mode
-writes CRLF on Windows, so without it every line of the file changes and the
-real edit disappears into a whole-file diff.
+Write JSON through `wordle_data.write_json`, which handles this. Anything else that rewrites a file must pass `newline=""` to `open` — Python's text mode writes CRLF on Windows, so without it every line of the file changes and the real edit disappears into a whole-file diff.
 
-**Wrap width follows how the file is read.** `SOLVER_EXPLAINED.md` and
-`ABOUT_SOLVER_EXPLAINED.md` are **one line per paragraph** — they are read
-rendered in a browser, where the wrap is invisible to the reader and only costs
-a reflow on every edit, hides phrases that straddle a line break from `grep`,
-and turns a one-word change into four lines of diff. Everything else is
-hard-wrapped at about 80 columns, because it is read in an editor: `README.md`,
-this file, and all docstrings and comments. Do not normalize either style toward
-the other; converting a file is a whole-file diff and belongs in its own commit.
+**Markdown is one line per paragraph. Python is hard-wrapped.** Markdown here is written unwrapped, because it is always read through something that wraps it for you: a browser, a gist, VS Code's preview, and VS Code's editor too, which ships `editor.wordWrap: on` for Markdown. The source width therefore reaches no reader, while hard wrapping costs a reflow on every edit, hides phrases that straddle a line break from `grep`, and turns a one-word change into four lines of diff. Python keeps its ~80 columns, where source *is* what gets read and a 200-character line is genuinely worse. The four Markdown files at the top level are converted; `analysis/README.md` and `tests/README.md` are still wrapped and can be converted whenever they are next touched. Converting a file is a whole-file diff, so it goes in its own commit touching nothing else.
 
 ## Running it
 
-**The dependencies live in `.venv`, and nowhere else.** The system Python has no
-`numba`, so `python web.py` dies on the import; run `.venv/Scripts/python.exe`
-instead, or activate the environment first.
+**The dependencies live in `.venv`, and nowhere else.** The system Python has no `numba`, so `python web.py` dies on the import; run `.venv/Scripts/python.exe` instead, or activate the environment first.
 
 ```
 .venv/Scripts/activate            PowerShell: .venv\Scripts\Activate.ps1
@@ -87,23 +37,13 @@ python wordle_solver.py play      the solver in the terminal
 python wordle_game.py             a game in the terminal
 ```
 
-`requirements.txt` splits in two: the solver needs `numpy` and `numba`, and the
-last two lines are for the one-off builders only. It is what `.venv` was built
-from; installing into the system Python is not the setup here.
+`requirements.txt` splits in two: the solver needs `numpy` and `numba`, and the last two lines are for the one-off builders only. It is what `.venv` was built from; installing into the system Python is not the setup here.
 
-Startup loads `feedback_table.npy` (167 MB) and compiles the numba kernels,
-which takes a while. `web.py` warms both in a background thread and the page
-waits behind its veil; `/api/status` reports progress and flips `ready`. Poll
-that before assuming the server is usable.
+Startup loads `feedback_table.npy` (167 MB) and compiles the numba kernels, which takes a while. `web.py` warms both in a background thread and the page waits behind its veil; `/api/status` reports progress and flips `ready`. Poll that before assuming the server is usable.
 
-The whole solver sits behind one lock. Scoring ~13k guesses already uses every
-core, so concurrent requests would only make both slower, and the memo tables
-are not written for concurrent use.
+The whole solver sits behind one lock. Scoring ~13k guesses already uses every core, so concurrent requests would only make both slower, and the memo tables are not written for concurrent use.
 
-Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
-rather than inventing an `f`, so a prior combination assembled on the fly needs
-`train --this-config-only` first — the exception's message spells the command
-out. Entropy mode needs no fit and runs on anything.
+Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted` rather than inventing an `f`, so a prior combination assembled on the fly needs `train --this-config-only` first — the exception's message spells the command out. Entropy mode needs no fit and runs on anything.
 
 ## The pieces
 
@@ -128,20 +68,11 @@ out. Entropy mode needs no fit and runs on anything.
 
 ## Where the data comes from
 
-`data/` holds the curated inputs and the answer record; `data/derived/` holds
-only what `feedback_table.py` regenerates from the two word lists, so it is the
-part that is safe to throw away. Every path is resolved from `wordle_data.py`'s
-`DATA_DIR` and `DERIVED_DIR` rather than spelled out again per module.
+`data/` holds the curated inputs and the answer record; `data/derived/` holds only what `feedback_table.py` regenerates from the two word lists, so it is the part that is safe to throw away. Every path is resolved from `wordle_data.py`'s `DATA_DIR` and `DERIVED_DIR` rather than spelled out again per module.
 
-Every data file has a builder except one. Three of them — `answer_like.py`,
-`solutions.py`, `word_lists.py` — **verify against the shipped file and write
-nothing** unless you pass `--write`. They rewrite inputs the solver reads, and
-`word_lists.py` invalidates `feedback_table.npy` outright, so the default is to
-report the difference and stop.
+Every data file has a builder except one. Three of them — `answer_like.py`, `solutions.py`, `word_lists.py` — **verify against the shipped file and write nothing** unless you pass `--write`. They rewrite inputs the solver reads, and `word_lists.py` invalidates `feedback_table.npy` outright, so the default is to report the difference and stop.
 
-`feedback_table.py` is the exception and predates that rule: it has no `--write`
-and no `__main__` guard, so **merely importing it rebuilds the index maps and
-starts on the 167 MB table**. Run it deliberately or not at all.
+`feedback_table.py` is the exception and predates that rule: it has no `--write` and no `__main__` guard, so **merely importing it rebuilds the index maps and starts on the 167 MB table**. Run it deliberately or not at all.
 
 | file | built by | reproduces the shipped copy? |
 | --- | --- | --- |
@@ -151,103 +82,42 @@ starts on the 167 MB table**. Run it deliberately or not at all.
 | `data/answer_like.json` | `answer_like.py` | yes, exactly |
 | `data/wordlebot_weights.json` | nothing | a third-party scrape of WordleBot; not rebuildable here |
 
-`answer_like.py` needs `wordfreq`, which nothing else here does. Its fit is
-sensitive to details that are easy to guess wrong: thirteen features and not the
-four `SOLVER_EXPLAINED.md` singles out, exactly ten foreign languages, a
-duplicate-letter *count* where a flag would seem enough, and a ridge that hits
-the intercept too. Change any of them and it still fits, still correlates at
-r ≈ 0.98, and no longer reproduces the file.
+`answer_like.py` needs `wordfreq`, which nothing else here does. Its fit is sensitive to details that are easy to guess wrong: thirteen features and not the four `SOLVER_EXPLAINED.md` singles out, exactly ten foreign languages, a duplicate-letter *count* where a flag would seem enough, and a ridge that hits the intercept too. Change any of them and it still fits, still correlates at r ≈ 0.98, and no longer reproduces the file.
 
 ## The web page
 
-Three views — solve, play and find — over one board pane and one set of
-switches. The finder is the odd one: it is given the answer and looks for the
-guess, so it has its own two rows, its own panel, and `/api/find` instead of a
-session.
+Three views — solve, play and find — over one board pane and one set of switches. The finder is the odd one: it is given the answer and looks for the guess, so it has its own two rows, its own panel, and `/api/find` instead of a session.
 
-The server holds sessions; the page holds an editable copy of the board and
-sends **the whole board** on every submit, never a delta. The reply is the board
-as the solver accepted it, and the local copy is rebuilt from it, so the two
-cannot drift. Editing an earlier row is therefore the same request as playing a
-new one.
+The server holds sessions; the page holds an editable copy of the board and sends **the whole board** on every submit, never a delta. The reply is the board as the solver accepted it, and the local copy is rebuilt from it, so the two cannot drift. Editing an earlier row is therefore the same request as playing a new one.
 
-**The settings ride along with the board**, as one `Settings` value parsed per
-request. Nothing about them lives on the session. Changing one is then the same
-request as playing a row, which is what lets a switch re-run the solver over the
-rows already played instead of clearing them. Only the answer box deals a new game.
-Nothing on the server has to be kept in step with the switches; do not add a
-setting that is remembered at `/api/new` time.
+**The settings ride along with the board**, as one `Settings` value parsed per request. Nothing about them lives on the session. Changing one is then the same request as playing a row, which is what lets a switch re-run the solver over the rows already played instead of clearing them. Only the answer box deals a new game. Nothing on the server has to be kept in step with the switches; do not add a setting that is remembered at `/api/new` time.
 
-Typing and coloring are local until Enter. Taking a word off is not, whether by
-*Delete row* or by backspacing the row empty: `refreshAfterRemoval` submits the
-shorter board itself, since a shadow and a panel still describing the word just
-removed read as no removal at all. A hole still open in the middle stays local,
-there being no valid board to send.
+Typing and coloring are local until Enter. Taking a word off is not, whether by *Delete row* or by backspacing the row empty: `refreshAfterRemoval` submits the shorter board itself, since a shadow and a panel still describing the word just removed read as no removal at all. A hole still open in the middle stays local, there being no valid board to send.
 
-The rule that follows is worth stating whole: **a board reached by taking words
-off is indistinguishable from the same board played straight** — shadow, cursor,
-panel, and which rows can be typed in. `trimRows` is the last of those: exactly
-one free row after the last word, so nothing selectable is left below the shadow.
-`README.md` § *Editing the board* has the rest, with why they are what they are;
-they are not obvious and they were each a bug once.
+The rule that follows is worth stating whole: **a board reached by taking words off is indistinguishable from the same board played straight** — shadow, cursor, panel, and which rows can be typed in. `trimRows` is the last of those: exactly one free row after the last word, so nothing selectable is left below the shadow. `README.md` § *Editing the board* has the rest, with why they are what they are; they are not obvious and they were each a bug once.
 
-Requests are serialized: one in flight, and a second made meanwhile is held, not
-dropped. Dropping it used to leave a view with nothing in it.
+Requests are serialized: one in flight, and a second made meanwhile is held, not dropped. Dropping it used to leave a view with nothing in it.
 
-Patterns cross the wire as either `"NYGNN"` or `[0, 1, 2, 0, 0]`; the server
-takes both, and the page sends whichever it has to hand. A test double for the
-API has to accept both too.
+Patterns cross the wire as either `"NYGNN"` or `[0, 1, 2, 0, 0]`; the server takes both, and the page sends whichever it has to hand. A test double for the API has to accept both too.
 
-`/editor` rewrites what the site says by scanning the source for user-visible
-strings. It means **string literals in `index.html`, `app.js` and `web.py` are
-data**: changing one changes what `/editor` lists, and any saved override keyed
-to the old wording is orphaned. `wording.json` holds live overrides; *Write into
-the code* bakes them into the source and logs the phrases to
-`wording_history.json`. There is no file-level undo.
+`/editor` rewrites what the site says by scanning the source for user-visible strings. It means **string literals in `index.html`, `app.js` and `web.py` are data**: changing one changes what `/editor` lists, and any saved override keyed to the old wording is orphaned. `wording.json` holds live overrides; *Write into the code* bakes them into the source and logs the phrases to `wording_history.json`. There is no file-level undo.
 
-**`wording_history.json` is a record of the past.** Its `was:` fields quote what
-the code used to say. Do not sweep it with a project-wide rewrite — that makes it
-false. It was deliberately left British when everything else was converted.
+**`wording_history.json` is a record of the past.** Its `was:` fields quote what the code used to say. Do not sweep it with a project-wide rewrite — that makes it false. It was deliberately left British when everything else was converted.
 
 ## Numbers in the documents
 
-Every measured claim about the priors is reproduced by a script in `analysis/`,
-and the claims move with `solutions.json` — rerun after `solutions.py --write`,
-and refit before rerunning `analysis/replay.py` or it measures a stale policy
-against fresh answers. Nothing warns you: the estimator cache is keyed on the
-`PriorConfig` alone, so a fit made against a shorter answer log loads silently.
+Every measured claim about the priors is reproduced by a script in `analysis/`, and the claims move with `solutions.json` — rerun after `solutions.py --write`, and refit before rerunning `analysis/replay.py` or it measures a stale policy against fresh answers. Nothing warns you: the estimator cache is keyed on the `PriorConfig` alone, so a fit made against a shorter answer log loads silently.
 
-`analysis/repeat_shapes.py --events 18` is the method check. It scores only the
-first 18 repeats and should print what the README carried before 2026-08-10 —
-uniform −134.5, binned −116.1. If that still holds, a number that moved moved
-because the data did, not because the analysis drifted.
+`analysis/repeat_shapes.py --events 18` is the method check. It scores only the first 18 repeats and should print what the README carried before 2026-08-10 — uniform −134.5, binned −116.1. If that still holds, a number that moved moved because the data did, not because the analysis drifted.
 
 ## Testing
 
-`tests/` holds three files and `tests/README.md` describes them; `python
-tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the
-table. They are deliberately narrow — the board's editing rules, the two front
-ends agreeing on how the solver is asked, and whether the cached `f` is a fit of
-the answer record we have.
+`tests/` holds three files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, and whether the cached `f` is a fit of the answer record we have.
 
-**Nothing there asserts a number written down by hand, and nothing new should.**
-Each check has an oracle instead: the other front end, the answer record, or a
-property that holds of every board. A figure copied into a test is a fourth
-place for it to go stale, and there are three already.
+**Nothing there asserts a number written down by hand, and nothing new should.** Each check has an oracle instead: the other front end, the answer record, or a property that holds of every board. A figure copied into a test is a fourth place for it to go stale, and there are three already.
 
-The board tests are the pattern to follow for page logic: a small fake DOM plus
-a fake `fetch`, `web/app.js` loaded unmodified via `vm`, and a getter object
-appended to reach its internals. Cursor and board-state bugs are where the page's
-bugs live. Add cases as **properties over a random walk of whole intentions**
-(*a word*, *clearing the row by hand*), not as more sequences you thought of:
-bare random keystrokes never clear a row, and the anchors only ever cover what
-someone already had in mind. The phantom free row was found by the walk, not by
-anyone writing a case for it.
+The board tests are the pattern to follow for page logic: a small fake DOM plus a fake `fetch`, `web/app.js` loaded unmodified via `vm`, and a getter object appended to reach its internals. Cursor and board-state bugs are where the page's bugs live. Add cases as **properties over a random walk of whole intentions** (*a word*, *clearing the row by hand*), not as more sequences you thought of: bare random keystrokes never clear a row, and the anchors only ever cover what someone already had in mind. The phantom free row was found by the walk, not by anyone writing a case for it.
 
-Server endpoints are quickest to check with `http.client` over a single
-keep-alive connection — several bugs have been connection-reuse bugs, and one
-request per connection hides them.
+Server endpoints are quickest to check with `http.client` over a single keep-alive connection — several bugs have been connection-reuse bugs, and one request per connection hides them.
 
-Do not trust a solver change without checking it end to end: build a truthful
-board with `score_guess(guess, answer)` instead of hand-writing patterns, or
-the server rejects it as contradictory and the test proves nothing.
+Do not trust a solver change without checking it end to end: build a truthful board with `score_guess(guess, answer)` instead of hand-writing patterns, or the server rejects it as contradictory and the test proves nothing.
