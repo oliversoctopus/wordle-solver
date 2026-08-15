@@ -65,6 +65,15 @@ that rewrites a file must pass `newline=""` to `open` — Python's text mode
 writes CRLF on Windows, so without it every line of the file changes and the
 real edit disappears into a whole-file diff.
 
+**Wrap width follows how the file is read.** `SOLVER_EXPLAINED.md` and
+`ABOUT_SOLVER_EXPLAINED.md` are **one line per paragraph** — they are read
+rendered in a browser, where the wrap is invisible to the reader and only costs
+a reflow on every edit, hides phrases that straddle a line break from `grep`,
+and turns a one-word change into four lines of diff. Everything else is
+hard-wrapped at about 80 columns, because it is read in an editor: `README.md`,
+this file, and all docstrings and comments. Do not normalize either style toward
+the other; converting a file is a whole-file diff and belongs in its own commit.
+
 ## Running it
 
 **The dependencies live in `.venv`, and nowhere else.** The system Python has no
