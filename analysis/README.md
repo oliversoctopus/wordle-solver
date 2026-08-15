@@ -1,9 +1,6 @@
 # analysis/
 
-Every measured number in `README.md` and `SOLVER_EXPLAINED.md` about the two
-priors, about which form of `f` is the default, about what hard mode costs, and
-about the loss penalty comes from one of these. They read `data/` and the
-estimator cache and print; they write nothing.
+Every measured number in `README.md` and `SOLVER_EXPLAINED.md` about the two priors, about which form of `f` is the default, about what hard mode costs, and about the loss penalty comes from one of these. They read `data/` and the estimator cache and print; they write nothing.
 
 ```
 python analysis/regime.py           the regime table and the pool arithmetic
@@ -26,33 +23,11 @@ python analysis/form_default.py     which form to fit by default (slower)
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
 ```
 
-The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`,
-both arms over every word — cheap because the restriction it measures is also
-what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over
-the four priors and thirteen with `--decisions`, which plays out ten guesses at
-each position rather than one; `exact_decisions.py` is under a minute, since the
-positions it asks about are the small ones. `opening.py` is sixteen minutes for
-the two hundred openings it defaults to, about five seconds each, and
-`--every-word` holds that rate over all 12,947 — the best part of a day.
-`loss_penalty.py` is nine minutes for both
-sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and
-well under one for `--policies` and about half for `--search`; `--cost` is a
-timing probe rather than a measurement and takes about six. `replay.py` is 80 s over the regime's real
-games, `results_tables.py` about three minutes, and `form_default.py` ten, which
-makes it the slow one — it replays 45 fitted policies where the others replay
-one or two.
+The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`, both arms over every word — cheap because the restriction it measures is also what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over the four priors and thirteen with `--decisions`, which plays out ten guesses at each position rather than one; `exact_decisions.py` is under a minute, since the positions it asks about are the small ones. `opening.py` is sixteen minutes for the two hundred openings it defaults to, about five seconds each, and `--every-word` holds that rate over all 12,947 — the best part of a day. `loss_penalty.py` is nine minutes for both sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and well under one for `--policies` and about half for `--search`; `--cost` is a timing probe rather than a measurement and takes about six. `replay.py` is 80 s over the regime's real games, `results_tables.py` about three minutes, and `form_default.py` ten, which makes it the slow one — it replays 45 fitted policies where the others replay one or two.
 
-Those are wall clocks on one machine, and they are far shorter than the sizes
-suggest for one reason: the memos fill after a few thousand positions and the
-rest of a run comes out of cache. Behind a fixed opening the 12,947 answers reach
-at most 243 distinct positions, so the memo turns a 12,947-wide computation into
-a 240-wide one, and that ratio is most of why any of this finishes at all.
+Those are wall clocks on one machine, and they are far shorter than the sizes suggest for one reason: the memos fill after a few thousand positions and the rest of a run comes out of cache. Behind a fixed opening the 12,947 answers reach at most 243 distinct positions, so the memo turns a 12,947-wide computation into a 240-wide one, and that ratio is most of why any of this finishes at all.
 
-Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Memo`
-drops its least recently used entry rather than refusing new ones once full, and
-why `WordleSolver.reset_memo` is there for a sweep that wants each run
-independent of the last. A run taking far longer than its row above is worth
-interrupting and diagnosing rather than waiting out.
+Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Memo` drops its least recently used entry rather than refusing new ones once full, and why `WordleSolver.reset_memo` is there for a sweep that wants each run independent of the last. A run taking far longer than its row above is worth interrupting and diagnosing rather than waiting out.
 
 | script | backs |
 | --- | --- |
@@ -72,96 +47,36 @@ interrupting and diagnosing rather than waiting out.
 
 ## Rerunning them
 
-Rerun after `solutions.py --write`. Every one of these numbers moves with the
-answer log, and nothing warns you: the estimator cache is keyed on the
-`PriorConfig` alone, so a stale fit is loaded silently. Refit before rerunning
-`replay.py` or it measures an old policy against new answers.
+Rerun after `solutions.py --write`. Every one of these numbers moves with the answer log, and nothing warns you: the estimator cache is keyed on the `PriorConfig` alone, so a stale fit is loaded silently. Refit before rerunning `replay.py` or it measures an old policy against new answers.
 
-**Check the method before believing a changed number.** `repeat_shapes.py
---events 18` scores only the first 18 repeats and should print the figures the
-README carried before the 2026-08-10 update — uniform −134.5, binned −116.1 at
-+18.4, α = 1.0 at −118.4, and +1.024 ± 0.235 nats/event at 4.4σ winning 14 of
-18. If those still come out, a number that moved moved because the data did.
-`regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s
-uniform baseline (−9.27) are fixed points for the same reason.
+**Check the method before believing a changed number.** `repeat_shapes.py --events 18` scores only the first 18 repeats and should print the figures the README carried before the 2026-08-10 update — uniform −134.5, binned −116.1 at +18.4, α = 1.0 at −118.4, and +1.024 ± 0.235 nats/event at 4.4σ winning 14 of 18. If those still come out, a number that moved moved because the data did. `regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s uniform baseline (−9.27) are fixed points for the same reason.
 
 ## Enumerating instead of sampling
 
-`hard_mode.py`, `loss_penalty.py`, `results_tables.py` and `form_default.py` do
-not draw answers and report a standard error. They do not have to: the solver is
-deterministic, so a game's outcome is a pure function of the answer, and playing
-all 12,947 words once with the prior as weights *computes* the mean and the loss
-probability. There is no sampling distribution left to put an interval around,
-and `common.every_answer` is the one implementation they share.
+`hard_mode.py`, `loss_penalty.py`, `results_tables.py` and `form_default.py` do not draw answers and report a standard error. They do not have to: the solver is deterministic, so a game's outcome is a pure function of the answer, and playing all 12,947 words once with the prior as weights *computes* the mean and the loss probability. There is no sampling distribution left to put an interval around, and `common.every_answer` is the one implementation they share.
 
-It matters most where the effect is small. The loss penalty is worth about
-+0.0005 guesses, while a 20,000-game sample carries an error near 0.009 — twenty
-times larger, and only pairing ever made those figures readable. Removing the
-noise also moved conclusions, not just digits: under the flat prior the nine
-forms of `f` span 0.0013 guesses rather than the 0.0110 a 3,000-answer holdout
-showed, which is most of what used to separate them.
+It matters most where the effect is small. The loss penalty is worth about +0.0005 guesses, while a 20,000-game sample carries an error near 0.009 — twenty times larger, and only pairing ever made those figures readable. Removing the noise also moved conclusions, not just digits: under the flat prior the nine forms of `f` span 0.0013 guesses rather than the 0.0110 a 3,000-answer holdout showed, which is most of what used to separate them.
 
-Three things change shape in the output. A loss *rate* becomes the exact prior
-mass on the words that lose, which is not the fraction of words that lose. "Which
-games changed" becomes a list of words. And a block sd or a holdout seed stops
-existing, so a ranking is a fact about the prior rather than something that might
-move on a rerun — which makes a small gap harder to dismiss, not easier.
+Three things change shape in the output. A loss *rate* becomes the exact prior mass on the words that lose, which is not the fraction of words that lose. "Which games changed" becomes a list of words. And a block sd or a holdout seed stops existing, so a ranking is a fact about the prior rather than something that might move on a rerun — which makes a small gap harder to dismiss, not easier.
 
-Enumerating is usually the cheaper option too. The memos in `WordleSolver` and
-`ExactEndgame` saturate after a few thousand positions, so most of a sweep runs
-out of cache — the marginal rate climbs past 4,000 games a second, and the arm
-that looks slowest from a cold start is not the one that costs the most.
+Enumerating is usually the cheaper option too. The memos in `WordleSolver` and `ExactEndgame` saturate after a few thousand positions, so most of a sweep runs out of cache — the marginal rate climbs past 4,000 games a second, and the arm that looks slowest from a cold start is not the one that costs the most.
 
-`replay.py` is the exception that stays sampled, and for a good reason: it
-replays the *real* answer sequence, so its sample is a historical record rather
-than a draw from the prior. There is nothing to enumerate.
+`replay.py` is the exception that stays sampled, and for a good reason: it replays the *real* answer sequence, so its sample is a historical record rather than a draw from the prior. There is nothing to enumerate.
 
-`lookahead_accuracy.py` and `exact_decisions.py` sit between the two. Every value
-they report is exact — a position played out once per candidate answer — but
-which positions they visit, and how heavily each counts, comes from a sample of
-games. Their means carry a sampling error that the enumerated ones do not. The
-machinery is shared: `common.collect_positions`, `common.guess_value` and their
-neighbors are the one implementation both read.
+`lookahead_accuracy.py` and `exact_decisions.py` sit between the two. Every value they report is exact — a position played out once per candidate answer — but which positions they visit, and how heavily each counts, comes from a sample of games. Their means carry a sampling error that the enumerated ones do not. The machinery is shared: `common.collect_positions`, `common.guess_value` and their neighbors are the one implementation both read.
 
 ## `replay.py` lost its uniform-shape arms
 
-It used to compare the sharpened shapes against the uniform ones, which needed
-fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and
-`repeat1_curation1_c-wordlebot`. Those fits are no longer in the repo, and since
-2026-08-10 a prior with no fit raises instead of playing an invented `f`. The
-arms were removed rather than retrained. What is left is the comparison both
-remaining fits support: curation `frequency` against the shipped `wordlebot`,
-over the regime and by arm.
+It used to compare the sharpened shapes against the uniform ones, which needed fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`. Those fits are no longer in the repo, and since 2026-08-10 a prior with no fit raises instead of playing an invented `f`. The arms were removed rather than retrained. What is left is the comparison both remaining fits support: curation `frequency` against the shipped `wordlebot`, over the regime and by arm.
 
 ## What is not reproduced here
 
-`replay.py` is only comparable against itself. Its numbers depend on the fitted
-estimator as much as on the data, and every configuration's winning form moved
-in the 2026-08-10 refit, so its output cannot be diffed against a run from
-before that. The same holds for `form_default.py`: it scores the fits in
-`estimator_cache/forms/`, so a refit moves every row.
+`replay.py` is only comparable against itself. Its numbers depend on the fitted estimator as much as on the data, and every configuration's winning form moved in the 2026-08-10 refit, so its output cannot be diffed against a run from before that. The same holds for `form_default.py`: it scores the fits in `estimator_cache/forms/`, so a refit moves every row.
 
-`hard_mode.py` is the one that survives a refit, and it is worth knowing why: its
-two arms play the *same* `f`, so a refit moves both columns together and mostly
-cancels in the paired difference. Read the difference across refits; read the
-two means only against each other. `lookahead.py` does *not* get that protection
-even though it also pairs two arms on one fit: what it measures is how much room
-the base policy leaves above itself, so a better-fitted `f` shrinks it directly.
+`hard_mode.py` is the one that survives a refit, and it is worth knowing why: its two arms play the *same* `f`, so a refit moves both columns together and mostly cancels in the paired difference. Read the difference across refits; read the two means only against each other. `lookahead.py` does *not* get that protection even though it also pairs two arms on one fit: what it measures is how much room the base policy leaves above itself, so a better-fitted `f` shrinks it directly.
 
-Two claims in README *Lookahead* have no script: that width 25 measures no
-better, and that two plies costs 205 s for the opening position alone. Each needs
-a position sample as well as a method, and that sample was not kept.
+Two claims in README *Lookahead* have no script: that width 25 measures no better, and that two plies costs 205 s for the opening position alone. Each needs a position sample as well as a method, and that sample was not kept.
 
-Three rows of the README *Shaping the two priors* table are history now, not
-output: `wordlebot` alone, `binned` alone, and the uniform baseline they are
-measured against. Reproducing them means fitting the three uniform-shape
-configurations again. That is a deliberate choice about what this repo ships,
-and not something a rerun should do behind your back.
+Three rows of the README *Shaping the two priors* table are history now, not output: `wordlebot` alone, `binned` alone, and the uniform baseline they are measured against. Reproducing them means fitting the three uniform-shape configurations again. That is a deliberate choice about what this repo ships, and not something a rerun should do behind your back.
 
-Two figures the documents used to carry could not be reproduced exactly. The
-window variants' *spread* was −124…−129; the best variant here matches, but the
-worst is far worse, so the original must have defined the band more robustly.
-Only the best of the sixteen is quoted now, which is the number the argument
-actually needs. The drift rate's standard error was ±0.39 against ±1.56 here;
-the slope agrees to two decimals, so the parameterization is right and the error
-model is not.
+Two figures the documents used to carry could not be reproduced exactly. The window variants' *spread* was −124…−129; the best variant here matches, but the worst is far worse, so the original must have defined the band more robustly. Only the best of the sixteen is quoted now, which is the number the argument actually needs. The drift rate's standard error was ±0.39 against ±1.56 here; the slope agrees to two decimals, so the parameterization is right and the error model is not.
