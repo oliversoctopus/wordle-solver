@@ -113,7 +113,7 @@ $$H(S) = \underbrace{H(p_1, \ldots, p_k)}_{\text{which bucket}} + \sum_r p_r H(S
 
 Substituting, **the information gained is exactly the entropy of the bucket-mass distribution.** You never need to look inside the buckets. That's `kernels._ig`: total up the **mass** of each pattern — a bucket's mass being the combined weight of the candidates that land in it, probability before it is divided through by the total — and then `h -= p*log2(p)` over the buckets.
 
-That gives **`--mode entropy`**: pick the guess whose partition has the highest bucket entropy. It's the standard 3Blue1Brown-style solver, and it averages **3.68 guesses** here.
+That gives **`--mode entropy`**: pick the guess whose partition has the highest bucket entropy. It's the standard 3Blue1Brown-style solver, and it averages **3.68 guesses** here — a figure measured under the prior §4 is about to build, as every measured number in this document is. Scored under the uniform assumption this section has been making instead, the same rule reads 4.08, and §4's table is where the reason those two cannot be set against each other belongs.
 
 That is the baseline, and the rest of this document is about beating it. There are two ways to try. One is to search harder — look further ahead, solve the endgame exactly. The other is to notice that the question in §0 was never quite right: it assumed every word is equally likely to be the answer, and no word ever was. The second turns out to be worth far more than the first, which is §16's punchline.
 
