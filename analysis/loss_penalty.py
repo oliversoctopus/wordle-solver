@@ -17,7 +17,7 @@ import time
 import numpy as np
 
 import common
-from priors import PriorConfig
+from priors import PriorConfig, build_weights
 from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED,
                     WordleSolver, sample_answers)
 from wordle_data import load_data
@@ -48,6 +48,10 @@ parser.add_argument("--search", action="store_true",
                     help="what the search adds, by how far it is allowed to reach")
 parser.add_argument("--cost", action="store_true",
                     help="time the reach instead of scoring it")
+parser.add_argument("--bound", action="store_true",
+                    help="why the pruning bound caps the penalty at 1")
+parser.add_argument("--bound-family", default="atch",
+                    help="the suffix whose family --bound values")
 parser.add_argument("--cost-games", type=int, default=400,
                     help="answers per timed configuration")
 args = parser.parse_args()
@@ -224,6 +228,41 @@ def costs():
         print()
 
 
+def bound():
+    """Why `ExactEndgame.bound_penalty` caps the penalty at 1.
+
+    The two-turn value prunes the search above it, which needs V to be
+    non-decreasing in the turns remaining.  That holds at a penalty of 1, where
+    running out costs exactly the guess that continuing would have, and fails at
+    the shipped 5, where a position near the deadline would rather have the
+    turns.  One family shows both.
+    """
+    from exact import ExactEndgame
+
+    family = sorted(data.word2ind[word] for word in data.all_words
+                    if word.endswith(args.bound_family))
+    candidates = np.array(family, dtype=np.int64)
+    weights = build_weights(data, PriorConfig())
+    share = weights[candidates] / weights[candidates].sum()
+
+    common.header(f"-{args.bound_family}: V by turns left, by penalty")
+    print("  " + "  ".join(f"{data.all_words[i]} {p:.3f}"
+                           for i, p in zip(candidates, share)))
+    turns = (2, 3, 4)
+    print(f"\n  {'penalty':>8} " + " ".join(f"{'t=' + str(t):>8}" for t in turns))
+    for penalty in (1.0, DEFAULT_LOSS_PENALTY):
+        # uncapped, so the t=2 column is the bound the search would use if
+        # `bound_penalty` did not exist
+        search = ExactEndgame(data.feedback_table, weights,
+                              loss_penalty=penalty, max_branch=None)
+        values = [search.solve(candidates, t)[1] for t in turns]
+        rising = all(a <= b for a, b in zip(values, values[1:]))
+        print(f"  {penalty:>8g} " + " ".join(f"{v:>8.4f}" for v in values)
+              + ("   rising, so admissible" if rising
+                 else "   falls: the two-turn value is not a bound"))
+    print()
+
+
 def crossovers(grid, settings):
     """Which penalty is best, as a function of what a loss is really worth.
 
@@ -303,7 +342,9 @@ def sweep(label, settings, run, baseline_key):
     return grid
 
 
-if args.cost:
+if args.bound:
+    bound()
+elif args.cost:
     costs()
 elif args.search:
     search()

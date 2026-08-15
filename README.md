@@ -279,7 +279,7 @@ V(S, 0) = loss_penalty
 
 with `t` the guesses left including this one. A loss penalty of 1 means running out costs one unit more than the six turns already spent, so a lost game scores 7. The deadline then needs no separate objective and no risk weighting.
 
-V is non-*decreasing* in t here: with more turns left you are obliged to finish rather than pay the comparatively cheap penalty. That is what makes the two-turn value a valid lower bound, which the search prunes with.
+V is non-*decreasing* in t only when a loss is priced at 1 or below: running out is then an exit costing exactly one guess, and no continuation finishes for less, so having turns left over is never an advantage. The bound the search prunes with is accordingly the two-turn value computed at `min(loss_penalty, 1)` (`ExactEndgame.bound_penalty`), which sits under every deeper value at the real penalty. Uncapped it would not: at a penalty of 5 the ordering reverses, and the ten `-atch` words are worth 1.986 with two turns left against 1.556 with three.
 
 Four things make it affordable:
 

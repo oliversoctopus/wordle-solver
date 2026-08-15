@@ -18,6 +18,7 @@ python analysis/loss_penalty.py     the penalty and the endgame search's reach
 python analysis/loss_penalty.py --policies    entropy against the estimator
 python analysis/loss_penalty.py --search      what the search adds, by its reach
 python analysis/loss_penalty.py --cost        what reaching further costs in time
+python analysis/loss_penalty.py --bound       why the pruning bound caps the penalty
 python analysis/replay.py           what the shapes are worth in guesses (slow)
 python analysis/form_default.py     which form to fit by default (slower)
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
@@ -25,7 +26,7 @@ python analysis/table_layout.py     both feedback-table layouts, kernel by kerne
 python analysis/fused_gain.py       what the answer-major dispatch is worth in games
 ```
 
-The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`, both arms over every word — cheap because the restriction it measures is also what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over the four priors and thirteen with `--decisions`, which plays out ten guesses at each position rather than one; `exact_decisions.py` is under a minute, since the positions it asks about are the small ones. `opening.py` is sixteen minutes for the two hundred openings it defaults to, about five seconds each, and `--every-word` holds that rate over all 12,947 — the best part of a day. `loss_penalty.py` is nine minutes for both sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and well under one for `--policies` and about half for `--search`; `--cost` is a timing probe rather than a measurement and takes about six. `replay.py` is 80 s over the regime's real games, `results_tables.py` about three minutes, and `form_default.py` ten, which makes it the slow one — it replays 45 fitted policies where the others replay one or two.
+The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`, both arms over every word — cheap because the restriction it measures is also what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over the four priors and thirteen with `--decisions`, which plays out ten guesses at each position rather than one; `exact_decisions.py` is under a minute, since the positions it asks about are the small ones. `opening.py` is sixteen minutes for the two hundred openings it defaults to, about five seconds each, and `--every-word` holds that rate over all 12,947 — the best part of a day. `loss_penalty.py` is nine minutes for both sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and well under one for `--policies` and about half for `--search`; `--cost` is a timing probe rather than a measurement and takes about six, while `--bound` values a single ten-word family and is seconds. `replay.py` is 80 s over the regime's real games, `results_tables.py` about three minutes, and `form_default.py` ten, which makes it the slow one — it replays 45 fitted policies where the others replay one or two.
 
 `table_layout.py` is about four minutes and `fused_gain.py` under one. Those two are timing probes rather than measurements, as `loss_penalty.py --cost` is: they move with the machine and with what else is running on it, and not with the answer log, so a rerun after `solutions.py --write` is pointless. What they compare is two ways of arranging the same arithmetic, so read the ratios and not the milliseconds.
 
@@ -44,7 +45,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §16 |
 | `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §16 |
 | `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §16 |
-| `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, SOLVER_EXPLAINED §12 and §14 |
+| `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, its `--bound` the `-atch` values in SOLVER_EXPLAINED §12(c), SOLVER_EXPLAINED §12 and §14 |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results* |

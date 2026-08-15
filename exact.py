@@ -93,8 +93,8 @@ class ExactEndgame:
         self.weights = weights
         self.hard = bool(hard)
         self.loss_penalty = float(loss_penalty)
-        # the bound stays valid for any penalty: a guess costs 1, and being
-        # wrong costs at least one more guess or the penalty, whichever is less
+        # capping at 1 is what makes V non-decreasing in t: running out then
+        # costs exactly one guess, so no deeper value undercuts the two-turn one
         self.bound_penalty = min(self.loss_penalty, 1.0)
         self.max_nodes = max_nodes
         self.max_branch = max_branch
