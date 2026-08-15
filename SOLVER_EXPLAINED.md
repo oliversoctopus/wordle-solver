@@ -378,7 +378,16 @@ That identity is testable, because `loglinear` is a form of `f` that *is* linear
 
 None of that bonus needs fitting, which is worth saying plainly given how much of the gain it is. Written in its own terms the rule is `IG(g) + a·p_win(g)`, no `f` anywhere, and two exact facts fix `a` without touching the answer log: one candidate takes one guess and two take 1.5, so a bit of information is worth half a guess and a win outright saves the whole one, which is two bits. Playing `IG + 2·p_win` scores **3.1187**, collecting the same 0.63 the table above books to the bonus with no estimator, no fit and no answer log behind it. README *Results* carries it as a second reference rather than as the baseline, since it pays for those guesses with twelve times greedy entropy's loss rate.
 
-Nearly all of the improvement over a standard entropy solver is the free discount for guessing a word that might be the answer. The fitted curve's shape — the thing §10 works hardest for — contributes about a sixteenth of it. The bonus grows as the prior sharpens while curvature is worth what it always was, which is the first hint of §16.
+Nearly all of the improvement over a standard entropy solver is the free discount for guessing a word that might be the answer. The fitted curve's shape — the thing §10 works hardest for — contributes about a sixteenth of it. Splitting the same gap under each prior (`analysis/results_tables.py --part priors`) shows both halves are the prior's doing rather than the objective's:
+
+| priors on | entropy | linear `f` | best `f` | bonus | curvature |
+| --- | --- | --- | --- | --- | --- |
+| none | 4.1223 | 4.0718 | 4.0718 | +0.051 | −0.000 |
+| repeat only | 4.1033 | 4.0111 | 4.0111 | +0.092 | +0.000 |
+| curation only | 3.8455 | 3.5347 | 3.4903 | +0.311 | +0.044 |
+| both | 3.7507 | 3.1179 | 3.0770 | +0.633 | +0.041 |
+
+The bonus grows with how sharp the prior is, which is what §16 is about. Curvature is not a constant ~0.04 either: it is worth that much when the **curation** prior is on and nothing at all when it is off, where the best form of `f` is a straight line and the fitted curve has no shape left to exploit — under `repeat only` policy iteration picks `loglinear` outright. A bent `f` pays only where the prior has made the candidate sets uneven enough to bend it for.
 
 Wordle's own **hard mode** is the cleanest test of the identity, because it isolates the bonus from everything else. Hard mode requires every guess to be a word that could still be the answer, so restricting greedy entropy to it forces `p_win` up without touching entropy's scoring rule at all. It gains **0.2505 guesses** (3.7507 → 3.5002, `analysis/hard_mode.py`) — two fifths of what the objective gets by *pricing* the same bonus rather than imposing it. The objective does better because it takes the bonus **and** keeps the probes: it plays a non-candidate whenever the split is worth more than the win chance given up, which is exactly the trade hard mode forbids.
 

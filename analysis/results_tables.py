@@ -84,6 +84,7 @@ if args.part in ("priors", "both"):
           "exact under it\n")
     print(f"  {'priors':14s} {'opening':>8s} {'entropy':>9s} {'expected':>9s} "
           f"{'solved':>8s} {'form':>11s}")
+    rows = []
     for label, config in [
         ("none", PriorConfig(repeat=False, curation=False)),
         ("curation only", PriorConfig(repeat=False)),
@@ -97,6 +98,23 @@ if args.part in ("priors", "both"):
                                              solver.weights)
             if mode == EXPECTED:
                 opening, form = opening_of(solver), solver.form.name
+        # the linear form sits between the two: entropy plus the bonus and
+        # nothing else, so it splits the gap into the bonus and the curvature
+        record = archived(config, "loglinear")
+        linear = WordleSolver(config=config, params=record["params"],
+                              form="loglinear")
+        straight = common.exact_stats(common.every_answer(linear),
+                                      linear.weights)[0]
+        rows.append((label, means[ENTROPY][0], straight, means[EXPECTED][0]))
         print(f"  {label:14s} {opening:>8s} {means[ENTROPY][0]:9.4f} "
               f"{means[EXPECTED][0]:9.4f} {(1 - means[EXPECTED][1]) * 100:7.2f}% "
               f"{form:>11s}")
+
+    common.header("what the gap between the two modes is made of")
+    print("  the linear f is greedy entropy plus the possible-answer bonus "
+          "(section 13),\n  so what it leaves is curvature\n")
+    print(f"  {'priors':14s} {'entropy':>9s} {'loglinear':>10s} {'best':>9s} "
+          f"{'bonus':>9s} {'curvature':>10s}")
+    for label, entropy, straight, best in rows:
+        print(f"  {label:14s} {entropy:9.4f} {straight:10.4f} {best:9.4f} "
+              f"{entropy - straight:+9.4f} {straight - best:+10.4f}")
