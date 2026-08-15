@@ -22,6 +22,8 @@ python analysis/loss_penalty.py --bound       why the pruning bound caps the pen
 python analysis/replay.py           what the shapes are worth in guesses (slow)
 python analysis/form_default.py     which form to fit by default (slower)
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
+python analysis/head_to_head.py     the shipped solver against the reference, game by game
+python analysis/head_to_head.py --baseline   against greedy entropy instead
 python analysis/split_ranking.py    how much of a ranking is one guess twice
 python analysis/table_layout.py     both feedback-table layouts, kernel by kernel
 python analysis/fused_gain.py       what the answer-major dispatch is worth in games
@@ -50,6 +52,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results* |
+| `head_to_head.py` | README *Where the estimator's guesses come from* |
 | `split_ranking.py` | README *Alternatives* under the web page, and the runners-up paragraph closing *The exact endgame* |
 | `table_layout.py` | SOLVER_EXPLAINED §8 *Storing the table the other way round*, the per-kernel figures |
 | `fused_gain.py` | the same section's whole-game figures, 1.09× and 1.63× |

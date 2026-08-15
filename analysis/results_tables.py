@@ -19,7 +19,7 @@ import numpy as np
 import common
 import estimator
 from priors import PriorConfig
-from solver import ENTROPY, EXPECTED, WordleSolver
+from solver import DERIVED_WIN_BONUS, ENTROPY, EXPECTED, WordleSolver
 
 MAX_GUESSES = 6
 
@@ -60,6 +60,12 @@ if args.part in ("forms", "both"):
     greedy = WordleSolver(config=config, mode=ENTROPY)
     runs["greedy entropy"] = common.every_answer(greedy)
     meta["greedy entropy"] = ("--", opening_of(greedy))
+
+    # the reference that needs no fit: greedy entropy paying for the win chance
+    priced = WordleSolver(config=config, mode=ENTROPY, win_bonus=DERIVED_WIN_BONUS)
+    label = f"IG + {DERIVED_WIN_BONUS:g}*p_win"
+    runs[label] = common.every_answer(priced)
+    meta[label] = ("--", opening_of(priced))
 
     scored = {f: common.exact_stats(runs[f], weights) for f in runs}
     best = min(scored, key=lambda f: scored[f][0])

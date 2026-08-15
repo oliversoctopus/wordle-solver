@@ -26,6 +26,8 @@ SLOW = [
      [sys.executable, os.path.join(HERE, "front_ends_agree.py"), "--full"]),
     ("one word per split, and the words it stands for",
      [sys.executable, os.path.join(HERE, "splits.py")]),
+    ("the scoring rules are what they claim",
+     [sys.executable, os.path.join(HERE, "scoring.py")]),
 ]
 
 

@@ -5,7 +5,7 @@ python tests/run.py           a few seconds, needs nothing loaded
 python tests/run.py --full    also the parts that load the 167 MB table
 ```
 
-Four files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, and a list of words can be five spellings of one guess. Nothing here tests whether the page looks right, and nothing here can.
+Five files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, and a scoring rule can stop being the policy the documents describe without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
 
 None of them assert numbers written down by hand. Each has something else to check against — the second implementation, the answer record, or a property that holds of every board there is — because a number copied into a test is a fourth place for it to go stale, and `README.md` § *Numbers in the documents* already has three.
 
@@ -44,6 +44,18 @@ Needs the table, so `run.py` keeps it behind `--full`.
 
 ```
 python tests/splits.py --games 8     four games per mode by default
+```
+
+## `scoring.py` — each scoring rule is what it claims to be
+
+Three rules share one path: information gain, expected guesses under `f`, and information gain with a price on being a possible answer. The last is new machinery on the first, and paying the wrong words — or paying them twice — still yields a ranking that reads perfectly sensibly.
+
+Nothing is compared against itself. The price is recomputed from the prior weights with numpy, which owes the kernels nothing; switching it off must leave the mode bit-identical; a pooled score must equal the full pass restricted to that pool; and the ranking's first entry must be the guess `best_guess` plays, at the same value. That last one is the check that would have caught a real divergence — the page shows `top_guesses[0]` and the terminal plays `best_guess`, and until the entropy tie-break came out they could name different words on a tie.
+
+Needs the table, so `run.py` keeps it behind `--full`.
+
+```
+python tests/scoring.py --games 6     three games per mode by default
 ```
 
 ## `fit_provenance.py` — the fitted `f` is a fit of the record we have

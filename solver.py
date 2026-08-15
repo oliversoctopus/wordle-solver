@@ -15,8 +15,9 @@ ENTROPY = "entropy"
 EXPECTED = "expected"
 MODES = (ENTROPY, EXPECTED)
 
-# guesses within this many bits of the best are treated as tied (entropy mode)
-IG_TIE_TOL = 1e-4
+# price of being a possible answer, in bits, for the reference policy
+# IG(g) + a*p_win(g); README *Results* says where the 2 comes from
+DERIVED_WIN_BONUS = 2.0
 
 DEFAULT_DEADLINE = 6
 
@@ -38,8 +39,8 @@ DEFAULT_MEMO_LIMIT = 200_000
 class WordleSolver:
     """Chooses guesses under a given prior, in one of two modes.
 
-    ``entropy``   greedily maximize expected information gain, breaking near
-                  ties in favor of a word that could be the answer.
+    ``entropy``   greedily maximize expected information gain, and nothing
+                  else: being a possible answer earns a guess no credit here.
     ``expected``  minimize E(g, S) = 1 + sum_{r != GGGGG} p_r f(n_r), using the
                   estimator fitted for this prior combination.
 
@@ -61,6 +62,10 @@ class WordleSolver:
     which is a strictly smaller choice than the ~13k words the solver usually
     picks from; f is still the one fitted for unrestricted play, so its estimates
     are optimistic under the restriction.
+
+    ``win_bonus`` pays entropy mode ``a`` bits for a guess that could itself be
+    the answer, giving the reference policy IG(g) + a*p_win(g) that README
+    *Results* measures against.  At the default 0 the mode is unchanged.
     """
 
     def __init__(self, data=None, config=None, mode=EXPECTED, params=None,
@@ -69,9 +74,12 @@ class WordleSolver:
                  loss_penalty=DEFAULT_LOSS_PENALTY,
                  exact_max_branch=DEFAULT_MAX_BRANCH, hard=False,
                  lookahead=0, beam_width=DEFAULT_BEAM_WIDTH, beam_exact_max=None,
-                 fused=None):
+                 fused=None, win_bonus=0.0):
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
+        if win_bonus and mode != ENTROPY:
+            raise ValueError("win_bonus is priced in bits, so it only means "
+                             "something against information gain")
         self.data = data if data is not None else load_data()
         self.config = config if config is not None else PriorConfig()
         self.mode = mode
@@ -98,6 +106,7 @@ class WordleSolver:
 
         self.lookahead = int(lookahead)
         self.beam_width = int(beam_width)
+        self.win_bonus = float(win_bonus)
         self.use_exact = use_exact
         self.exact_max = exact_max
         self.hard = bool(hard)
@@ -178,12 +187,30 @@ class WordleSolver:
         table = self.data.feedback_table
         weights = self.weights[candidates]
         if self.mode == ENTROPY:
-            return fused_kernels.ig_all(table, self.transposed, candidates,
-                                        weights, pool=pool)
+            scores = fused_kernels.ig_all(table, self.transposed, candidates,
+                                          weights, pool=pool)
+            return (self._priced_win(scores, candidates, weights, pool)
+                    if self.win_bonus else scores)
         return fused_kernels.expected_guesses_all(
             table, self.transposed, candidates, weights, self.params,
             self._codes, self._knots, self._base, pool=pool,
         )
+
+    def _priced_win(self, scores, candidates, weights, pool):
+        """Pay each guess that could itself be the answer for the chance it
+        is one.  Candidates run ascending, so a search finds the pooled ones."""
+        total = float(weights.sum())
+        if total <= 0.0:
+            return scores
+        paid = self.win_bonus * weights / total
+        scores = scores.copy()
+        if pool is None:
+            scores[candidates] += paid
+            return scores
+        slot = np.clip(np.searchsorted(candidates, pool), 0, len(candidates) - 1)
+        hit = candidates[slot] == pool
+        scores[hit] += paid[slot[hit]]
+        return scores
 
     def score_one(self, guess, candidates):
         """The same score, for a single guess."""
@@ -260,22 +287,8 @@ class WordleSolver:
 
         pool = self.guess_pool(candidates)
         scores = self.score_all(candidates, pool=pool)
-
-        if self.mode == EXPECTED:
-            best_ind = int(scores.argmin())
-            return self._row(pool, best_ind), float(scores[best_ind])
-
-        # entropy mode: among guesses within the tolerance of the best, prefer
-        # one that could itself be the answer
-        best_ind = int(scores.argmax())
-        best = float(scores[best_ind])
-        close = np.nonzero(scores >= best - IG_TIE_TOL)[0]
-        words = close if pool is None else pool[close]
-        close_possible = close[np.isin(words, candidates)]
-        if close_possible.size:
-            pick = int(close_possible[scores[close_possible].argmax()])
-            return self._row(pool, pick), float(scores[pick])
-        return self._row(pool, best_ind), best
+        best_ind = int(scores.argmin() if self.mode == EXPECTED else scores.argmax())
+        return self._row(pool, best_ind), float(scores[best_ind])
 
     # ------------------------------------------------------------- lookahead
 
@@ -388,9 +401,10 @@ class WordleSolver:
 
         pool = self.guess_pool(candidates)
         scores = self.score_all(candidates, pool=pool)
-        order = np.argsort(scores)
-        if self.mode == ENTROPY:
-            order = order[::-1]
+        # stable, so a tie leaves the winner where argmin and argmax have it and
+        # the ranking opens on the guess best_guess would play
+        order = np.argsort(-scores if self.mode == ENTROPY else scores,
+                           kind="stable")
 
         table = self.data.feedback_table
         kept = []

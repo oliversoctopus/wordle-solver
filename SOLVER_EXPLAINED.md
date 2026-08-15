@@ -113,7 +113,7 @@ $$H(S) = \underbrace{H(p_1, \ldots, p_k)}_{\text{which bucket}} + \sum_r p_r H(S
 
 Substituting, **the information gained is exactly the entropy of the bucket-mass distribution.** You never need to look inside the buckets. That's `kernels._ig`: total up the **mass** of each pattern — a bucket's mass being the combined weight of the candidates that land in it, probability before it is divided through by the total — and then `h -= p*log2(p)` over the buckets.
 
-That gives **`--mode entropy`**: pick the guess whose partition has the highest bucket entropy. It's the standard 3Blue1Brown-style solver, and it averages **3.68 guesses** here — a figure measured under the prior §4 is about to build, as every measured number in this document is. Scored under the uniform assumption this section has been making instead, the same rule reads 4.08, and §4's table is where the reason those two cannot be set against each other belongs.
+That gives **`--mode entropy`**: pick the guess whose partition has the highest bucket entropy. It's the standard 3Blue1Brown-style solver, and it averages **3.75 guesses** here — a figure measured under the prior §4 is about to build, as every measured number in this document is. Scored under the uniform assumption this section has been making instead, the same rule reads 4.12, and §4's table is where the reason those two cannot be set against each other belongs.
 
 That is the baseline, and the rest of this document is about beating it. There are two ways to try. One is to search harder — look further ahead, solve the endgame exactly. The other is to notice that the question in §0 was never quite right: it assumed every word is equally likely to be the answer, and no word ever was. The second turns out to be worth far more than the first, which is §16's punchline.
 
@@ -129,12 +129,12 @@ Those two 0.10s look aggressive against Wordle's full history, and the reason th
 
 | priors on | entropy | expected-guess mode |
 | --- | --- | --- |
-| none | 4.0794 | 4.0718 |
-| repeat only | 4.0639 | 4.0111 |
-| curation only | 3.7802 | **3.4903** |
-| both | 3.6815 | **3.0770** |
+| none | 4.1223 | 4.0718 |
+| repeat only | 4.1033 | 4.0111 |
+| curation only | 3.8455 | **3.4903** |
+| both | 3.7507 | **3.0770** |
 
-Read *down* a column, never across a row: each row's weights are its own prior's, so a concentrated prior makes the game genuinely easier and no two rows are comparable. What the columns show is the gap between the two objectives — 0.60 guesses with both priors on, 0.0076 with none, eighty times less for exactly the same machinery. §9 shows why that collapse is an identity rather than a coincidence.
+Read *down* a column, never across a row: each row's weights are its own prior's, so a concentrated prior makes the game genuinely easier and no two rows are comparable. What the columns show is the gap between the two objectives — 0.67 guesses with both priors on, 0.0505 with none, thirteen times less for exactly the same machinery. §9 shows why that collapse is an identity rather than a coincidence.
 
 Three groups says how much mass each one gets, not how it spreads *within* one, and the obvious answer — flat — is wrong twice over. It says `cigar` (Wordle #1) and `sandy` (#1227) are equally likely to come round again, and that `squid` and `xylyl` are equally likely to be tomorrow's answer. The second is the expensive one: that group is 10,638 of the 12,947 words, so it dominates the candidate *count* at almost every position while holding only 9% of the mass. Call the within-group spread the group's **shape**; both were uniform in the original design and both are now sharpened, which is §5.
 
@@ -368,17 +368,19 @@ $$E(g,S) = 1 + a(1 - p_{\text{win}}) + b\big(H(S) - \mathrm{IG}(g)\big)$$
 
 `H(S)` doesn't depend on `g`, so minimizing `E` is *identical* to maximizing `b·IG(g) + a·p_win` — greedy entropy, plus the possible-answer bonus. **A linear `f` buys you nothing but the bonus.** All the remaining gain comes from `f` being *concave* in `x`.
 
-That identity is testable, because `loglinear` is a form of `f` that *is* linear in `x`, so by the argument above it should score exactly "entropy plus the bonus" — and it does. Under the shipped shapes greedy entropy scores 3.6815, `loglinear` 3.1179, and the best form 3.0770. So the gap splits:
+That identity is testable, because `loglinear` is a form of `f` that *is* linear in `x`, so by the argument above it should score exactly "entropy plus the bonus" — and it does. Under the shipped shapes greedy entropy scores 3.7507, `loglinear` 3.1179, and the best form 3.0770. So the gap splits:
 
 | | worth |
 | --- | --- |
-| the possible-answer bonus | **0.564** |
+| the possible-answer bonus | **0.633** |
 | curvature in `f` | **0.041** |
-| total, entropy → best | 0.605 |
+| total, entropy → best | 0.674 |
 
-Nearly all of the improvement over a standard entropy solver is the free discount for guessing a word that might be the answer. The fitted curve's shape — the thing §10 works hardest for — contributes about a fifteenth of it. Under the flat shapes the same split read 0.462 and 0.041: the bonus grows as the prior sharpens and curvature is worth what it always was, which is the first hint of §16.
+None of that bonus needs fitting, which is worth saying plainly given how much of the gain it is. Written in its own terms the rule is `IG(g) + a·p_win(g)`, no `f` anywhere, and two exact facts fix `a` without touching the answer log: one candidate takes one guess and two take 1.5, so a bit of information is worth half a guess and a win outright saves the whole one, which is two bits. Playing `IG + 2·p_win` scores **3.1187**, collecting the same 0.63 the table above books to the bonus with no estimator, no fit and no answer log behind it. README *Results* carries it as a second reference rather than as the baseline, since it pays for those guesses with twelve times greedy entropy's loss rate.
 
-Wordle's own **hard mode** is the cleanest test of the identity, because it isolates the bonus from everything else. Hard mode requires every guess to be a word that could still be the answer, so restricting greedy entropy to it forces `p_win` up without touching entropy's scoring rule at all. It gains **0.1813 guesses** (3.6815 → 3.5002, `analysis/hard_mode.py`) — a third of what the objective gets by *pricing* the same bonus rather than imposing it. The objective does better because it takes the bonus **and** keeps the probes: it plays a non-candidate whenever the split is worth more than the win chance given up, which is exactly the trade hard mode forbids.
+Nearly all of the improvement over a standard entropy solver is the free discount for guessing a word that might be the answer. The fitted curve's shape — the thing §10 works hardest for — contributes about a sixteenth of it. The bonus grows as the prior sharpens while curvature is worth what it always was, which is the first hint of §16.
+
+Wordle's own **hard mode** is the cleanest test of the identity, because it isolates the bonus from everything else. Hard mode requires every guess to be a word that could still be the answer, so restricting greedy entropy to it forces `p_win` up without touching entropy's scoring rule at all. It gains **0.2505 guesses** (3.7507 → 3.5002, `analysis/hard_mode.py`) — two fifths of what the objective gets by *pricing* the same bonus rather than imposing it. The objective does better because it takes the bonus **and** keeps the probes: it plays a non-candidate whenever the split is worth more than the win chance given up, which is exactly the trade hard mode forbids.
 
 So `f` needs to be concave in `x`, and the fitted curve for the default prior is a piecewise-linear spline that obliges:
 
@@ -586,9 +588,9 @@ The shapes of §5 are the first. Together they are worth −0.064 ± 0.032, smal
 
 The sharpened repeat prior taken alone (+0.0056 ± 0.0294, despite being 4.4σ better as a prior) belongs here rather than above, and the reason is worth being precise about. Changing the weights changes what a position is *worth*, so the two arms have no common ground truth and no scale on which one guess is better than the other. A better model of the editor is not a better estimate of a fixed quantity; it is a different quantity.
 
-Hard mode is the same thing in its bluntest form, and it makes the distinction hard to argue with. It improves no valuation whatsoever; it deletes words from the choice set. Under greedy entropy that is worth **−0.1813** guesses, against the nothing at all that one-ply lookahead buys by valuing positions ten times better. Take a choice away from a policy that was pricing it wrong and you gain more than by pricing everything else right. Under the expected-guesses objective, which already prices it correctly, the identical restriction *costs* +0.0269 — same intervention, opposite sign, entirely because of what the objective was already getting right.
+Hard mode is the same thing in its bluntest form, and it makes the distinction hard to argue with. It improves no valuation whatsoever; it deletes words from the choice set. Under greedy entropy that is worth **−0.2505** guesses, against the nothing at all that one-ply lookahead buys by valuing positions ten times better. Take a choice away from a policy that was pricing it wrong and you gain more than by pricing everything else right. Under the expected-guesses objective, which already prices it correctly, the identical restriction *costs* +0.0269 — same intervention, opposite sign, entirely because of what the objective was already getting right.
 
-That is the honest reading of the headline number too. The 0.60-guess gain over greedy entropy is 0.56 from the possible-answer bonus and 0.04 from curvature in `f`. And the bonus is the *prior* showing up inside the objective — `p_win` is nothing but the mass the prior puts on the word being guessed, which is why the same split read 0.46 under the flat shapes and 0.56 under the sharpened ones. The search contributes the 0.04.
+That is the honest reading of the headline number too. The 0.67-guess gain over greedy entropy is 0.63 from the possible-answer bonus and 0.04 from curvature in `f`. And the bonus is the *prior* showing up inside the objective — `p_win` is nothing but the mass the prior puts on the word being guessed, which is why the split moves with how sharp the prior is. The search contributes the 0.04.
 
 Modeling the editor beat improving the search, every time.
 

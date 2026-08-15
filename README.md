@@ -232,7 +232,7 @@ One thing this measurement still needs: the form of `f` must be refitted per sha
 
 ## Choosing a guess
 
-`--mode entropy` is the greedy scorer: maximize expected information gain, breaking near-ties in favor of a word that could be the answer.
+`--mode entropy` is the greedy scorer: maximize expected information gain, and nothing else — being a possible answer earns a guess no credit at all, which is what keeps it a clean reference for what pricing that chance is worth.
 
 `--mode expected` (the default) instead minimizes an estimate of how many guesses the game will take in total:
 
@@ -262,13 +262,13 @@ What it costs, every word weighted by the row's own prior, the same words in bot
 | **both (default)** | **3.0770** | **3.1039** | **+0.0269** | **99.98% → 99.90%** |
 | both, `frequency` | 3.1214 | 3.1480 | +0.0266 | 99.96% → 99.70% |
 
-Under the shipped prior it costs **+0.0269** guesses, about a twentieth of what the estimator is worth over greedy entropy. What sets the size is how flat the prior is: with no priors at all the cost is fourteen times larger and the solve rate falls to **92.28%**, because a wide candidate set with no probe available is exactly the position the restriction forbids you to fix. Concentrate the mass and the candidate set collapses fast enough that the likely answers are decent probes anyway.
+Under the shipped prior it costs **+0.0269** guesses, about a twenty-fifth of what the estimator is worth over greedy entropy. What sets the size is how flat the prior is: with no priors at all the cost is fourteen times larger and the solve rate falls to **92.28%**, because a wide candidate set with no probe available is exactly the position the restriction forbids you to fix. Concentrate the mass and the candidate set collapses fast enough that the likely answers are decent probes anyway.
 
 The losses are where it really shows. Even in the default row, where the mean barely moves, the loss probability roughly quadruples. Hard mode arrives in the one-letter families of *The penalty* below and then cannot spend a turn separating them, since the separating word is the one it is not allowed to play.
 
 The opening word never changes, in any row. Every one of the 12,947 words carries prior mass, so at the first guess every word is still a possible answer and the restriction binds nothing at all.
 
-Under `--mode entropy` the restriction **helps**, by −0.1813 guesses on the default prior (3.6815 → 3.5002). That is the identity under *Results* read backwards: what greedy entropy is missing is the bonus for guessing a word that could be the answer, and hard mode supplies it by force. It pays in losses, its solve rate falling from 100.00% to 99.86%, and it still does not reach the expected-guesses policy's 3.0770 — which gets the same bonus for free, and keeps the probes.
+Under `--mode entropy` the restriction **helps**, by −0.2505 guesses on the default prior (3.7507 → 3.5002). That is the identity under *Results* read backwards: what greedy entropy is missing is the bonus for guessing a word that could be the answer, and hard mode supplies it by force. It pays in losses, its solve rate falling from 100.00% to 99.86%, and it still does not reach the expected-guesses policy's 3.0770 — which gets the same bonus for free, and keeps the probes.
 
 ## The exact endgame
 
@@ -301,7 +301,7 @@ From the first state the search takes over, the whole continuation is optimal, s
 
 | policy | mean | loss probability | solve rate | wall clock |
 | --- | --- | --- | --- | --- |
-| greedy entropy | 3.6815 | 0.0034% | 99.9966% | 4 s |
+| greedy entropy | 3.7507 | 0.0033% | 99.9967% | 4 s |
 | expected, no exact search | 3.0773 | 0.0671% | 99.9329% | 4 s |
 | exact for t ≤ 2 only | 3.0774 | 0.0283% | 99.9717% | 4 s |
 | exact for m ≤ 10 | 3.0773 | 0.0258% | 99.9742% | 5 s |
@@ -332,20 +332,20 @@ Every word played as the answer, under both priors:
 
 | policy | mean | loss probability | solve rate |
 | --- | --- | --- | --- |
-| greedy entropy | 3.6815 | 0.0034% | 99.9966% |
+| greedy entropy | 3.7507 | 0.0033% | 99.9967% |
 | expected, no exact search, penalty 1 | 3.0773 | 0.0671% | 99.9329% |
 | expected, exact-max 24, penalty 5 | 3.0772 | 0.0250% | 99.9750% |
 | **expected, exact-max 60, penalty 5 (default)** | **3.0770** | **0.0240%** | **99.9760%** |
 
-Entropy is not lossless — 73 words beat it — but it loses seven times less often than the estimator, and the two are not failing on the same words: they share 27. What protects entropy is that it cannot see the prior. Separating candidates is what maximizes information, and separating is also what never gambles; the estimator backs the prior instead, and pays for it when the prior is confidently wrong, which *The penalty* below takes apart.
+Entropy is not lossless — 72 words beat it — but it loses seven times less often than the estimator, and the two are not failing on the same words: they share 27. What protects entropy is that it cannot see the prior. Separating candidates is what maximizes information, and separating is also what never gambles; the estimator backs the prior instead, and pays for it when the prior is confidently wrong, which *The penalty* below takes apart.
 
-The six tenths of a guess the estimator wins are therefore not free. They cost about seven times the loss rate, and `--loss-penalty` is the dial that buys some of it back. Neither rate is large enough for the default 200-game `benchmark` to notice: it finds zero losses 99.3% of the time under entropy and 95.3% under the default, which is why both look lossless there.
+The two thirds of a guess the estimator wins are therefore not free. They cost about seven times the loss rate, and `--loss-penalty` is the dial that buys some of it back. Neither rate is large enough for the default 200-game `benchmark` to notice: it finds zero losses 99.3% of the time under entropy and 95.3% under the default, which is why both look lossless there.
 
 Wordle is provably solvable in five guesses, but that theorem is about a solver that knows the answer is one of the curated 2,309. This one hedges over all 12,947, and 9% of the prior mass sits on the 10,638 never-curated ones, which is where the losses collect: of the 300 words the shipped prior can lose on, 290 are never-curated — `aahed`, `anele`, `avyze`, `bizzy`. Playing all 2,309 curated words as the answer instead:
 
 | policy | mean | worst | losses |
 | --- | --- | --- | --- |
-| greedy entropy | 3.8281 | 6 | 0 / 2309 |
+| greedy entropy | 3.9142 | 6 | 0 / 2309 |
 | expected (defaults) | 3.7523 | 7 | 10 / 2309 |
 
 The estimator wins the mean here too, and takes ten losses doing it. Every one of the ten — `foggy`, `hater`, `water`, `brook`, `mushy`, `wound`, `rider`, `ratty`, `hound`, `catty` — is a word that has already been an answer, which is the repeat prior working rather than failing. The 497 still-unused curated words hold about 81% of the mass while the 1,812 already used share 10.2% of it, so sweeping the curated list uniformly asks the solver to do well on a distribution its own prior says is unlikely. Greedy entropy dodges that by ignoring the prior altogether — the same blindness that costs it six tenths of a guess everywhere else.
@@ -511,19 +511,22 @@ Both priors on with the shipped shapes, six-guess limit, failures counted as 7. 
 | cubic | a + b·x + c·x² + d·x³ | 2/4 | raise | 3.1179 | +0.0409 | 0.0335% |
 | loglinear | a + b·log2(n) | 2/2 | raise | 3.1179 | +0.0409 | 0.0335% |
 | quadratic | a + b·x + c·x² | 2/3 | raise | 3.1179 | +0.0409 | 0.0335% |
-| greedy entropy | — | — | raise | 3.6815 | +0.6045 | 0.0034% |
+| IG + 2·p_win | — | — | raise | 3.1187 | +0.0417 | 0.0405% |
+| greedy entropy | — | — | raise | 3.7507 | +0.6737 | 0.0033% |
 
 The table divides where the opening word does. The top three are separated by 0.0029 guesses, and since these are exact figures that ordering is a fact about this prior rather than a coin landing — though 0.0029 is still far too little to choose a *default* on, which is what the next section is for. Everything from `anchored` down gives up ~0.04 guesses, more than ten times the spread among the leaders. `anchored` and `sqrt` land on the same value, and `cubic`, `loglinear` and `quadratic` are identical because the monotonicity guard cuts all three back to the same `a + b·x`.
 
-The loss column is the one place greedy entropy wins, and it wins by a lot: see *Losing less* for why the estimator's six tenths of a guess costs seven times the loss rate.
+The loss column is the one place greedy entropy wins, and it wins by a lot: see *Losing less* for why the estimator's two thirds of a guess costs seven times the loss rate.
 
-What separates the groups is **concavity in x**, not fit quality: `anchored2` has the worst fit RMSE of any form (0.70 against `invonly`'s 0.49) and still beats the five below it. With `f` exactly linear in x,
+**`IG + 2·p_win` is the second reference**, and the only row that is neither a fitted curve nor a plain greedy rule (`WordleSolver(win_bonus=...)`). It scores information gain and then pays a guess that could itself be the answer two bits for the chance that it is. Two exact facts fix that price with no data at all: one candidate takes one guess and two take 1.5, so a bit of information is worth half a guess, and winning outright saves a whole one — two bits' worth. `SOLVER_EXPLAINED.md` §13 has why a policy of that shape is what a straight-line `f` collapses to. It is a reference and deliberately not the baseline: it buys **0.632 guesses** over greedy entropy with nothing fitted, and pays for them with twelve times the loss rate, which is the trade *Losing less* is about. Greedy entropy stays the baseline because it makes no such bet.
+
+What separates the groups is **concavity in x**, not fit quality: `anchored2` has the worst fit RMSE of any form (0.70 against `invonly`'s 0.49) and still beats the five forms below it. With `f` exactly linear in x,
 
 ```
 E(g, S) = 1 + a·(1 − p_win) + b·(H(S) − IG(g))
 ```
 
-so minimizing E is the same as maximizing `b·IG + a·p_win`: greedy entropy plus a bonus for possible answers. That is why `loglinear` picks entropy's opening word and gains the least — of the 0.60 guesses between greedy entropy and the best form, ~0.56 is that bonus and ~0.04 is curvature.
+so minimizing E is the same as maximizing `b·IG + a·p_win`: greedy entropy plus a bonus for possible answers. That is why `loglinear` picks entropy's opening word and gains the least — of the 0.67 guesses between greedy entropy and the best form, ~0.63 is that bonus and ~0.04 is curvature.
 
 Saturation is no longer the liability it was under the flat prior. `invonly` flattens out completely (f(200) ≈ f(2000)) and used to rank 6th; with the mass concentrated it comes third, because the effective size rarely reaches the range where the curve has gone flat.
 
@@ -556,11 +559,28 @@ Per prior combination, shipped shapes, each with its own fitted form. Every word
 
 | priors | form | opening | entropy mean | expected mean | solve rate |
 | --- | --- | --- | --- | --- | --- |
-| none | saturating | tares | 4.0794 | 4.0718 | 99.93% |
-| curation only | invonly | trace | 3.7802 | 3.4903 | 99.99% |
-| repeat only | loglinear | tares | 4.0639 | 4.0111 | 99.92% |
-| both | spline | salet | 3.6815 | 3.0770 | 99.98% |
+| none | saturating | tares | 4.1223 | 4.0718 | 99.93% |
+| curation only | invonly | trace | 3.8455 | 3.4903 | 99.99% |
+| repeat only | loglinear | tares | 4.1033 | 4.0111 | 99.92% |
+| both | spline | salet | 3.7507 | 3.0770 | 99.98% |
 
-The gain comes from the curation prior. When the prior is nearly flat, expected guesses and information gain rank guesses almost identically — with no priors the estimator is worth **0.0076** guesses against entropy, next to **0.6045** with both priors on. Eighty times less for the same machinery, as the identity above predicts. (It was reported as nothing at all before 2026-08-10; it is small, but it is there, and being exact it is no longer a question of resolving it.)
+The gain comes from the curation prior. When the prior is nearly flat, expected guesses and information gain rank guesses almost identically — with no priors the estimator is worth **0.0505** guesses against entropy, next to **0.6737** with both priors on. Thirteen times less for the same machinery, as the identity above predicts. (It was reported as nothing at all before 2026-08-10; it is small, but it is there, and being exact it is no longer a question of resolving it.)
+
+### Where the estimator's guesses come from
+
+Against the fit-free reference the shipped solver wins 0.0417 guesses, and `analysis/head_to_head.py` says where every one of them is. Both policies play all 12,947 words, so a word either changes hands or it does not:
+
+| guesses | shipped | `IG + 2·p_win` |
+| --- | --- | --- |
+| 2 | **13.82%** | 10.98% |
+| 3 | 67.04% | **68.86%** |
+| 4 | 17.19% | 17.83% |
+| 5 | **1.53%** | 2.03% |
+| 6 | 0.39% | **0.27%** |
+| lost | **0.0240%** | 0.0405% |
+
+The whole margin is the two-guess row. Finishing in two on 13.82% of the prior's mass against 10.98% is worth more than the 0.0417 by itself, and everywhere else the reference is level or slightly ahead — it reaches three guesses more often, and six less often. That is the fitted `f` and the priors doing the one thing they are for: leaning the second guess toward the words an editor is likely to pick, which pays out as outright wins rather than as tidier splits.
+
+They are also nothing like the same policy. The shipped solver finishes sooner on 21.85% of the prior's mass, the reference on **18.14%**, and they tie on 60%. Two policies four hundredths of a guess apart disagree about two games in five. The reference's losses are worse than its count of them suggests, too: 432 words against 300, and its heaviest is `candy` at 0.0029% of the mass, three times heavier than anything the shipped solver drops — it has no `f` with which to price a deadline, so it walks into losses that `--loss-penalty 5` buys the shipped policy out of.
 
 Because `f` estimates expected guesses, the policy is risk-neutral away from the endgame, where greedy entropy is implicitly cautious. `--loss-penalty 5` compensates, closing about two thirds of the gap in loss probability, but not for nothing and not the whole way: the estimator still loses seven times as often as entropy does (see [Losing less](#losing-less)). `--loss-penalty 1` restores risk neutrality and gives that ground back.
