@@ -74,22 +74,46 @@ feedback_table[guess_index, answer_index] = pattern number   # one uint8
 That's 12,947² ≈ 167 million bytes — the `feedback_table.npy` file. Building it
 takes a while; after that, "what would I see?" is a single array lookup instead
 of a string comparison. This is the same instinct as a prefix-sum table: pay
-O(n²) once so every query is O(1). Every hot loop in the project is a scan over
-one row of this table.
+O(n²) once so every query is O(1). Every inner loop in the project is a scan
+along one row of this table.
 
-Two things follow from that shape, and both come back later.
+### What the program is actually holding
+
+Under all of that is a shape in memory, and three later arguments — the
+rearrangement in §7, the memory bill in §8, the packed keys in §12 — are
+arguments about that shape rather than about Wordle, so it is worth setting down
+before any of them.
+
+After startup, words are never compared as text. Each of the 12,947 is assigned
+an index once, and from then on a word *is* its index (`ind2word.json` is that
+numbering, and `word2ind.json` is it read backwards). So:
+
+- the table is a 12,947 × 12,947 grid of single bytes, where **the row is the
+  guess and the column is the answer**, and the entry is the pattern number above;
+- a guess is a row number, so "score every guess" means visiting all 12,947 rows;
+- the candidate set is an array of *column* numbers in ascending order —
+  `[3, 17, 964, …]` — starting as all 12,947 and getting shorter every turn as
+  the feedback rules words out (`kernels.filter_candidates`).
+
+Filtering keeps the order but not the spacing. By turn three the candidates are
+forty-odd columns scattered the width of a row of thirteen thousand, and that
+spread is what §8 turns out to be paying for.
+
+Two things follow from the shape, and both come back later.
 
 **The table is read along rows, and that is not an accident.** Row `guess` is
 laid out contiguously in memory, so scanning it for a *whole* candidate set walks
-straight through memory. Scanning it for a *scattered* handful does not, and §8
-is where that bill arrives.
+straight through memory. Doing it for that scattered handful does not, and §8 is
+where the bill arrives.
 
 **The loops that scan it are compiled, not interpreted.** `kernels.py` is
 decorated with numba's `@njit`, which translates each function to machine code
 the first time it runs — Python's own loops would be a hundred times too slow for
-13,000 guesses × 13,000 candidates. `cache=True` writes the compiled code to
-disk, so only the first run of a fresh checkout pays for it. That compile, plus
-loading the 167 MB table, is the startup wait the web page hides behind its veil.
+13,000 guesses × 13,000 candidates. One such compiled scoring loop is a
+**kernel**, and `kernels.py` is nothing but a handful of them. `cache=True`
+writes the compiled code to disk, so only the first run of a fresh checkout pays
+for it. That compile, plus loading the 167 MB table, is the startup wait the web
+page hides behind its veil.
 
 ## 2. A guess is a partition
 
@@ -154,8 +178,10 @@ adds the same way:
 $$H(S) = \underbrace{H(p_1, \ldots, p_k)}_{\text{which bucket}} + \sum_r p_r H(S_r)$$
 
 Substituting, **the information gained is exactly the entropy of the bucket-mass
-distribution.** You never need to look inside the buckets. That's
-`kernels._ig` — accumulate mass per pattern, then `h -= p*log2(p)`.
+distribution.** You never need to look inside the buckets. That's `kernels._ig`:
+total up the **mass** of each pattern — a bucket's mass being the combined weight
+of the candidates that land in it, probability before it is divided through by
+the total — and then `h -= p*log2(p)` over the buckets.
 
 That gives **`--mode entropy`**: pick the guess whose partition has the highest
 bucket entropy. It's the standard 3Blue1Brown-style solver, and it averages
@@ -361,8 +387,9 @@ the ranking of opening words flips: under `sqrt`, the form chosen for the
 genuinely worse — forcing it under the unchanged uniform prior costs
 **+0.034 ± 0.028** — so this is estimator error, not a real preference. The three
 best-fitting forms under the sharpened prior all pick `salet` (`invonly`,
-`saturating` and `spline`), and so does one-ply lookahead. This is why the shape
-is part of the cache key.
+`saturating` and `spline`), and so does one-ply lookahead — playing each guess,
+then scoring the positions it could lead to, one *ply* being one turn of search.
+This is why the shape is part of the cache key.
 
 Fit quality is not the criterion, though. Rank the forms by **RMSE** — the
 root-mean-square of the residuals, the typical distance between the fitted curve
@@ -451,12 +478,12 @@ build each bucket's entropy. That's one `log` per (guess, candidate) pair.
 **The fix.** Expand the definition and split the logarithm. Write `m = Σ w_i` over
 the bucket's members:
 
-$$H = -\sum_i p_i \log_2 p_i = -\sum_i \frac{w_i}{m} \log_2\!\left(\frac{w_i}{m}\right)$$
+$$H = -\sum_i p_i \log_2 p_i = -\sum_i \frac{w_i}{m} \log_2\left(\frac{w_i}{m}\right)$$
 
 Now use `log₂(w/m) = log₂ w − log₂ m` to break the coupled term apart:
 
 $$H = -\frac{1}{m}\sum_i w_i \big(\log_2 w_i - \log_2 m\big)
-    = -\frac{1}{m}\sum_i w_i \log_2 w_i \;+\; \frac{\log_2 m}{m}\sum_i w_i$$
+    = -\frac{1}{m}\sum_i w_i \log_2 w_i + \frac{\log_2 m}{m}\sum_i w_i$$
 
 The second sum is just `m` again, so `(log₂ m / m) · m = log₂ m`, leaving
 
@@ -469,29 +496,39 @@ with no reference to the bucket, the guess, or the normalization. Normalizing is
 what coupled a candidate's contribution to a global property of its bucket, and
 factoring the logarithm decouples it again.
 
-So `w_i log₂ w_i` is computed **once per candidate**, up front, for all guesses
-(`kernels._w_log_w`). The inner accumulate loop then just adds a
-precomputed float into a bucket:
+To see where that pays, it helps to have the loop it pays inside. Every scorer in
+`kernels.py` has the same two-phase shape, and it is worth seeing once, since §8
+takes it apart:
 
 ```
-w_log_w[r] += wlw[i]        # instead of a log() call here
+for each guess:
+    accumulate:  one pass over the candidates, adding each one's
+                 contribution into a slot picked out by its pattern
+    reduce:      turn those 243 slots into one number, the guess's score
 ```
 
-and the reduce recovers the entropy from two accumulators it already has:
+The slots are the **accumulators**: four arrays of 243 floats, one entry per
+possible pattern, holding that bucket's running mass, its candidate count, its
+running total of `w log₂ w`, and its heaviest single weight. The accumulate pass
+is the hot one, running once per (guess, candidate) pair — 167 million times at
+the opening — so everything expensive is kept out of it.
 
-```python
-x = np.log2(mass) - wlw / mass      # in _bucket_guesses — this x *is* H
-```
+`w_i log₂ w_i` is therefore computed **once per candidate**, before any guess is
+scored (`kernels._w_log_w`), and the accumulate pass adds a precomputed float
+into a slot where the naive version would call a logarithm. The reduce then reads
+two of the slots it already has — the bucket's mass and its total `w log₂ w` —
+and recovers `H = log₂(mass) − (Σ w_i log₂ w_i) / mass` with one logarithm per
+*bucket* rather than one per candidate (`kernels._bucket_guesses`).
 
-Cost, for a position with `m` candidates scored against all 12,947 guesses: the
-naive version needs `12,947 × m` logarithms, the split version needs `m`. At a
-wide position (`m` ≈ 12,947) that's 167 million logs against thirteen thousand.
+Cost, for a position with `c` candidates scored against all 12,947 guesses: the
+naive version needs `12,947 × c` logarithms, the split version needs `c`. At a
+wide position (`c` ≈ 12,947) that's 167 million logs against thirteen thousand.
 
-**One more consequence.** Since `n_eff = 2^H`, that `x` is exactly `log₂(n_eff)` —
-already in the units `f` wants. That's why `f_eval_x` is parameterized by `x`
-rather than by `n` (`estimator.f_eval_x`): every caller reaches `f` through an
-entropy, so it has `x` in hand, and going via `n` would mean computing `2^x` only
-for `f` to take `log₂` straight back off.
+**One more consequence.** Since `n_eff = 2^H`, the `H` the reduce just recovered
+is exactly `log₂(n_eff)` — already in the units `f` wants. That's why `f_eval_x`
+is parameterized by `x = log₂ n` rather than by `n` (`estimator.f_eval_x`): every
+caller reaches `f` through an entropy, so it has `x` in hand, and going via `n`
+would mean computing `2^x` only for `f` to take `log₂` straight back off.
 
 Sanity check on random weights, direct definition against the rearranged one:
 
@@ -513,18 +550,26 @@ often — every node of the endgame search and every late turn of every training
 rollout scans a handful of candidates against all ~13k guesses. The aggregate
 cost lives in the small cases, so that is where to optimize.
 
-That matters because of how the reduce is written. After accumulating mass per
-pattern, something has to walk the buckets and total them up, and the obvious
-walk is over all 243 patterns — which costs 243 whether there were 12,000
-candidates or five. With five candidates, at most five buckets are non-empty and
-the other 238 checks are pure waste, repeated for every one of 13,000 guesses.
+Start with the accumulators, since what they cost decides how the reduce has to
+be written. Four fresh 243-element arrays per guess would mean allocating and
+zeroing some fifty thousand floats thirteen thousand times over, so instead they
+are allocated once per block of at most `kernels._MAX_BLOCK` = 64 guesses and
+reused across the block. That reuse puts them under an obligation: whatever one
+guess writes into them has to be gone before the next guess starts.
 
-So below `kernels._RESCAN_MAX` (128 candidates) the reduce **walks the candidates
-a second time instead**, taking each bucket the first time it is reached and
-zeroing it on the spot. Zeroing there is what makes it work: it both clears the
-accumulator for the next guess and stops the bucket being counted twice when a
-later candidate lands in it. The reduce *and* the clear then both cost `m` rather
-than 243.
+So the reduce carries two jobs — total the buckets up, and leave them zeroed —
+and the obvious way to do both is a walk over all 243 patterns, which costs 243
+whether there were 12,000 candidates or five. With five candidates at most five
+buckets are non-empty, and the other 238 checks are pure waste, repeated for
+every one of 13,000 guesses.
+
+Below `kernels._RESCAN_MAX` (128 candidates), then, the reduce **walks the
+candidates a second time instead**, taking each bucket the first time it is
+reached and zeroing it on the spot. Zeroing there is what makes the second walk correct as
+well as cheap: it clears the accumulator for the next guess, and it stops the
+bucket being counted twice when a later candidate lands in it. With five
+candidates the sweep does 243 reads and 243 writes per guess where the second
+pass does five of each.
 
 | candidates | reduce over patterns | reduce over candidates |
 | --- | --- | --- |
@@ -543,37 +588,39 @@ the second pass above is nearly free — it re-reads exactly what the first pass
 already pulled into cache. It is also why there is little further to win here
 short of storing the table transposed as well.
 
-Two smaller things, both about not repeating setup work:
-
-- **Accumulators are allocated once per block of guesses, not once per guess.**
-  A block is at most `kernels._MAX_BLOCK` = 64 guesses, so the four 243-element
-  arrays are zeroed once and then reused 64 times.
-- **Work is split into `4 × get_num_threads()` blocks** and handed to numba's
-  `prange`, a parallel loop that spreads iterations across cores. Several blocks
-  per thread rather than exactly one means a thread that draws slow work does not
-  hold everyone up at the end.
+**Those blocks are also the unit of parallelism.** The guesses to be scored are
+cut into `4 × get_num_threads()` blocks and handed to numba's `prange`, a
+parallel loop that spreads its iterations across cores, and each block carries
+accumulators of its own, so no two threads are ever writing into the same array. Several blocks
+per thread rather than exactly one means a thread that draws slow work does not
+hold everyone up at the end.
 
 ### The optimization that had to be taken back out
 
-Numba offers a `fastmath` flag that lets the compiler reorder floating-point
+Numba hands each kernel to LLVM, the compiler that turns it into machine code,
+and offers a `fastmath` flag that grants LLVM license to reorder floating-point
 arithmetic for speed, on the reasoning that addition is associative. It is not
-associative in floating point, but the reordering is usually harmless.
+quite associative in floating point, but the reordering is usually harmless.
 
-Here it was not. The reduce reads a bucket and then zeroes it for the next guess;
-under `fastmath`, LLVM moved the store ahead of the load, so **every bucket
-maximum read back as zero**. It surfaced as `two_turn_scores` returning exactly
-3.0 for every guess and the search confidently preferring nonsense words. The
-other two scorers happened to survive, but only because a logarithm or a function
-call in their reduce blocked the same transform — which is not a thing to rely
-on. None of the kernels carry the flag now. It costs nothing on the widest
+Here it was not, and the damage was not to the arithmetic at all. The reduce
+reads a bucket and then writes a zero into it for the next guess; restructuring
+the loop swapped those two memory operations, so **every bucket maximum read back
+as the zero its own loop had just written**. The license granted was over the
+order of the additions, and what moved was a store. It surfaced as
+`two_turn_scores` returning exactly 3.0 for every guess and the search
+confidently preferring nonsense words. The other two scorers happened to survive,
+but only because a logarithm or a call to the estimator sits between their read
+and their write and gives the compiler something it cannot reorder across —
+which is luck, not protection, and not a thing to rely on. None of the kernels
+carry the flag now. It costs nothing on the widest
 positions and up to about 10% in the middle, which is a small price for scores
 that are what they claim to be.
 
 ### Scoring fewer guesses
 
-Every kernel takes a `pool` of table rows and returns one score per entry, with
-`pool=None` meaning all 12,947. That parameter is what keeps deeper search
-affordable: a lookahead exploring the replies to a bucket of ninety candidates
+Every kernel takes a **pool** — the set of table rows it is being asked to score,
+standing in for all 12,947 — and returns one score per entry, `pool=None` meaning
+every row. That parameter is what keeps deeper search affordable: a lookahead exploring the replies to a bucket of ninety candidates
 does not need all 13k of them, and hard mode (§9) is the same mechanism with the
 pool set to the candidate set itself.
 
@@ -593,7 +640,7 @@ Suppose you had a function
 
 Then the value of guess `g` is immediate:
 
-$$E(g, S) = 1 + \sum_{r \ne \texttt{GGGGG}} p_r \, f(n_r)$$
+$$E(g, S) = 1 + \sum_{r \ne \texttt{GGGGG}} p_r f(n_r)$$
 
 "One guess for this turn, plus the average cost of wherever I land." Two details
 carry real weight:
@@ -658,7 +705,8 @@ f(n) = 0.955 + 0.372·x − 0.112·(x−2)₊ − 0.138·(x−4)₊ − 0.104·(
                                             (x = log₂ n, (u)₊ = max(u, 0))
 ```
 
-Every knot bends it flatter and none bends it back — the sixth, at `x = 8`, was
+Every knot — a knot being a value of `x` where the curve is allowed to change
+slope — bends it flatter and none bends it back, and the sixth, at `x = 8`, was
 dropped altogether by the monotonicity guard §10 describes. Concretely, beside
 the curve fitted under the flat shapes (`0.61 + 0.77·√x`):
 
@@ -672,7 +720,7 @@ and from 1,000 to the whole word list another 0.07. That is the honest shape of
 the game, and precisely what a linear `f` cannot express. Over that whole stretch
 the shipped curve climbs 0.13 where the flat-shape one climbs 0.84, which is more
 than a rescaling: it is the prior changing what
-`f` even has to model: with the mass concentrated, the effective size rarely
+`f` even has to model. With the mass concentrated, the effective size rarely
 reaches the range where a saturating curve has gone flat, so saturation stopped
 being the liability it used to be.
 
@@ -728,9 +776,10 @@ Three constraints worth flagging:
 - **`f` must be non-decreasing** on `[1, 12947]` (`estimator._is_monotone`). If a
   bigger candidate set could score *cheaper*, the search would prefer
   uninformative guesses that dump everything into one bucket. When the full basis
-  violates that, terms are dropped from the end until it holds — which is why
-  `quadratic` scores identically to `loglinear` in the results table: its `x²`
-  term gets dropped every time.
+  — the ordered list of terms a form is built from — violates that, terms are
+  dropped from the end until it holds, which is why `quadratic` and `loglinear`
+  score identically in `README.md`'s table of the forms: `quadratic`'s `x²` term
+  gets dropped every time, leaving exactly `loglinear` behind.
 - **A prior with no cached fit does not play.** Rather than bending some
   reference curve onto the chosen form and playing a policy nobody measured, the
   estimator raises and names the `train` command that fixes it. Entropy mode
@@ -772,7 +821,7 @@ was set to, or rows run at different penalties could not be compared.
 `f` is a fitted approximation. But when few candidates remain, you don't need
 approximation — you can compute the true answer by brute force (`exact.py`).
 
-$$V(S, t) = \min_g \Big[1 + \sum_{r \ne \texttt{GGGGG}} p_r \, V(S_r, t-1)\Big], \qquad V(S, 0) = \text{penalty}$$
+$$V(S, t) = \min_g \Big[1 + \sum_{r \ne \texttt{GGGGG}} p_r V(S_r, t-1)\Big], \qquad V(S, 0) = \text{penalty}$$
 
 `t` is turns remaining. This is **expectimax**: you *minimize* over your guess
 (you choose it) but take an *expectation* over the feedback (you don't). Not
@@ -783,13 +832,27 @@ make it affordable.
 
 **(a) Partition dedupe.** This is where §2 pays off: a guess *is* its partition,
 so two guesses that split `S` identically are perfectly interchangeable, and the
-branching factor is the number of *distinct partitions* rather than 12,947. With
-≤7 candidates the whole feedback vector packs into one int64 (8 bits per
-candidate) and equal keys are provably equal partitions; above that it's an FNV
-hash with an explicit collision check, so a collision costs a redundant
-representative but never a missing one (`kernels.distinct_partitions`).
+branching factor is the number of *distinct partitions* rather than 12,947.
 
-The hash is worth a word, since the direct approach is right there: `np.unique`
+Grouping guesses that way means comparing, for each pair, the whole list of
+patterns they produce over the candidates — the guess's **feedback vector**, one
+number in `[0, 243)` per candidate, which is just the piece of the guess's table
+row that the candidate columns pick out. Comparing those directly, 13,000 of them
+against each other, is too slow. So each vector is squeezed down to a single
+64-bit integer and the integers are grouped instead.
+
+With seven candidates or fewer the squeeze loses nothing. A pattern fits in 8
+bits, seven of them fit in the 56 bits available, and the packed integer therefore
+*is* the vector: equal integers are identical partitions, and nothing needs
+checking. Above seven the vector no longer fits and the integer becomes a hash —
+FNV-1a, a cheap mixing function that folds an input of any length down to 64 bits.
+Identical vectors always hash alike; different ones almost never collide, but
+"almost" is not a proof, so every guess is compared once against its group's
+representative and promoted to a group of its own if it really does split
+differently (`kernels.distinct_partitions`). A collision costs one redundant
+representative and can never lose a distinct partition.
+
+The hash is worth defending, since the direct approach is right there: `np.unique`
 can group the feedback *vectors* themselves, which needs no collision check at
 all. It is a lexicographic sort, one pass per candidate, and it costs an order of
 magnitude more than hashing each vector to 64 bits and grouping those. The
@@ -819,13 +882,29 @@ count.** The same two-turn position is reached along many different guess orders
 about four calls in five being a repeat, so even this closed form is cached
 rather than recomputed (§13).
 
-**(c) Branch and bound.** That two-turn value is also a valid **lower bound** on
-`V(S,t)` for larger `t`. (Why: under this convention `V` is non-*decreasing* in
-`t` — with more turns left you're obliged to actually finish rather than pay the
-comparatively cheap penalty.) So order guesses by that bound, and inside a guess
-replace bucket bounds with exact values one at a time, abandoning the moment the
-running total exceeds the incumbent — biggest-mass buckets first, since they
-tighten fastest. Standard search pruning, on a well-chosen admissible bound.
+**(c) Branch and bound.** That two-turn value doubles as a **lower bound** on
+`V(S,t)` for larger `t`, provided it is computed with the penalty capped at 1
+(`ExactEndgame.bound_penalty`). The cap is the smaller of the two reasons it
+holds: being wrong at the end costs either one further guess or the penalty,
+whichever is *less*, so pricing a miss at 1 can only ever understate the true cost
+when the shipped penalty is 5.
+
+The larger reason is that `V` is non-*decreasing* in `t`, which reads backwards
+at first — more turns in hand ought to make a position cheaper, not dearer. Under
+this convention it makes it dearer, because a position one turn from the deadline
+is allowed to miss and pay the comparatively cheap penalty and stop, where a
+position with turns to spare is obliged to carry on until it actually wins. So no
+deeper value can come in under the two-turn value of the same set, which is
+exactly what makes that value safe to prune with.
+
+The search then does the standard thing with it. Guesses are ordered by their
+bound and walked in that order, holding on to the best complete value found so
+far — the **incumbent**. Within a guess, the total starts as the sum of its
+buckets' bounds and each bucket is replaced by its exact value one at a time, so
+the running total only ever rises; the moment it passes the incumbent, the guess
+is abandoned unevaluated. Biggest-mass buckets go first, since they move the
+total fastest. All of it is sound because the bound is **admissible** — it never
+overestimates, so nothing it prunes could have turned out to be the best.
 
 **(d) Branch cap** (default 50). Only the 50 best splits by that bound are tried
 at all. The justification is sharp: branch and bound finds the best guess early
@@ -850,10 +929,11 @@ repeated. The same collapse happens at every depth: many different paths arrive
 at the same candidate set.
 
 So `memo.Memo` caches results keyed on the position. The key is
-`candidates.tobytes()` — the raw bytes of the candidate index array, which is
-cheap to produce and exact — together with the number of turns left, since the
-right guess genuinely depends on how many are remaining and a value found with
-four turns left is wrong for two.
+`candidates.tobytes()` — the raw bytes of that array of column numbers from §1,
+used because an array cannot be a dictionary key and its bytes can, and because
+they are exact where a hash of them would not be — together with the number of
+turns left, since the right guess genuinely depends on how many are remaining and
+a value found with four turns left is wrong for two.
 
 There are three of them, and they do not all expire together. `WordleSolver`
 keeps two, one for the guess it chose and one for lookahead values, and both are
@@ -879,13 +959,15 @@ disappears all at once.
 
 `memo.Memo` instead drops the **least recently used** entry — LRU, the standard
 policy of evicting whatever has gone longest without being touched, on the
-reasoning that it is the least likely to be wanted next. `get` counts as a use,
-which is the whole difference between LRU and simply dropping the oldest
-insertion: a position looked up constantly stays resident however long ago it was
-first computed.
+reasoning that it is the least likely to be wanted next. It is a dictionary that
+remembers the order its entries were last touched: a read moves that entry to the
+newest end, and an insertion past the cap drops whatever sits at the oldest. That
+a *read* counts as a use is the whole difference between LRU and simply dropping
+the oldest insertion, and it is what keeps a position that is looked up constantly
+resident however long ago it was first computed.
 
-The bookkeeping is not free — every read moves an entry to the back of an
-`OrderedDict` — but the comparison is lopsided. Relinking costs on the order of
+The bookkeeping is not free — every read moves an entry, which is a couple of
+pointer writes — but the comparison is lopsided. Moving it costs on the order of
 100 ns, while the miss it prevents costs a scoring pass over ~13k guesses,
 several milliseconds. The overhead is roughly ten thousand times smaller than the
 thing it buys, which is not a close call.

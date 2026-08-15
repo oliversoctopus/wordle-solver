@@ -51,6 +51,17 @@ of a subject from success at a competition that does not examine that subject.**
 
 What follows for this document:
 
+**Assume no knowledge of this codebase at all.** The reader has not opened
+`kernels.py` and is not going to — that is the entire point of the document. So
+anything that lives only in the source has to be built here before it is leaned
+on: that a candidate set is an array of column indices into the table, what the
+243-slot accumulators are, what a `pool` is, why the memo key is raw bytes. The
+test is whether a sentence would mean anything to someone who cannot see the
+function it describes. "The reduce zeroes the bucket on the spot" fails it, and
+either earns the two lines that make it mean something or comes out. Names are
+the exception, and the point: `priors.build_weights` is a pointer for afterwards,
+and no argument should need the reader to have followed it.
+
 **Fair to assume.** Logarithms and exponentials. Expected value, mean, standard
 deviation, the normal distribution, and the difference between a sample and the
 thing it estimates — AP Statistics covers these and the derivation leans on them
@@ -63,8 +74,10 @@ bits, information gain (§3). What a prior is and what it means to weight a word
 list (§4–§5). Value functions, policies, and policy iteration (§10). Game-tree
 search — expectimax, and pruning a search with bounds (§12). None of that appears
 in AP Statistics, in AIME, or in USACO Silver. Nor does anything about the
-machine underneath: cache lines and memory-bound loops, what a compiler is
-allowed to reorder, and cache eviction policy (§8, §13).
+machine underneath: how an array sits in memory (§1), cache lines and
+memory-bound loops and what a compiler is allowed to reorder (§8), packing values
+into a machine integer and what a hash collision costs (§12), cache eviction
+policy (§13).
 
 **Needs a sentence of gloss at first use.** Statistics past the AP syllabus, and
 especially where it resembles something on it: rank correlation is not the `r`
@@ -87,7 +100,20 @@ viewer with math support. Pick one:
 4. Click **Create secret gist**. Secret means unlisted, not private, so don't treat the URL as a secret.
 
 GitHub renders `$$ ... $$` math natively, along with the tables and code blocks.
-This is the highest-fidelity option and the result is a stable link you can share.
+This is the option the document is read in, and the result is a stable link you
+can share.
+
+It also decides one rule about how the math may be written. **No
+backslash-punctuation macros in an equation** — no `\,`, `\;`, `\!`, `\:`, and no
+`\\` for a line break. Markdown treats a backslash before any ASCII punctuation
+as an escape, so GitHub resolves `\;` to a bare `;` before the math renderer ever
+sees it, and a semicolon is duly typeset in the middle of the formula. Macros
+named with letters — `\frac`, `\sum`, `\qquad`, `\big(` — are not escapes and
+come through untouched. Nothing is lost by the rule: TeX spaces binary operators
+correctly on its own, and those macros only ever added decoration on top of
+spacing that was already right. The trick of writing `\\;` to smuggle one through
+works on GitHub and breaks the other three viewers, where KaTeX reads the `\\` as
+a line break.
 
 ### Option B — StackEdit (no account at all)
 
@@ -119,7 +145,7 @@ Read start to finish the first time. The order is the argument.
 | § | what it establishes |
 | --- | --- |
 | 0 | the one question the whole program answers, and the two word lists |
-| 1 | the feedback rule, why duplicate letters make it subtle, and why 167 MB of table is worth it |
+| 1 | the feedback rule, why duplicate letters make it subtle, why 167 MB of table is worth it, and the shape in memory that §7, §8 and §12 all turn out to be arguing about |
 | 2 | the reframe everything rests on: **a guess is a partition of the candidate set** |
 | 3 | entropy and information gain, built up from counting rather than quoted |
 | 4 | the answer is not drawn uniformly — the editor model, and the regime that justifies its two rates |
@@ -217,9 +243,15 @@ its weight.
 **Point at code by name, never by line number** — `priors.build_weights`, not
 `priors.py:221`. One pass found seven references that had silently drifted.
 
-**Section numbers are load-bearing.** The map above, and cross-references
-throughout both long documents, are keyed to them. Renumbering is a
-whole-repository edit, so prefer to add subsections at the end of a section.
+**Section numbers are load-bearing, which does not make them fixed.** The map
+above and some eighty-odd cross-references are keyed to them, so renumbering is a
+whole-repository edit — and a whole-repository edit is allowed, provided every
+reference moves with it in the same change. They live in four files:
+`SOLVER_EXPLAINED.md` itself, this one, `analysis/README.md`, and `CLAUDE.md`.
+`grep -rn "§" .` finds all of them, and the job is done when every hit reads
+correctly, not when the numbers have been shifted. Renumber when the argument
+genuinely wants a new section in the middle; where a subsection at the end of an
+existing section does the same work, that is still the cheaper move.
 
 A quick way to check yourself: read the section you edited from its first line,
 out loud if you can stand it. If you hear the seam where your paragraph joins,
