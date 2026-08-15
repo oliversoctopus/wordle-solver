@@ -131,7 +131,7 @@ It was rewritten end to end to undo that. These are the rules that undid it, and
 
 **Say each thing once.** The warning that the §4 table is not comparable across rows belongs at that table and nowhere else. A caveat repeated in three sections is three places to forget to update.
 
-**Every section should hand off.** End by naming the question the next one answers — §0 lists what §1–§3 must supply, §7 ends on the loop §8 then takes apart, §9 ends "where `f` comes from is §10's problem." The order is the argument; a section that could be moved without anyone noticing is not carrying its weight.
+**Every join is bridged, from one side or the other.** Often a section ends by naming the question the next one answers: §0 lists what §1–§3 must supply, §2 ends "now we need to make 'many small ones' precise", §14 points at the order §15 puts everything in. Just as often the bridge sits at the far end instead — §7 opens on what unequal weights break, §8 on what removing the logarithms exposed — and those sections want no closing sentence above them saying it a second time. What matters is that the seam is carried once, not that every section has a last line pointing forward. The order is the argument, and a section that could be moved without anyone noticing is not carrying its weight; but a sentence appended to satisfy the rule where the next section already bridges is worse than the join it papers over. Where a section opens cold on its own thesis, as §16 does, nothing reaches back and the bridge has to come from the line above it — which is why §15 ends by pointing at the split §16 makes.
 
 **Point at code by name, never by line number** — `priors.build_weights`, not `priors.py:221`. One pass found seven references that had silently drifted.
 

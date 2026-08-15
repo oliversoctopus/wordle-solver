@@ -533,6 +533,8 @@ Under that dispatch sits most of this document. The lookup that reads the feedba
 
 The heuristic `E(g,S)` is genuinely a **fallback**: it only runs where the game is too wide to solve outright. With both priors on and the shapes that ship, over every word the answer could be, the whole thing averages **3.0770 guesses** and opens with `salet`.
 
+That average is what every part above adds up to, and it says nothing about which of them earned it. Splitting it is §16's job, and the split does not fall where the work went.
+
 ## 16. The result worth framing
 
 This is the thread running through the whole project, and it's the most interesting thing in it:
