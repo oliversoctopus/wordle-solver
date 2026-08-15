@@ -22,13 +22,14 @@ python analysis/loss_penalty.py --bound       why the pruning bound caps the pen
 python analysis/replay.py           what the shapes are worth in guesses (slow)
 python analysis/form_default.py     which form to fit by default (slower)
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
+python analysis/split_ranking.py    how much of a ranking is one guess twice
 python analysis/table_layout.py     both feedback-table layouts, kernel by kernel
 python analysis/fused_gain.py       what the answer-major dispatch is worth in games
 ```
 
 The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`, both arms over every word — cheap because the restriction it measures is also what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over the four priors and thirteen with `--decisions`, which plays out ten guesses at each position rather than one; `exact_decisions.py` is under a minute, since the positions it asks about are the small ones. `opening.py` is sixteen minutes for the two hundred openings it defaults to, about five seconds each, and `--every-word` holds that rate over all 12,947 — the best part of a day. `loss_penalty.py` is nine minutes for both sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and well under one for `--policies` and about half for `--search`; `--cost` is a timing probe rather than a measurement and takes about six, while `--bound` values a single ten-word family and is seconds. `replay.py` is 80 s over the regime's real games, `results_tables.py` about three minutes, and `form_default.py` ten, which makes it the slow one — it replays 45 fitted policies where the others replay one or two.
 
-`table_layout.py` is about four minutes and `fused_gain.py` under one. Those two are timing probes rather than measurements, as `loss_penalty.py --cost` is: they move with the machine and with what else is running on it, and not with the answer log, so a rerun after `solutions.py --write` is pointless. What they compare is two ways of arranging the same arithmetic, so read the ratios and not the milliseconds.
+`split_ranking.py` is under ten seconds, since the positions it looks at are the small ones and nothing is played out. `table_layout.py` is about four minutes and `fused_gain.py` under one. Those two are timing probes rather than measurements, as `loss_penalty.py --cost` and the second half of `split_ranking.py` are: they move with the machine and with what else is running on it, and not with the answer log, so a rerun after `solutions.py --write` is pointless. What they compare is two ways of arranging the same arithmetic, so read the ratios and not the milliseconds.
 
 Those are wall clocks on one machine, and they are far shorter than the sizes suggest for one reason: the memos fill after a few thousand positions and the rest of a run comes out of cache. Behind a fixed opening the 12,947 answers reach at most 243 distinct positions, so the memo turns a 12,947-wide computation into a 240-wide one, and that ratio is most of why any of this finishes at all.
 
@@ -49,6 +50,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results* |
+| `split_ranking.py` | README *Alternatives* under the web page, and the runners-up paragraph closing *The exact endgame* |
 | `table_layout.py` | SOLVER_EXPLAINED §8 *Storing the table the other way round*, the per-kernel figures |
 | `fused_gain.py` | the same section's whole-game figures, 1.09× and 1.63× |
 

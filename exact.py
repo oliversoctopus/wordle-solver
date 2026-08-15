@@ -67,6 +67,11 @@ MAX_PACKED = 7
 # one and get a provable optimum; see the note on the branch cap above.
 DEFAULT_MAX_BRANCH = 50
 
+# two guesses that split the candidates identically score identically, so this
+# only decides when their feedback vectors are worth comparing; the comparison
+# is what settles whether they are one guess under two spellings
+SPLIT_TIE_TOL = 1e-9
+
 
 class SearchBudgetExceeded(Exception):
     """Raised when a search visits more nodes than allowed; the caller falls
@@ -112,6 +117,23 @@ class ExactEndgame:
         return self._solve(np.asarray(candidates, dtype=np.int64),
                            min(int(turns_left), MAX_TURNS))
 
+    def top(self, candidates, turns_left, k=5):
+        """``[(guess, expected score), ...]`` for the k best splits of this
+        position, best first, each score as true as ``solve``'s.
+
+        The k-th best value stands in for the incumbent, so a guess is still
+        abandoned the moment it cannot make the list.  Asking for several
+        therefore costs more than asking for one -- the cutoff is looser, so
+        fewer guesses die on their bound -- and much less than ranking the pool.
+
+        Guesses are the search's own representatives: one word per distinct
+        split, since the others are the same guess by another name.
+        """
+        self.searches += 1
+        self.nodes = 0
+        return self._top(np.asarray(candidates, dtype=np.int64),
+                         min(int(turns_left), MAX_TURNS), max(1, int(k)))
+
     # ------------------------------------------------------------- recursion
 
     def _solve(self, candidates, turns):
@@ -154,20 +176,7 @@ class ExactEndgame:
         if self.nodes > self.max_nodes:
             raise SearchBudgetExceeded(f"more than {self.max_nodes} nodes")
 
-        if self.hard:
-            # nothing for the dedupe to merge: only a candidate itself can come
-            # back all-green, so no two of them split S the same way
-            representatives = candidates
-            rep_bounds = fused_kernels.two_turn_scores(
-                self.feedback_table, self.transposed, candidates, weights,
-                self.bound_penalty, pool=candidates)
-        else:
-            # bound only the representatives: they are about a quarter of the
-            # pool, and scoring the rest would be scoring duplicate splits
-            representatives = self._distinct_partitions(candidates)
-            rep_bounds = fused_kernels.two_turn_scores(
-                self.feedback_table, self.transposed, candidates, weights,
-                self.bound_penalty, pool=representatives)
+        representatives, rep_bounds = self._bounded_splits(candidates, weights)
         order = np.argsort(rep_bounds)
         if self.max_branch is not None:
             # keep only the most promising splits.  Where the dedupe already
@@ -188,6 +197,81 @@ class ExactEndgame:
         result = (best_guess, float(best_value))
         self.memo.put(key, result)
         return result
+
+    def _top(self, candidates, turns, k):
+        m = candidates.shape[0]
+        if m == 0:
+            raise ValueError("no candidates left; the feedback given is inconsistent")
+        weights = self.weights[candidates]
+        total = weights.sum()
+
+        if m == 1:
+            return [(int(candidates[0]), 1.0)]
+        if turns <= 1:
+            # every word that cannot be the answer loses alike, so the ranking
+            # here is the candidates by weight and nothing else.  Stable, so
+            # that equal weights leave the winner the one ``_solve`` names
+            order = np.argsort(-weights, kind="stable")[:k]
+            return [(int(candidates[i]),
+                     1.0 + (1.0 - float(weights[i] / total)) * self.loss_penalty)
+                    for i in order]
+        if m == 2:
+            # either order wins by the second turn; leading with the likelier
+            # one is what makes the difference
+            order = np.argsort(-weights, kind="stable")
+            return [(int(candidates[i]), 2.0 - float(weights[i] / total))
+                    for i in order]
+        if turns == 2:
+            # the closed form scores every guess rather than the distinct
+            # splits, so the ranking is deduped on the way out; the winner is
+            # left where it is, which is where ``_solve`` has it
+            pool = candidates if self.hard else None
+            scores = fused_kernels.two_turn_scores(
+                self.feedback_table, self.transposed, candidates, weights,
+                self.loss_penalty, pool=pool)
+            out = []
+            for j in np.argsort(scores, kind="stable"):
+                guess = int(candidates[j]) if self.hard else int(j)
+                if self._duplicates(guess, float(scores[j]), out, candidates):
+                    continue
+                out.append((guess, float(scores[j])))
+                if len(out) == k:
+                    break
+            return out
+
+        self.nodes += 1
+        if self.nodes > self.max_nodes:
+            raise SearchBudgetExceeded(f"more than {self.max_nodes} nodes")
+
+        representatives, rep_bounds = self._bounded_splits(candidates, weights)
+        order = np.argsort(rep_bounds)
+        if self.max_branch is not None:
+            order = order[:self.max_branch]
+
+        best = []   # (value, guess), best first, never longer than k
+        for j in order:
+            cutoff = best[-1][0] if len(best) == k else np.inf
+            if rep_bounds[j] >= cutoff - 1e-12:
+                break  # sorted, so nothing left can reach the list
+            guess = int(representatives[j])
+            value = self._evaluate(guess, candidates, weights, total, turns, cutoff)
+            if value < cutoff:
+                best.append((value, guess))
+                best.sort(key=lambda entry: entry[0])
+                del best[k:]
+
+        # the winner was found under a cutoff no tighter than solve's, so it is
+        # the same word solve would return and worth leaving in the memo
+        self.memo.put((candidates.tobytes(), turns), (best[0][1], float(best[0][0])))
+        return [(guess, float(value)) for value, guess in best]
+
+    def _duplicates(self, guess, score, listed, candidates):
+        """Whether ``guess`` splits the candidates as something already listed
+        does, and so would be that guess again under another spelling."""
+        return any(abs(score - value) <= SPLIT_TIE_TOL
+                   and np.array_equal(self.feedback_table[guess, candidates],
+                                      self.feedback_table[other, candidates])
+                   for other, value in listed)
 
     def _evaluate(self, guess, candidates, weights, total, turns, cutoff):
         """Exact value of one guess, abandoned early if it cannot beat
@@ -228,6 +312,22 @@ class ExactEndgame:
         return running
 
     # ------------------------------------------------------------------ split
+
+    def _bounded_splits(self, candidates, weights):
+        """``(representatives, two-turn bounds)`` -- one guess per distinct
+        split, each with the lower bound the search orders and prunes by."""
+        if self.hard:
+            # nothing for the dedupe to merge: only a candidate itself can come
+            # back all-green, so no two of them split S the same way
+            representatives = candidates
+        else:
+            # bound only the representatives: they are about a quarter of the
+            # pool, and scoring the rest would be scoring duplicate splits
+            representatives = self._distinct_partitions(candidates)
+        bounds = fused_kernels.two_turn_scores(
+            self.feedback_table, self.transposed, candidates, weights,
+            self.bound_penalty, pool=representatives)
+        return representatives, bounds
 
     def _distinct_partitions(self, candidates):
         """One representative guess per distinct split of the candidate set."""

@@ -476,13 +476,18 @@ button.small { padding: 3px 10px; font-size: 12px; border-radius: 7px; }
 
 .rows li {
   display: flex;
+  flex-wrap: wrap;      /* the words sharing a split drop below their row */
   justify-content: space-between;
+  align-items: center;
   gap: 10px;
   padding: 5px 0;
   border-top: 1px solid var(--line);
   font-size: 14px;
   cursor: pointer;
 }
+
+.rows .row-tail { display: flex; align-items: center; gap: 8px; }
+.rows .split-chips { flex-basis: 100%; margin: 2px 0 4px; }
 
 .rows li:first-child { border-top: none; }
 .rows li:hover .word { color: var(--green); }
@@ -511,6 +516,24 @@ button.small { padding: 3px 10px; font-size: 12px; border-radius: 7px; }
 
 .chips li:hover { border-color: var(--ink-dim); }
 .chips li.more { border-style: dashed; cursor: default; color: var(--ink-dim); }
+
+/* one word stands for its whole split; these open the rest of it */
+.same-split { margin: 10px 0 0; }
+.same-split .sub { margin: 6px 0 0; }
+
+.split-toggle {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--raised);
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.split-toggle:hover { border-color: var(--ink-dim); color: var(--ink); }
 
 /* ------------------------------------------------- cards that fold away */
 

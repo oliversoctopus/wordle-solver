@@ -24,6 +24,8 @@ FAST = [
 SLOW = [
     ("the two front ends recommend alike",
      [sys.executable, os.path.join(HERE, "front_ends_agree.py"), "--full"]),
+    ("one word per split, and the words it stands for",
+     [sys.executable, os.path.join(HERE, "splits.py")]),
 ]
 
 

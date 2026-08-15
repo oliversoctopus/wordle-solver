@@ -375,6 +375,36 @@ def _splits_differently(feedback_table, candidates, heads):
     return out
 
 
+@njit(parallel=True, cache=True)
+def _same_split(feedback_table, candidates, guess, pool):
+    """Which pooled guesses split the candidates exactly as ``guess`` does."""
+    n = pool.shape[0]
+    m = candidates.shape[0]
+    out = np.zeros(n, dtype=np.bool_)
+    for slot in prange(n):
+        other = pool[slot]
+        same = True
+        for i in range(m):
+            c = candidates[i]
+            if feedback_table[other, c] != feedback_table[guess, c]:
+                same = False
+                break
+        out[slot] = same
+    return out
+
+
+def same_split(feedback_table, candidates, guess, pool=None):
+    """The words interchangeable with ``guess`` here: same feedback against
+    every candidate, so the same buckets for the rest of the game.
+
+    ``guess`` itself is in the result.  Only a candidate can come back all
+    green, and only against itself, so such a group holds either one possible
+    answer or any number of words that cannot be the answer.
+    """
+    pool, _ = _resolve_pool(feedback_table.shape[0], pool)
+    return pool[_same_split(feedback_table, candidates, guess, pool)]
+
+
 def distinct_partitions(feedback_table, candidates):
     """One representative guess per distinct split of the candidate set.
 

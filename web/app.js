@@ -709,6 +709,7 @@ function renderPlayPanel() {
     tag.textContent = hint.exact ? "Exact" : (hint.mode === "entropy" ? "Greedy" : "Estimated");
     if ($("opt-assist").checked) pick.open = true;
   }
+  fillSameSplit($("hint-same-split"), hint, playFill);
 
   const alts = (hint && hint.alternatives) || [];
   const card = $("game-alt-card");
@@ -767,14 +768,92 @@ function fillAlternatives(list, alts, take) {
     const word = document.createElement("span");
     word.className = "word";
     word.textContent = alt.word;
+    const tail = document.createElement("span");
+    tail.className = "row-tail";
     const score = document.createElement("span");
     score.className = "score";
     score.textContent = fmtScore(alt.score);
-    item.append(word, score);
+    tail.append(score);
+    item.append(word, tail);
     item.title = "Put this word in the selected row";
     item.addEventListener("click", () => take(alt.word));
+
+    const chips = splitChips(alt, take);
+    if (chips) {
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "split-toggle";
+      toggle.textContent = `+${alt.same_split_count}`;
+      toggle.title = splitLabel(alt.same_split_count, false);
+      toggle.addEventListener("click", (event) => {
+        event.stopPropagation();      // the row itself puts its word in the board
+        chips.hidden = !chips.hidden;
+        toggle.title = splitLabel(alt.same_split_count, !chips.hidden);
+      });
+      tail.prepend(toggle);
+      item.append(chips);
+    }
     list.appendChild(item);
   }
+}
+
+function splitLabel(count, open) {
+  const many = count === 1 ? "word that plays" : "words that play";
+  return `${open ? "Hide" : "Show"} the ${count} ${many} exactly the same`;
+}
+
+/** The words giving the same feedback as this guess against every candidate
+    still standing, so the same game from here on. Null when it stands alone,
+    which is most of the time: distinct splits are near-universal until the
+    candidates are nearly gone. */
+function splitChips(entry, take) {
+  const words = entry.same_split || [];
+  if (!words.length) return null;
+
+  const chips = document.createElement("ul");
+  chips.className = "chips split-chips";
+  chips.hidden = true;
+  for (const word of words) {
+    const chip = document.createElement("li");
+    chip.textContent = word;
+    chip.title = "Put this word in the selected row";
+    chip.addEventListener("click", (event) => {
+      event.stopPropagation();
+      take(word);
+    });
+    chips.appendChild(chip);
+  }
+  const hidden = entry.same_split_count - words.length;
+  if (hidden > 0) {
+    const more = document.createElement("li");
+    more.className = "more";
+    more.textContent = `+${hidden.toLocaleString()} more`;
+    chips.appendChild(more);
+  }
+  return chips;
+}
+
+/** The same list under a pick, where there is room to say what it is. */
+function fillSameSplit(box, entry, take) {
+  box.textContent = "";
+  const chips = entry ? splitChips(entry, take) : null;
+  box.hidden = !chips;
+  if (!chips) return;
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "ghost small";
+  toggle.textContent = splitLabel(entry.same_split_count, false);
+  toggle.addEventListener("click", () => {
+    chips.hidden = !chips.hidden;
+    toggle.textContent = splitLabel(entry.same_split_count, !chips.hidden);
+    note.hidden = chips.hidden;
+  });
+  const note = document.createElement("p");
+  note.className = "sub";
+  note.hidden = true;
+  note.textContent = "Identical feedback against every word still possible, so any of them plays the same game from here.";
+  box.append(toggle, chips, note);
 }
 
 const KEY_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
@@ -933,6 +1012,8 @@ function renderPanel() {
     $("rec-note").textContent = note;
     $("rec-note").hidden = !note;
   }
+
+  fillSameSplit($("rec-same-split"), state.over ? null : rec, fill);
 
   const alts = state.alternatives || [];
   $("alt-card").hidden = alts.length === 0;

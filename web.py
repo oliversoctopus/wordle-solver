@@ -58,6 +58,7 @@ MAX_GUESSES = 6
 MAX_SESSIONS = 200          # oldest are dropped; a session is a few dozen bytes
 MAX_LISTED_CANDIDATES = 80  # possible answers sent to the page, likeliest first
 MAX_LISTED_MATCHES = 120    # words the finder lists, best first by its sort
+MAX_LISTED_SIBLINGS = 40    # words sharing a guess's split, likeliest first
 MAX_BODY = 64 * 1024
 
 TILE_VALS = {"N": 0, "Y": 1, "G": 2}
@@ -304,6 +305,26 @@ def describe_estimator(solver):
     }
 
 
+def describe_guess(solver, word, score, candidates):
+    """One entry of the ranking: a word, its score, and the words that play
+    identically from here.
+
+    The ranking names one word per distinct split, so the ones it stands for
+    travel with it.  Likeliest first, which is the order that makes the
+    familiar spelling of a split the one on show.
+    """
+    guess = solver.data.word2ind[word]
+    siblings = solver.split_siblings(guess, candidates)
+    order = np.argsort(-solver.weights[siblings], kind="stable")
+    listed = siblings[order[:MAX_LISTED_SIBLINGS]]
+    return {
+        "word": word,
+        "score": float(score),
+        "same_split": [solver.data.all_words[i] for i in listed],
+        "same_split_count": int(siblings.size),
+    }
+
+
 def build_state(pool, session_id, settings, rows):
     """The whole board as the page wants it: what has been played, what the
     solver would play next, and what is still possible.
@@ -367,15 +388,15 @@ def build_state(pool, session_id, settings, rows):
         word, score = top[0]
         pick = data.word2ind[word]
         state["recommendation"] = {
-            "word": word,
-            "score": float(score),
+            **describe_guess(solver, word, score, candidates),
             "exact": exact,
             # a guess that cannot be the answer is still often the right one:
             # worth saying which it is
             "possible": bool((candidates == pick).any()),
             "win_probability": float(solver.win_probability(candidates, pick)),
         }
-        state["alternatives"] = [{"word": w, "score": float(s)} for w, s in top[1:]]
+        state["alternatives"] = [describe_guess(solver, w, s, candidates)
+                                 for w, s in top[1:]]
         state["elapsed_ms"] = round((time.perf_counter() - started) * 1000)
         return state
 
@@ -451,14 +472,14 @@ def game_hint(pool, game, settings):
                                  guesses_left=guesses_left)
         word, score = top[0]
         return {
-            "word": word,
-            "score": float(score),
+            **describe_guess(solver, word, score, candidates),
             "mode": settings.mode,
             "hard": settings.hard,
             "score_label": score_label(settings.mode),
             "candidates_left": int(len(candidates)),
             "exact": bool(solver.solved_exactly(candidates, guesses_left)),
-            "alternatives": [{"word": w, "score": float(s)} for w, s in top[1:]],
+            "alternatives": [describe_guess(solver, w, s, candidates)
+                             for w, s in top[1:]],
         }
 
 

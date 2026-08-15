@@ -5,7 +5,8 @@ import numpy as np
 import estimator
 import fused_kernels
 import kernels
-from exact import DEFAULT_MAX_BRANCH, MAX_TURNS, ExactEndgame, SearchBudgetExceeded
+from exact import (DEFAULT_MAX_BRANCH, MAX_TURNS, SPLIT_TIE_TOL, ExactEndgame,
+                   SearchBudgetExceeded)
 from memo import Memo
 from priors import PriorConfig, build_weights
 from wordle_data import WIN_PATTERN, load_data
@@ -358,23 +359,93 @@ class WordleSolver:
         return (len(candidates) <= 2 or guesses_left == 1
                 or self._exact_applies(len(candidates), turns))
 
+    def split_siblings(self, guess, candidates):
+        """Every other word that gives the same feedback as ``guess`` against
+        every candidate, and so plays identically from here on.
+
+        Hard mode narrows these the way it narrows the choice itself.  A group
+        holds either one possible answer or any number of words that cannot be
+        the answer, since only a candidate comes back all green and only
+        against itself.
+        """
+        pool = kernels.same_split(self.data.feedback_table, candidates,
+                                  int(guess), pool=self.guess_pool(candidates))
+        return pool[pool != guess]
+
     def top_guesses(self, candidates, k=5, guesses_left=None):
         """``[(word, score), ...]`` for the k best guesses, best first.
 
-        Collapses to the single best guess whenever that guess came from
-        somewhere other than the heuristic scorer, so the list never mixes
-        exact values with estimated ones.
+        One word per distinct split: the rest of a split's words give the same
+        feedback against every candidate, so listing them would be listing the
+        same guess spelled several ways, and ``split_siblings`` names them
+        instead.  Where the position is one the solver settles exactly the
+        scores are true values, and the list never mixes those with estimates.
         """
         if self.solved_exactly(candidates, guesses_left):
-            guess, score = self.best_guess(candidates, guesses_left)
-            return [(self.data.all_words[guess], score)]
+            exact_top = self._exact_top(candidates, k, guesses_left)
+            if exact_top is not None:
+                return [(self.data.all_words[g], float(s)) for g, s in exact_top]
+
         pool = self.guess_pool(candidates)
         scores = self.score_all(candidates, pool=pool)
         order = np.argsort(scores)
         if self.mode == ENTROPY:
             order = order[::-1]
-        return [(self.data.all_words[self._row(pool, int(i))], float(scores[i]))
-                for i in order[:k]]
+
+        table = self.data.feedback_table
+        kept = []
+        for i in order:
+            guess = self._row(pool, int(i))
+            score = float(scores[i])
+            split = table[guess, candidates]
+            if any(abs(score - seen) <= SPLIT_TIE_TOL and np.array_equal(split, other)
+                   for _, seen, other in kept):
+                continue
+            kept.append((guess, score, split))
+            if len(kept) == k:
+                break
+        return [(self.data.all_words[g], s) for g, s, _ in kept]
+
+    def _exact_top(self, candidates, k, guesses_left):
+        """``[(guess, value), ...]`` for a position settled without the
+        heuristic scorer, or None if the exact search ran out of budget and the
+        caller should fall back to it.
+
+        Mirrors ``_best_guess_uncached``: the same cases decided the same way,
+        reporting the runners-up rather than the winner alone.
+        """
+        m = len(candidates)
+        if m == 1:
+            return [(int(candidates[0]), 0.0 if self.mode == ENTROPY else 1.0)]
+
+        if m == 2:
+            weights = self.weights[candidates]
+            p = weights / weights.sum()
+            # stable, so equal weights leave the winner where best_guess has it
+            order = np.argsort(-p, kind="stable")
+            if self.mode == ENTROPY:
+                h = float(-(p * np.log2(p)).sum())
+                return [(int(candidates[i]), h) for i in order]
+            return [(int(candidates[i]), 2.0 - float(p[i])) for i in order]
+
+        turns = MAX_TURNS if guesses_left is None else int(guesses_left)
+        if self._exact_applies(m, turns):
+            try:
+                top = self.exact.top(candidates, turns, k)
+                self.exact_hits += 1
+                return top
+            except SearchBudgetExceeded:
+                self.exact_bailouts += 1
+                return None
+
+        if guesses_left == 1:
+            # a guess that cannot be the answer loses outright, so the ranking
+            # is the candidates by weight however uninformative they are
+            order = np.argsort(-self.weights[candidates], kind="stable")
+            best = candidates[order[:k]]
+            scores = self.score_all(candidates, pool=best)
+            return [(int(g), float(s)) for g, s in zip(best, scores)]
+        return None
 
     # --------------------------------------------------------------- rollouts
 
