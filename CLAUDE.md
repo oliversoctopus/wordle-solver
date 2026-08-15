@@ -153,7 +153,7 @@ starts on the 167 MB table**. Run it deliberately or not at all.
 
 `answer_like.py` needs `wordfreq`, which nothing else here does. Its fit is
 sensitive to details that are easy to guess wrong: thirteen features and not the
-four `SOLVER_EXPLAINED.md` §5.3 names, exactly ten foreign languages, a
+four `SOLVER_EXPLAINED.md` singles out, exactly ten foreign languages, a
 duplicate-letter *count* where a flag would seem enough, and a ridge that hits
 the intercept too. Change any of them and it still fits, still correlates at
 r ≈ 0.98, and no longer reproduces the file.
