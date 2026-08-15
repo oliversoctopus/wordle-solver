@@ -95,7 +95,7 @@ Read start to finish the first time. The order is the argument.
 | 16 | the result worth framing |
 | 17 | the five ideas that make any of it finish, collected |
 
-If you have ten minutes rather than an evening: **§2, §9, §16**. §2 is the idea the solver is built on, §9 is where it stops being a standard entropy solver, and §16 is the finding worth carrying away — *better decisions, worth almost nothing*, which held four separate times here and cost real work to learn.
+If you have ten minutes rather than an evening: **§2, §9, §16**. §2 is the idea the solver is built on, §9 is where it stops being a standard entropy solver, and §16 is the finding worth carrying away — *a better map, but no better score*, which held four separate times here and cost real work to learn.
 
 If you want the punchline first, §16 reads fine cold and will send you back for the parts you want. §17 is the same lesson from the engineering side and reads cold too.
 

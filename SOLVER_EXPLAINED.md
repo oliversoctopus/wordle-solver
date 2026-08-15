@@ -564,7 +564,7 @@ That average is what every part above adds up to, and it says nothing about whic
 
 This is the thread running through the whole project, and it's the most interesting thing in it:
 
-> **A better map, and nowhere better to go.**
+> **A better map, but no better score.**
 
 One-ply lookahead values positions **ten times more accurately** than `min_g E(g,S)` — RMSE 0.0111 vs 0.1122, measured against ground truth computed by playing positions out exactly. The accuracy is real and it does reach the decisions: lookahead disagrees about the guess in **half** of all games, and it is right to disagree, since its picks give up 0.0013 guesses against the estimator's 0.0115. Then the games are played out and none of it arrives. The outcome moves in a quarter of them, **2,644 better against 2,597 worse**, for a net of −0.0034 ± 0.0041 guesses at ~10× the wall clock. That is 0.9σ: the difference measured is smaller than the error bar on it, so nothing here is distinguishable from zero.
 
