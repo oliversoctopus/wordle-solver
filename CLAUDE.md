@@ -24,7 +24,7 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 Write JSON through `wordle_data.write_json`, which handles this. Anything else that rewrites a file must pass `newline=""` to `open` — Python's text mode writes CRLF on Windows, so without it every line of the file changes and the real edit disappears into a whole-file diff.
 
-**Markdown is one line per paragraph. Python is hard-wrapped.** Markdown here is written unwrapped, because it is always read through something that wraps it for you: a browser, a gist, VS Code's preview, and VS Code's editor too, which ships `editor.wordWrap: on` for Markdown. The source width therefore reaches no reader, while hard wrapping costs a reflow on every edit, hides phrases that straddle a line break from `grep`, and turns a one-word change into four lines of diff. Python keeps its ~80 columns, where source *is* what gets read and a 200-character line is genuinely worse. Every Markdown file in the repo is converted, so a wrapped paragraph in one is a regression rather than a local style. Converting a file is a whole-file diff, so it goes in its own commit touching nothing else.
+**Markdown is one line per paragraph. Python is hard-wrapped.** Markdown here is written unwrapped, because it is always read through something that wraps it for you: a browser, a gist, VS Code's preview, and VS Code's editor too, which ships `editor.wordWrap: on` for Markdown. The source width therefore reaches no reader, while hard wrapping costs a reflow on every edit, hides phrases that straddle a line break from `grep`, and turns a one-word change into four lines of diff. Python keeps its ~80 columns, where source *is* what gets read and a 200-character line is genuinely worse. Every Markdown file in the repo is converted, so a wrapped paragraph in one is a regression rather than a local style — `python unwrap_md.py` says so and exits non-zero, and `--write` fixes it. Converting a file is a whole-file diff, so it goes in its own commit touching nothing else.
 
 ## Running it
 
@@ -60,6 +60,7 @@ Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
 | `web.py` | the HTTP server and JSON API |
 | `web/app.js` | the whole page |
 | `wording.py` | the `/editor` string scanner |
+| `unwrap_md.py` | checks that every `.md` is one line per paragraph; `--write` converts |
 | `feedback_table.py` | builds `feedback_table.npy` and the index maps |
 | `answer_like.py` | builds `answer_like.json`, the answer-like scores |
 | `solutions.py` | brings `solutions.json` up to date from the NYT |
