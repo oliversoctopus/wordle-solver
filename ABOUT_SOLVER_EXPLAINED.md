@@ -82,7 +82,7 @@ Read start to finish the first time. The order is the argument.
 | 3 | entropy and information gain, built up from counting rather than quoted |
 | 4 | the answer is not drawn uniformly — the editor model, and the regime that justifies its two rates |
 | 5 | how the mass is spread *inside* each group: the repeat histogram, WordleBot's weights, and the fallback that needs no scrape |
-| 6 | how to measure a prior without fooling yourself, and the one question the data cannot settle |
+| 6 | how to measure a prior without fooling yourself, one question about the priors the data settles emphatically, and one about their shapes it cannot settle at all |
 | 7 | effective size: giving a weighted set an honest "count", and the rearrangement that makes it cheap |
 | 8 | the scoring loop, and the two cost assumptions that turned out to be wrong |
 | 9 | the real objective, `E(g, S)`, and **why minimizing it is not entropy in disguise** |

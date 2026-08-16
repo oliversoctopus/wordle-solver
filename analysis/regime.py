@@ -1,12 +1,18 @@
 """The regime table and the pool-exhaustion arithmetic.
 
 Backs README *Both defaults describe a regime six months old* and
-SOLVER_EXPLAINED 4.1.
+SOLVER_EXPLAINED 4.1.  The closing block is what each prior implies about the
+repeat rate, which is why the two priors turn out to need each other (6.4) --
+it needs the weights but no solver, so it stays a seconds-long script.
 """
 
 import datetime
 
+import numpy as np
+
 import common
+from priors import PriorConfig, build_weights
+from wordle_data import load_data
 
 sol = common.solutions()
 words = [r["solution"] for r in sol]
@@ -70,3 +76,30 @@ print(f"off-list events         {len(offs)}")
 print(f"still-unused curated    {remaining}")
 print(f"regime mixture          {100*rep_rate:.1f}% / {100*off_rate:.1f}% / "
       f"{100*(1-rep_rate-off_rate):.1f}%")
+
+common.header("what each prior implies about the two rates")
+print("  the mass it puts on the already-used words, and on the non-curated\n"
+      "  ones given not a repeat -- the same conditioning the two rates are\n"
+      "  defined with.  No solver in this, just the weights.\n")
+
+data = load_data(mask_last=0, with_feedback_table=False)
+is_used = np.array([w in seen for w in data.all_words])
+is_curated = np.array([w in curated for w in data.all_words])
+print(f"  {'prior':14s} {'repeat':>9s} {'offlist|not repeat':>21s}")
+for label, config in [
+        ("none", PriorConfig(repeat=False, curation=False)),
+        ("curation only", PriorConfig(repeat=False)),
+        ("repeat only", PriorConfig(curation=False)),
+        ("both", PriorConfig())]:
+    w = build_weights(data, config)
+    unused = w[~is_used].sum()
+    print(f"  {label:14s} {100*w[is_used].sum():8.1f}% "
+          f"{100*w[~is_used & ~is_curated].sum()/unused:20.1f}%")
+
+# the observed pair: the regime row of the table above, restated
+nonrep = [j for j in range(start, N) if not is_repeat[j]]
+obs_off = sum(off_list[j] for j in nonrep) / len(nonrep)
+print(f"\n  {'observed':14s} {100*rep_rate:8.1f}% {100*obs_off:20.1f}%   over the "
+      f"regime's {N - start} puzzles")
+print("\n  Each prior is wildly wrong about the rate the *other* one governs,")
+print("  which is why neither is worth much alone.")

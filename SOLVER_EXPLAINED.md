@@ -235,7 +235,33 @@ The repeat arm is the loosest term in every blend at ±0.17–0.23, leaving the 
 
 No: they are **additive, within noise**. The three configurations blend to −0.044, −0.022 and −0.064 against a sum of −0.066, and each shape independently beats flat at its own job by a margin the prequential scoring *can* resolve — +1.14 ± 0.21 nats per event for `binned` (§5.1), −6.46 against −9.27 for `wordlebot` (§5.2). Both ship because each earns its place alone.
 
-There is a mechanism that predicts otherwise, and it is worth knowing about even though the data cannot see it. Sharpening one side makes the other's flatness the larger error in the weights: concentrating the off-list mass onto its ~870 effective words gives each about **1.0×10⁻⁴** where a used word under flat repeat mass has **5.4×10⁻⁵**, so curation alone promotes every off-list word above every past answer, and when the answer is a `cigar` that costs. Whether the repeat shape buys it back is not a question 21 events can answer — that arm carries ±0.17–0.23 however it is analyzed, and resolving a 0.1-guess effect on it needs some 340 repeats, eight years of Wordle. A reason to expect interference, not evidence of it.
+There is a mechanism that predicts otherwise, and it is worth knowing about even though these events cannot see it. Sharpening one side makes the other's flatness the larger error in the weights: concentrating the off-list mass onto its ~870 effective words gives each about **1.0×10⁻⁴** where a used word under flat repeat mass has **5.4×10⁻⁵**, so curation alone promotes every off-list word above every past answer, and when the answer is a `cigar` that costs. Whether the repeat shape buys it back is not a question 21 events can answer — that arm carries ±0.17–0.23 however it is analyzed, and resolving a 0.1-guess effect on it needs some 340 repeats, eight years of Wordle. So the mechanism is unmeasured here rather than absent. That interference of this general kind is real gets settled one level up: §6.4 finds the two *priors* these shapes sit inside strongly entangled, though by a different route — each miscalibrating the rate the other governs, rather than one group outranking another.
+
+### 6.4 Do the two *priors* need each other?
+
+A shape only ever redistributes mass inside a group its prior has already carved out. The prior decides whether the group is there to spread anything over: switch curation off and there is no curated-versus-not split at all, just 12,947 words sharing the mass equally (§4), non-answers included. That is the larger question, and it has a much larger answer. `analysis/replay.py --all-priors` replays the same 190 regime puzzles under all four on/off combinations, every arm paired on the same answer, for means of **3.9421** with neither prior, **3.5368** with curation alone, **3.9000** with repeat alone, and **3.1789** with both.
+
+Those four numbers do not add up, and the way they fail to is the finding. Turning the repeat prior on is worth **+0.042 ± 0.042** when curation is off — nothing — and **+0.358 ± 0.059** when it is on. The gap between those two, the *interaction*, is **−0.316 ± 0.072**, and the three-arm blend of §6.2 agrees at −0.294 ± 0.046 — a wider view of the same data rather than a second opinion, its repeat arm being those same 21 events. The priors are strongly superadditive even though their shapes are not.
+
+Read from the other side it is the same number, as an interaction always is: the curation prior is worth +0.405 ± 0.055 with the repeat prior off and +0.721 ± 0.060 with it on, and 0.721 − 0.405 is that 0.316 again. Neither prior is the one that "needs" the other. What they need is each other.
+
+The reason is calibration, and it shows plainest if you ask what rates each prior implies — against the two the regime really shows, an 11.1% repeat rate and 8.9% off-list among the answers that are not repeats (§4):
+
+| prior | implied repeat | implied off-list \| not a repeat |
+| --- | --- | --- |
+| none | 14.4% | 95.5% |
+| curation only | 71.3% | 32.4% |
+| repeat only | 10.0% | 95.5% |
+| both | 10.0% | 10.0% |
+| *observed* | *11.1%* | *8.9%* |
+
+Every prior but the last is wildly wrong about the rate the *other* one governs, and that is the whole of the interaction. Uniform lands near enough on repeats by pure accident — 1,858 used words out of 12,947 is 14.4% — so adding the repeat prior to it corrects a column that was not much wrong while leaving the 95.5% exactly where it was, which is why it buys nothing. Curation alone pulls that second column down to 32.4% and *creates* the repeat error in the act: confining the field to a 2,309-word list of which 1,812 are spent is implicitly a claim that the editor repeats himself two times in three. Only with both switched on is either rate right.
+
+Per word, that correction reads as a used word falling from **3.8×10⁻⁴** to **5.4×10⁻⁵** while a fresh curated word climbs from **3.9×10⁻⁴** to **1.6×10⁻³** — the 497 words the editor can still reach without repeating himself or leaving the list.
+
+It also prices the repeat arm, where curation alone beats the pair by **0.571 ± 0.213** on the 21 answers that really were repeats. That is what a calibrated prior costs rather than a fault in it: move a class from 71.3% down to 10.0% and you pay on the occasions it turns up, in exchange for the fresh arm's **+0.519 ± 0.032** across 81.1% of the regime. Any honest prior makes that trade.
+
+One caveat rides along with all four numbers. Each arm carries the `f` fitted for its own prior, as §6.1 says it must, so what is being compared is four *solvers* rather than four beliefs held by one solver. That is the honest comparison — a prior the estimator has not been fitted to is not a configuration anyone would ship — but it does mean a refit moves every row, and the four have to be refitted together or not at all.
 
 ## 7. Effective size: making a weighted set have a "count"
 

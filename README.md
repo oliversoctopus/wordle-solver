@@ -178,6 +178,25 @@ Both defaults of 0.10 are right for the current regime and roughly 10× and 4× 
 
 The two moves started together because the curated pool is running out: 1,812 of the 2,309 curated words are used, 497 remain, and fresh ones are consumed at ~334/year — about 1.5 years left. Going off-list and recycling old answers are the same editorial response to the same constraint. Extrapolating both upward is defensible on that basis, and 0.10 is a forward-looking number rather than a historical one.
 
+### What each prior is worth on real answers
+
+Everything above argues the two priors *from* the answer record; this measures them against it. `analysis/replay.py --all-priors` replays the 190 real puzzles of the current regime under all four combinations, rebuilding each prior from strictly earlier puzzles each day, and pairs every arm on the same answer. The pairing is the whole point: the tables in *Results* weight each row by the prior being judged, so a prior that concentrates on words it happens to solve quickly scores well by construction, whereas here the yardstick is the sequence the NYT actually published and no arm gets a say in it.
+
+| priors | mean | vs. both | on the 21 repeats | on the 15 off-list | on the other 154 |
+| --- | --- | --- | --- | --- | --- |
+| none | 3.9421 | +0.763 ± 0.060 | −0.095 ± 0.181 | +0.200 ± 0.200 | +0.935 ± 0.059 |
+| curation only | 3.5368 | +0.358 ± 0.059 | −0.571 ± 0.213 | +0.200 ± 0.145 | +0.500 ± 0.058 |
+| repeat only | 3.9000 | +0.721 ± 0.060 | −0.143 ± 0.232 | +0.067 ± 0.182 | +0.903 ± 0.056 |
+| **both** | **3.1789** | — | — | — | — |
+
+Read that first column against `priors.build_weights` rather than against intuition. Switching the curation prior off does not leave a uniform prior over the curated list; it leaves a uniform prior over all 12,947 words, non-answers included. The 0.405 ± 0.055 the column charges for the curation prior is therefore two things bundled — telling the solver the answer is probably a curated word at all, and the `wordlebot` shape concentrating the off-list remainder onto ~911 words — and nothing measured here separates them.
+
+**The two priors are strongly superadditive**, which the shapes below turn out not to be. Adding the repeat prior to a solver with no curation prior buys +0.042 ± 0.042 — nothing at all. Adding the same prior on top of the curation prior buys +0.358 ± 0.059. The interaction is **−0.316 ± 0.072**, and the three-arm blend agrees at −0.294 ± 0.046 — a wider view of the same data rather than an independent check, since its repeat arm is those same 21 events.
+
+The mechanism is calibration. Ask what rates each prior implies, against the 11.1% repeat rate and the 8.9% off-list rate the regime really shows: uniform implies 14.4% and 95.5%, curation alone 71.3% and 32.4%, repeat alone 10.0% and 95.5%, and both 10.0% and 10.0% (`analysis/regime.py`). Every prior but the last is wildly wrong about the rate the *other* one governs. Uniform lands near enough on repeats by accident — 1,858 used words in 12,947 is 14.4% — so the repeat prior corrects a column that was barely wrong and leaves the 95.5% untouched, which is why it buys nothing. Curation alone pulls that second column to 32.4% and creates the repeat error doing it, a 2,309-word list with 1,812 spent amounting to a prediction that the editor repeats himself two times in three. Only with both on is either rate right, and that is the whole of the interaction.
+
+That also prices the repeat arm, where `curation only` beats `both` by 0.571 ± 0.213 on the 21 answers that really were repeats. This is the ordinary cost of a calibrated prior, not a defect: a repeat averages 5.4e-5 under `--repeat-prob 0.10` against the 3.8e-4 it would hold as an ordinary curated word, and any prior that moves a class from 71.3% to 10.0% pays on the occasions the class turns up. What it buys is the fresh curated word rising from 3.9e-4 to 1.6e-3, worth +0.519 ± 0.032 across the 81.1% of the regime that is neither a repeat nor off-list.
+
 ### Sharpening the repeat prior
 
 By default `build_weights` spreads the repeat mass uniformly over all 1,858 used words, but the reuse is not uniform: 19 of the 21 repeats came from Wordle

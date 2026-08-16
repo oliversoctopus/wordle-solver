@@ -20,6 +20,7 @@ python analysis/loss_penalty.py --search      what the search adds, by its reach
 python analysis/loss_penalty.py --cost        what reaching further costs in time
 python analysis/loss_penalty.py --bound       why the pruning bound caps the penalty
 python analysis/replay.py           what the shapes are worth in guesses (slow)
+python analysis/replay.py --all-priors   what each prior is worth, on real answers
 python analysis/form_default.py     which form to fit by default (slower)
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
 python analysis/head_to_head.py     the shipped solver against the reference, game by game
@@ -29,7 +30,7 @@ python analysis/table_layout.py     both feedback-table layouts, kernel by kerne
 python analysis/fused_gain.py       what the answer-major dispatch is worth in games
 ```
 
-The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`, both arms over every word — cheap because the restriction it measures is also what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over the four priors and thirteen with `--decisions`, which plays out ten guesses at each position rather than one; `exact_decisions.py` is under a minute, since the positions it asks about are the small ones. `opening.py` is sixteen minutes for the two hundred openings it defaults to, about five seconds each, and `--every-word` holds that rate over all 12,947 — the best part of a day. `loss_penalty.py` is nine minutes for both sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and well under one for `--policies` and about half for `--search`; `--cost` is a timing probe rather than a measurement and takes about six, while `--bound` values a single ten-word family and is seconds. `replay.py` is 80 s over the regime's real games, `results_tables.py` about three minutes, and `form_default.py` ten, which makes it the slow one — it replays 45 fitted policies where the others replay one or two.
+The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`, both arms over every word — cheap because the restriction it measures is also what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over the four priors and thirteen with `--decisions`, which plays out ten guesses at each position rather than one; `exact_decisions.py` is under a minute, since the positions it asks about are the small ones. `opening.py` is sixteen minutes for the two hundred openings it defaults to, about five seconds each, and `--every-word` holds that rate over all 12,947 — the best part of a day. `loss_penalty.py` is nine minutes for both sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and well under one for `--policies` and about half for `--search`; `--cost` is a timing probe rather than a measurement and takes about six, while `--bound` values a single ten-word family and is seconds. `replay.py` is 80 s over the regime's real games and three minutes for `--all-priors`, which plays four arms where the default plays two; `results_tables.py` is about three minutes, and `form_default.py` ten, which makes it the slow one — it replays 45 fitted policies where the others replay one or two.
 
 `split_ranking.py` is under ten seconds, since the positions it looks at are the small ones and nothing is played out. `table_layout.py` is about four minutes and `fused_gain.py` under one. Those two are timing probes rather than measurements, as `loss_penalty.py --cost` and the second half of `split_ranking.py` are: they move with the machine and with what else is running on it, and not with the answer log, so a rerun after `solutions.py --write` is pointless. What they compare is two ways of arranging the same arithmetic, so read the ratios and not the milliseconds.
 
@@ -39,7 +40,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 
 | script | backs |
 | --- | --- |
-| `regime.py` | README *Both defaults describe a regime six months old*, SOLVER_EXPLAINED §4 |
+| `regime.py` | README *Both defaults describe a regime six months old*, SOLVER_EXPLAINED §4; its last block the implied-rate table in §6.4, which is why the two priors need each other |
 | `repeat_shapes.py` | README *Sharpening the repeat prior* table, SOLVER_EXPLAINED §5.1 |
 | `drift.py` | the closing paragraph of README *Sharpening the repeat prior* |
 | `curation_shapes.py` | SOLVER_EXPLAINED §5.2 including why the hedge is flat, the opening of README *Shaping the two priors* |
@@ -49,7 +50,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §16 |
 | `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §16 |
 | `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, its `--bound` the `-atch` values in SOLVER_EXPLAINED §12(c), SOLVER_EXPLAINED §12 and §14 |
-| `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows |
+| `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows; its `--all-priors` the whole of README *What each prior is worth on real answers* |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §13 |
 | `head_to_head.py` | README *Where the estimator's guesses come from* |
@@ -60,6 +61,8 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 ## Rerunning them
 
 Rerun after `solutions.py --write`. Every one of these numbers moves with the answer log, and nothing warns you: the estimator cache is keyed on the `PriorConfig` alone, so a stale fit is loaded silently. Refit before rerunning `replay.py` or it measures an old policy against new answers.
+
+`replay.py --dump PATH` writes every arm's per-game guess counts out as JSON, and `analysis/replay_all_priors.json` is the four-prior run the tables in README *What each prior is worth on real answers* are read off — 190 regime games plus the three arms' 21, 46 and 497 events, per arm, in 85 KB. Take a dump whenever you run the thing. `--all-priors` costs three minutes, and the file means a contrast nobody thought to print — a pair the tables skip, a subgroup split some other way — is arithmetic over it rather than another replay. It goes stale exactly when the run does, which is on a refit or a longer answer log, so replace it in the same change that moves the numbers.
 
 **Check the method before believing a changed number.** `repeat_shapes.py --events 18` scores only the first 18 repeats and should print the figures the README carried before the 2026-08-10 update — uniform −134.5, binned −116.1 at +18.4, α = 1.0 at −118.4, and +1.024 ± 0.235 nats/event at 4.4σ winning 14 of 18. If those still come out, a number that moved moved because the data did. `regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s uniform baseline (−9.27) are fixed points for the same reason.
 
@@ -75,6 +78,8 @@ Enumerating is usually the cheaper option too. The memos in `WordleSolver` and `
 
 `replay.py` is the exception that stays sampled, and for a good reason: it replays the *real* answer sequence, so its sample is a historical record rather than a draw from the prior. There is nothing to enumerate.
 
+That is also what lets its arms be compared across *different* priors, which no enumerated script can offer. An enumerated mean weights every word by the prior on trial, so two such rows answer the same question about two different populations and the gap between them means little — `results_tables.py` prints exactly that warning above its own prior table, and `head_to_head.py` states the weighting and leaves you to draw it. A replay scores every arm on the answers the NYT published, which none of them had a hand in choosing, so `--all-priors` is where the four combinations can be put side by side.
+
 `lookahead_accuracy.py` and `exact_decisions.py` sit between the two. Every value they report is exact — a position played out once per candidate answer — but which positions they visit, and how heavily each counts, comes from a sample of games. Their means carry a sampling error that the enumerated ones do not. The machinery is shared: `common.collect_positions`, `common.guess_value` and their neighbors are the one implementation both read.
 
 ## `replay.py` lost its uniform-shape arms
@@ -83,7 +88,7 @@ It used to compare the sharpened shapes against the uniform ones, which needed f
 
 ## What is not reproduced here
 
-`replay.py` is only comparable against itself. Its numbers depend on the fitted estimator as much as on the data, and every configuration's winning form moved in the 2026-08-10 refit, so its output cannot be diffed against a run from before that. The same holds for `form_default.py`: it scores the fits in `estimator_cache/forms/`, so a refit moves every row.
+`replay.py`'s arms are comparable to each other, but a run is not comparable to an older run. Its numbers depend on the fitted estimator as much as on the data, and every configuration's winning form moved in the 2026-08-10 refit, so its output cannot be diffed against a run from before that. The same holds for `form_default.py`: it scores the fits in `estimator_cache/forms/`, so a refit moves every row.
 
 `hard_mode.py` is the one that survives a refit, and it is worth knowing why: its two arms play the *same* `f`, so a refit moves both columns together and mostly cancels in the paired difference. Read the difference across refits; read the two means only against each other. `lookahead.py` does *not* get that protection even though it also pairs two arms on one fit: what it measures is how much room the base policy leaves above itself, so a better-fitted `f` shrinks it directly.
 
