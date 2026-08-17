@@ -1,7 +1,7 @@
-"""What one ply of width-limited lookahead is worth, per prior and blended.
+"""What one ply of branch-capped lookahead is worth, per prior and blended.
 
 The same answers are played twice, once with `--lookahead 0` and once with 1 at
-the default beam width, so the difference is paired.  Both arms read the fit
+the default branch cap, so the difference is paired.  Both arms read the fit
 cached for that prior: lookahead sits above `f` rather than replacing it, and is
 not part of the cache key.
 
@@ -17,7 +17,8 @@ import numpy as np
 
 import common
 from priors import PriorConfig
-from solver import DEFAULT_BEAM_WIDTH, EXPECTED, WordleSolver, sample_answers
+from solver import (DEFAULT_LOOKAHEAD_BRANCH, EXPECTED, WordleSolver,
+                    sample_answers)
 from wordle_data import load_data
 
 MAX_GUESSES = 6
@@ -25,7 +26,7 @@ MAX_GUESSES = 6
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--games", type=int, default=5000, help="answers per prior")
 parser.add_argument("--seed", type=int, default=4242)
-parser.add_argument("--width", type=int, default=DEFAULT_BEAM_WIDTH)
+parser.add_argument("--branch", type=int, default=DEFAULT_LOOKAHEAD_BRANCH)
 parser.add_argument("--shipped-only", action="store_true")
 args = parser.parse_args()
 
@@ -55,7 +56,7 @@ for config in configs:
     arms = {}
     for ply in (0, 1):
         solver = WordleSolver(data=data, config=config, mode=EXPECTED,
-                              lookahead=ply, beam_width=args.width)
+                              lookahead=ply, lookahead_max_branch=args.branch)
         start = time.perf_counter()
         arms[ply] = lengths_of(solver, answers)
         print(f"  ply {ply}: mean {arms[ply].mean():.4f}   "

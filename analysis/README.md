@@ -92,7 +92,7 @@ It used to compare the sharpened shapes against the uniform ones, which needed f
 
 `hard_mode.py` is the one that survives a refit, and it is worth knowing why: its two arms play the *same* `f`, so a refit moves both columns together and mostly cancels in the paired difference. Read the difference across refits; read the two means only against each other. `lookahead.py` does *not* get that protection even though it also pairs two arms on one fit: what it measures is how much room the base policy leaves above itself, so a better-fitted `f` shrinks it directly.
 
-Two claims in README *Lookahead* have no script: that width 25 measures no better, and that two plies costs 205 s for the opening position alone. Each needs a position sample as well as a method, and that sample was not kept.
+Two claims in README *Lookahead* have no script: that a branch cap of 25 measures no better, and that two plies costs 205 s for the opening position alone. Each needs a position sample as well as a method, and that sample was not kept.
 
 Three rows of the README *Shaping the two priors* table are history now, not output: `wordlebot` alone, `binned` alone, and the uniform baseline they are measured against. Reproducing them means fitting the three uniform-shape configurations again. That is a deliberate choice about what this repo ships, and not something a rerun should do behind your back.
 

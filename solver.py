@@ -27,7 +27,7 @@ DEFAULT_DEADLINE = 6
 DEFAULT_EXACT_MAX = 60
 
 # how many guesses the lookahead expands at each node it reaches
-DEFAULT_BEAM_WIDTH = 10
+DEFAULT_LOOKAHEAD_BRANCH = 10
 
 # cost of running out of turns, on top of the six spent; 1.0 is risk neutral
 DEFAULT_LOSS_PENALTY = 5.0
@@ -51,9 +51,11 @@ class WordleSolver:
     restricted to words that could actually be the answer, since information is
     worthless on the last turn.
 
-    ``lookahead`` puts a width-limited expectimax above that, expanding the best
-    ``beam_width`` guesses and scoring each by what its buckets are really worth
-    rather than by f alone.  It is off by default: one ply measures
+    ``lookahead`` puts an expectimax above that under a branch cap of its own,
+    expanding the best ``lookahead_max_branch`` guesses at each node and scoring
+    each by what its buckets are really worth rather than by f alone.  The cap
+    is a fan-out per node, not a frontier of fixed size, so a second ply
+    multiplies the work by the cap again.  It is off by default: one ply measures
     -0.0034 +- 0.0041 guesses over 20,000 paired games, which is nothing at 0.9
     sigma, for roughly 10x the wall clock, and two plies costs minutes per
     position.  See the README for the numbers.
@@ -73,8 +75,8 @@ class WordleSolver:
                  use_exact=True, exact_max=DEFAULT_EXACT_MAX,
                  loss_penalty=DEFAULT_LOSS_PENALTY,
                  exact_max_branch=DEFAULT_MAX_BRANCH, hard=False,
-                 lookahead=0, beam_width=DEFAULT_BEAM_WIDTH, beam_exact_max=None,
-                 fused=None, win_bonus=0.0):
+                 lookahead=0, lookahead_max_branch=DEFAULT_LOOKAHEAD_BRANCH,
+                 lookahead_exact_max=None, fused=None, win_bonus=0.0):
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
         if win_bonus and mode != ENTROPY:
@@ -102,15 +104,16 @@ class WordleSolver:
 
         self._codes, self._knots, self._base = self.form.arrays()
         self._memo = Memo(DEFAULT_MEMO_LIMIT)
-        self._beam_memo = Memo(DEFAULT_MEMO_LIMIT)
+        self._lookahead_memo = Memo(DEFAULT_MEMO_LIMIT)
 
         self.lookahead = int(lookahead)
-        self.beam_width = int(beam_width)
+        self.lookahead_max_branch = int(lookahead_max_branch)
         self.win_bonus = float(win_bonus)
         self.use_exact = use_exact
         self.exact_max = exact_max
         self.hard = bool(hard)
-        self.beam_exact_max = exact_max if beam_exact_max is None else int(beam_exact_max)
+        self.lookahead_exact_max = (exact_max if lookahead_exact_max is None
+                                    else int(lookahead_exact_max))
         # an answer-major copy of the table, or None to score the shipped way
         if fused is None:
             fused = fused_kernels.DEFAULT_ENABLED
@@ -132,7 +135,7 @@ class WordleSolver:
             self._codes, self._knots, self._base = self.form.arrays()
         self.params = np.asarray(params, dtype=np.float64)
         self._memo.clear()
-        self._beam_memo.clear()
+        self._lookahead_memo.clear()
 
     def reset_memo(self):
         """Drop the cached guesses, for a sweep playing many independent
@@ -145,7 +148,7 @@ class WordleSolver:
         the weights, so they stay valid and stay worth sharing.
         """
         self._memo.clear()
-        self._beam_memo.clear()
+        self._lookahead_memo.clear()
 
     def all_candidates(self):
         return self.data.all_candidates()
@@ -312,14 +315,14 @@ class WordleSolver:
         return out
 
     def _lookahead_value(self, candidates, turns, depth):
-        """Value of a position under the width-limited search."""
+        """Value of a position under the branch-capped search."""
         m = candidates.shape[0]
         if m == 1:
             return 1.0
         # the exact search gives a true value here, but the lookahead reaches
         # these sub-positions tens of thousands of times, so how far it is
         # allowed to reach *inside* the search is its own knob
-        if self._exact_applies(m, turns, cap=self.beam_exact_max):
+        if self._exact_applies(m, turns, cap=self.lookahead_exact_max):
             try:
                 value = self.exact.solve(candidates, turns)[1]
                 self.exact_hits += 1
@@ -332,24 +335,26 @@ class WordleSolver:
         return self._lookahead_guess(candidates, turns, depth)[1]
 
     def _lookahead_guess(self, candidates, turns, depth):
-        """``(guess, value)`` from expanding the best ``beam_width`` guesses and
-        scoring each by what its buckets are really worth.
+        """``(guess, value)`` from expanding the best ``lookahead_max_branch``
+        guesses and scoring each by what its buckets are really worth.
 
         Only the guess is pruned, never the feedback: dropping a bucket would
-        leave the sum something other than an expectation.
+        leave the sum something other than an expectation.  The cap therefore
+        limits the fan-out at this node alone, and every level below pays it
+        again.
         """
         key = (candidates.tobytes(), turns, depth)
-        hit = self._beam_memo.get(key)
+        hit = self._lookahead_memo.get(key)
         if hit is not None:
             return hit
 
         pool = self.guess_pool(candidates)
         scores = self.score_all(candidates, pool=pool)
-        beam = np.argsort(scores)[:self.beam_width]
+        branch = np.argsort(scores)[:self.lookahead_max_branch]
         total = float(self.weights[candidates].sum())
 
-        best_guess, best_value = self._row(pool, int(beam[0])), np.inf
-        for slot in beam:
+        best_guess, best_value = self._row(pool, int(branch[0])), np.inf
+        for slot in branch:
             guess = self._row(pool, int(slot))
             value = 1.0
             for mass, members in self._partition(guess, candidates):
@@ -361,7 +366,7 @@ class WordleSolver:
                 best_value, best_guess = value, guess
 
         result = (best_guess, float(best_value))
-        self._beam_memo.put(key, result)
+        self._lookahead_memo.put(key, result)
         return result
 
     def solved_exactly(self, candidates, guesses_left=None):

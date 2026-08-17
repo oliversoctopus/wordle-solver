@@ -46,7 +46,8 @@ import numpy as np
 
 import common
 from priors import PriorConfig
-from solver import DEFAULT_BEAM_WIDTH, EXPECTED, WordleSolver, sample_answers
+from solver import (DEFAULT_LOOKAHEAD_BRANCH, EXPECTED, WordleSolver,
+                    sample_answers)
 from wordle_data import load_data
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -54,15 +55,16 @@ parser.add_argument("--positions", type=int, default=60,
                     help="positions scored per prior")
 parser.add_argument("--games", type=int, default=400,
                     help="games drawn on to collect them from")
-parser.add_argument("--width", type=int, default=DEFAULT_BEAM_WIDTH)
+parser.add_argument("--branch", type=int, default=DEFAULT_LOOKAHEAD_BRANCH)
 parser.add_argument("--seed", type=int, default=4242)
 parser.add_argument("--shipped-only", action="store_true")
 parser.add_argument("--decisions", action="store_true",
                     help="rank the guesses within a position instead of scoring "
                          "the position")
-parser.add_argument("--top", type=int, default=DEFAULT_BEAM_WIDTH,
+parser.add_argument("--top", type=int, default=DEFAULT_LOOKAHEAD_BRANCH,
                     help="guesses played out per position under --decisions; at "
-                         "the default this is exactly the beam lookahead re-ranks")
+                         "the default these are exactly the ones the lookahead "
+                         "re-ranks")
 args = parser.parse_args()
 
 data = load_data()
@@ -127,7 +129,7 @@ for config in configs:
     common.header(config.slug)
     base = WordleSolver(data=data, config=config, mode=EXPECTED)
     look = WordleSolver(data=data, config=config, mode=EXPECTED,
-                        lookahead=1, beam_width=args.width)
+                        lookahead=1, lookahead_max_branch=args.branch)
 
     answers = sample_answers(base.weights, args.games, seed=args.seed)
     found, counts = common.collect_positions(base, answers, heuristic_decides)

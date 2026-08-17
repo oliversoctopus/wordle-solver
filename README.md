@@ -421,17 +421,17 @@ Between the penalty and the wider reach, the loss probability falls from 0.1198%
 
 ## Lookahead (`--lookahead`, off by default)
 
-Above the exact search sits an optional width-limited expectimax. Only the guess is pruned, never the feedback — dropping a bucket would leave the sum something other than an expectation:
+Above the exact search sits an optional expectimax with a branch cap of its own. Only the guess is pruned, never the feedback — dropping a bucket would leave the sum something other than an expectation:
 
 ```
-V_d(S, t) = min over the best `--beam-width` guesses of
+V_d(S, t) = min over the best `--lookahead-branch` guesses of
             [ 1 + sum_{r != GGGGG} p_r · V_{d-1}(S_r, t-1) ]
 V_0(S, t) = min_g E(g, S)
 ```
 
-with the exact search taking any sub-position it can reach. `--beam-width` is a fan-out at each node rather than a frontier held to a constant size, which makes this an expectimax with its guesses pruned and not a beam search: a second ply multiplies the work by the width again, and that is where the 205 s below comes from.
+with the exact search taking any sub-position it can reach. This is the exact search's `--exact-branch` device one level up: a fan-out at each node rather than a frontier held to a constant size, so every kept guess expands into every one of its buckets and each further ply multiplies the work by the cap again. That growth, not a constant factor, is where the 205 s below comes from.
 
-Over 20,000 paired games (5,000 per prior, identical answers, `analysis/lookahead.py`), one ply at width 10 is worth **−0.0034 ± 0.0041** guesses — 0.9σ, which is to say nothing at all, for roughly 10× the wall clock. What little there is sits on the flat no-priors case at −0.0094 ± 0.0080; under the shipped prior it reads +0.0012 ± 0.0050, slightly the wrong way. Width 25 measured no better, the opening word stays `salet` at every width from 5 to 40, and two plies costs 205 s for the opening position alone.
+Over 20,000 paired games (5,000 per prior, identical answers, `analysis/lookahead.py`), one ply at a cap of 10 is worth **−0.0034 ± 0.0041** guesses — 0.9σ, which is to say nothing at all, for roughly 10× the wall clock. What little there is sits on the flat no-priors case at −0.0094 ± 0.0080; under the shipped prior it reads +0.0012 ± 0.0050, slightly the wrong way. A cap of 25 measured no better, the opening word stays `salet` at every cap from 5 to 40, and two plies costs 205 s for the opening position alone.
 
 Its value is not a fixed property of the solver: what lookahead measures is the room the base policy leaves above itself, so refitting `f` takes it away. This was worth a real −0.0158 ± 0.0038 under the forms that shipped before the 2026-08-10 refit.
 

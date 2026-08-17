@@ -43,8 +43,9 @@ import kernels
 import wording
 from exact import DEFAULT_MAX_BRANCH
 from priors import PriorConfig, regime_stats
-from solver import (DEFAULT_BEAM_WIDTH, DEFAULT_EXACT_MAX, DEFAULT_LOSS_PENALTY,
-                    ENTROPY, EXPECTED, MODES, WordleSolver)
+from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
+                    DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED, MODES,
+                    WordleSolver)
 # the terminal game's answer-drawing and emoji grid, so both front ends deal
 # the same answers and print the same thing at the end
 from wordle_game import TILE_BLOCK, pick_random_answer
@@ -869,10 +870,13 @@ def build_parser():
                         help="splits the exact search tries per position (default "
                              "%(default)s; 0 tries every one)")
     parser.add_argument("--lookahead", type=int, default=0,
-                        help="plies of width-limited lookahead (default %(default)s, "
+                        help="plies of branch-capped lookahead (default %(default)s, "
                              "off); 1 costs roughly 10x the wall clock per guess")
-    parser.add_argument("--beam-width", type=int, default=DEFAULT_BEAM_WIDTH,
-                        help="guesses expanded per position when --lookahead is on")
+    parser.add_argument("--lookahead-branch", type=int,
+                        default=DEFAULT_LOOKAHEAD_BRANCH,
+                        help="guesses expanded per position when --lookahead is on; "
+                             "a fan-out at each node, so a second ply multiplies "
+                             "the work by it again")
     parser.add_argument("--loss-penalty", type=float, default=DEFAULT_LOSS_PENALTY,
                         help="cost of running out of turns, on top of the six spent "
                              "(default %(default)s; 1.0 is risk neutral)")
@@ -889,7 +893,7 @@ def solver_options(args):
         "loss_penalty": args.loss_penalty,
         "exact_max_branch": None if args.exact_branch <= 0 else args.exact_branch,
         "lookahead": args.lookahead,
-        "beam_width": args.beam_width,
+        "lookahead_max_branch": args.lookahead_branch,
     }
 
 

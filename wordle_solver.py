@@ -21,8 +21,9 @@ import estimator
 import train as training
 from exact import DEFAULT_MAX_BRANCH
 from priors import ALL_CONFIGS, CURATION_SHAPES, REPEAT_SHAPES, PriorConfig
-from solver import (DEFAULT_BEAM_WIDTH, DEFAULT_EXACT_MAX, DEFAULT_LOSS_PENALTY,
-                    ENTROPY, EXPECTED, MODES, WordleSolver)
+from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
+                    DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED, MODES,
+                    WordleSolver)
 from wordle_data import WIN_PATTERN, feedback_to_num, load_data
 
 MAX_GUESSES = 6
@@ -56,7 +57,7 @@ def solver_kwargs(args):
         # training under the restriction would overwrite the ordinary fit
         "hard": getattr(args, "hard", False),
         "lookahead": args.lookahead,
-        "beam_width": args.beam_width,
+        "lookahead_max_branch": args.lookahead_branch,
     }
 
 
@@ -267,14 +268,17 @@ def build_parser():
                              "which is provably optimal but can take tens of seconds "
                              "on a hard position")
     common.add_argument("--lookahead", type=int, default=0,
-                        help="plies of width-limited lookahead above the exact "
+                        help="plies of branch-capped lookahead above the exact "
                              "search (default %(default)s, off).  1 measures "
                              "-0.0034 +- 0.0041 guesses, which is nothing, for "
                              "~10x the wall clock; 2 is not affordable")
-    common.add_argument("--beam-width", type=int, default=DEFAULT_BEAM_WIDTH,
+    common.add_argument("--lookahead-branch", type=int,
+                        default=DEFAULT_LOOKAHEAD_BRANCH,
                         help="guesses expanded per position when --lookahead is on "
-                             "(default %(default)s; widening to 25 measured no "
-                             "better)")
+                             "(default %(default)s; a cap of 25 measured no "
+                             "better).  It is a fan-out at each node, as "
+                             "--exact-branch is, so a second ply multiplies the "
+                             "work by it again")
     common.add_argument("--loss-penalty", type=float, default=DEFAULT_LOSS_PENALTY,
                         help="cost of running out of turns, on top of the six spent, so "
                              "1.0 scores a lost game as 7 and is risk neutral "
