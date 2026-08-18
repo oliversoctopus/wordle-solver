@@ -47,6 +47,10 @@ The whole solver sits behind one lock. Scoring ~13k guesses already uses every c
 
 Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted` rather than inventing an `f`, so a prior combination assembled on the fly needs `train --this-config-only` first — the exception's message spells the command out. Entropy mode needs no fit and runs on anything.
 
+**The solver is being ported to Rust**, so it can compile to WASM behind a free static site and to a native binary that gives the sweeps back the ~79% of whole-game time that is not in the kernels. `cargo build --release`, or `./build.sh` since rustup was installed without touching PATH. The Python stays the oracle throughout and keeps `estimator.fit`, `answer_like.py`, the two fetchers and all of `analysis/`'s reporting; nothing is deleted until the Rust matches it in `tests/rust_parity.py`.
+
+Do not enable `-ffast-math` or any Rust equivalent. Letting the compiler reassociate the bucket reduction reorders a store ahead of a load and every bucket maximum reads back zero; `kernels.py` records what that looked like.
+
 ## The pieces
 
 | file | what it is |
@@ -71,6 +75,8 @@ Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
 | `solutions.py` | brings `solutions.json` up to date from the NYT |
 | `word_lists.py` | refetches `wordles.json` and `nonwordles.json` |
 | `analysis/` | the scripts behind every measured number in the two documents |
+| `core/` | the Rust port of the solver, in progress; compiles to WASM and to a native binary |
+| `native/` | Rust binaries the analysis scripts drive, and the parity checks against the Python |
 
 ## Where the data comes from
 
@@ -118,7 +124,7 @@ Every measured claim about the priors is reproduced by a script in `analysis/`, 
 
 ## Testing
 
-`tests/` holds seven files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, whether every pointer into the documents still resolves, and whether the C++ core agrees with the Python it was ported from.
+`tests/` holds seven files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, whether every pointer into the documents still resolves, and whether the Rust core agrees with the Python it was ported from.
 
 **Nothing there asserts a number written down by hand, and nothing new should.** Each check has an oracle instead: the other front end, the answer record, or a property that holds of every board. A figure copied into a test is a fourth place for it to go stale, and there are three already.
 

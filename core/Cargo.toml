@@ -1,0 +1,8 @@
+[package]
+name = "wordle_core"
+version = "0.1.0"
+edition = "2021"
+
+# Named wordle_core rather than core, which is taken by the standard library.
+# No dependencies, and the WASM build depends on it staying that way.
+[dependencies]

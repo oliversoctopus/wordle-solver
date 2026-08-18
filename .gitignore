@@ -2,8 +2,8 @@
 __pycache__/
 *.pyc
 
-# what build.sh produces; every artifact is rebuilt from core/ and native/
-build/
+# what cargo produces; every artifact is rebuilt from core/ and native/
+target/
 
 # 167 MB, and feedback_table.py rebuilds it from the two word lists.  The rest
 # of data/derived/ is a few hundred KB of index maps and is kept: they are what

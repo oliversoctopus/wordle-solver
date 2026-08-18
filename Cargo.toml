@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = ["core", "native"]
+
+# The solver is memory-bound at its hottest, so what matters here is that LLVM
+# can see across the whole core rather than that it unrolls harder.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+# No fast-math equivalent is enabled anywhere, and none should be.  Letting the
+# compiler reassociate the bucket reduction reorders a store ahead of a load and
+# every bucket maximum reads back zero; kernels.py records what that looked like.

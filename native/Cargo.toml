@@ -1,0 +1,9 @@
+[package]
+name = "wordle_native"
+version = "0.1.0"
+edition = "2021"
+
+# The binaries the analysis scripts drive, and the parity checks that hold the
+# port to the Python.  Everything real lives in wordle_core.
+[dependencies]
+wordle_core = { path = "../core" }

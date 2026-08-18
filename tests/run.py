@@ -30,8 +30,8 @@ SLOW = [
      [sys.executable, os.path.join(HERE, "splits.py")]),
     ("the scoring rules are what they claim",
      [sys.executable, os.path.join(HERE, "scoring.py")]),
-    ("the C++ core agrees with the Python",
-     [sys.executable, os.path.join(HERE, "cpp_parity.py")]),
+    ("the Rust core agrees with the Python",
+     [sys.executable, os.path.join(HERE, "rust_parity.py")]),
 ]
 
 

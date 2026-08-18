@@ -66,9 +66,9 @@ The headings are the oracle, so nothing here is written down by hand. A referenc
 
 What it cannot do is tell you a reference points at the *right* section, only that it points at a real one. A pointer that survives a renumbering by landing on the wrong existing section still passes.
 
-## `cpp_parity.py` — the C++ core agrees with the Python it came from
+## `rust_parity.py` — the Rust core agrees with the Python it came from
 
-The solver is being ported to C++ so it can compile to WASM for a static site and to a native binary for the sweeps. This runs each ported piece against the Python it replaces, on the same inputs, and diffs. It skips rather than fails when nothing is built, so a checkout without a compiler still runs the rest; `./build.sh` builds it.
+The solver is being ported to Rust so it can compile to WASM for a static site and to a native binary for the sweeps. This runs each ported piece against the Python it replaces, on the same inputs, and diffs. It skips rather than fails when nothing is built, so a checkout without a toolchain still runs the rest; `cargo build --release` builds it, and `./build.sh` does the same when cargo is not on your PATH.
 
 The coloring rule has a complete oracle and gets the strongest check there is: every one of the 12,947² pairs must equal `feedback_table.npy`, which is the file the Python rule generated. There is nothing about the rule left over once all 167,624,809 agree.
 
