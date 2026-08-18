@@ -5,7 +5,7 @@ python tests/run.py           a few seconds, needs nothing loaded
 python tests/run.py --full    also the parts that load the 167 MB table
 ```
 
-Six files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
+Seven files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
 
 None of them assert numbers written down by hand. Each has something else to check against — the second implementation, the answer record, or a property that holds of every board there is — because a number copied into a test is a fourth place for it to go stale, and `README.md` § *Numbers in the documents* already has three.
 
@@ -65,6 +65,14 @@ The documents cross-reference each other, `analysis/README.md` pairs each script
 The headings are the oracle, so nothing here is written down by hand. A reference names its heading — `README *Results*` — and matches on a prefix, since a pointer often quotes a heading's opening words rather than all of it. SOLVER_EXPLAINED is also numbered, so a section sign or the word *section* followed by a number resolves against that numbering instead. Whitespace is collapsed first, which is the part that matters: Python is hard-wrapped, so a title in a docstring is routinely split across a line break, and a line-oriented `grep` misses exactly the references hardest to find by hand.
 
 What it cannot do is tell you a reference points at the *right* section, only that it points at a real one. A pointer that survives a renumbering by landing on the wrong existing section still passes.
+
+## `cpp_parity.py` — the C++ core agrees with the Python it came from
+
+The solver is being ported to C++ so it can compile to WASM for a static site and to a native binary for the sweeps. This runs each ported piece against the Python it replaces, on the same inputs, and diffs. It skips rather than fails when nothing is built, so a checkout without a compiler still runs the rest; `./build.sh` builds it.
+
+The coloring rule has a complete oracle and gets the strongest check there is: every one of the 12,947² pairs must equal `feedback_table.npy`, which is the file the Python rule generated. There is nothing about the rule left over once all 167,624,809 agree.
+
+Needs the table, so `run.py` keeps it behind `--full`.
 
 ## `fit_provenance.py` — the fitted `f` is a fit of the record we have
 
