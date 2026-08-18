@@ -72,6 +72,10 @@ The solver is being ported to Rust so it can compile to WASM for a static site a
 
 The coloring rule has a complete oracle and gets the strongest check there is: every one of the 12,947² pairs must equal `feedback_table.npy`, which is the file the Python rule generated. There is nothing about the rule left over once all 167,624,809 agree.
 
+The prior weights are compared per configuration, the Rust writing raw little-endian f64 and the Python diffing with numpy — a vector of 12,947 floats is one line to compare there and a parser to get wrong here. They agree **exactly**, every weight bit for bit, which takes reproducing numpy's pairwise summation rather than adding left to right; a naive loop lands about 1e-13 out. `core/src/sum.rs` has the shape of it, and why only the places the Python reaches for `np.sum` want it — the kernels accumulate one candidate at a time and must keep doing exactly that.
+
+The tolerance is still 1e-12 rather than zero. Exactness here is a property of two implementations that happen to agree, not something either side promises, and a check that fails on the last bit would eventually fail for a reason nobody cares about.
+
 Needs the table, so `run.py` keeps it behind `--full`.
 
 ## `fit_provenance.py` — the fitted `f` is a fit of the record we have

@@ -8,8 +8,14 @@
 //! `README.md` is the reference for what the solver does and
 //! `SOLVER_EXPLAINED.md` derives why it is built this way.
 
+pub mod data;
 pub mod feedback;
+pub mod json;
+pub mod priors;
+pub mod sum;
 pub mod words;
 
+pub use data::WordleData;
 pub use feedback::{score_guess, N_PATTERNS, WIN_PATTERN, WORD_LEN};
+pub use priors::{build_weights, PriorConfig};
 pub use words::WordList;
