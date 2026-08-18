@@ -76,6 +76,12 @@ The prior weights are compared per configuration, the Rust writing raw little-en
 
 `f` is checked over a grid of `x` twice per form: once on synthetic coefficients, which reaches bases no fit happens to use, and once on the fit the repository actually cached, which is what really gets played. `effective_size` goes over the leading weights of each prior at sizes either side of the kernels' 128-candidate branch. All of it agrees exactly too, `2 ** -x` and `log2` and `sqrt` included.
 
+The kernels are driven over candidate sets **Python** builds, so a disagreement is always about the scoring and never about the inputs. They straddle both thresholds that change how a kernel behaves — 127/128/129 candidates either side of the reduce's `_RESCAN_MAX`, and 7/8 either side of the packed signature's `MAX_PACKED` — and three of them are real positions left by playing a word rather than the first n indices, which is not the same shape at all.
+
+The split helpers are compared **in order**, not as sets. `distinct_partitions` decides which word represents a split and therefore the order the exact search tries them in, so under a branch cap a different order is a different search.
+
+The Rust side also checks its two feedback sources against each other before trusting either: the table the native build fills, and the live scoring the browser build uses instead. If those ever diverged the site and the sweeps would be playing different games.
+
 The tolerance is still 1e-12 rather than zero. Exactness here is a property of two implementations that happen to agree, not something either side promises, and a check that fails on the last bit would eventually fail for a reason nobody cares about.
 
 Needs the table, so `run.py` keeps it behind `--full`.
