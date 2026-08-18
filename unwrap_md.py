@@ -1,6 +1,6 @@
 """Rewrite Markdown as one line per paragraph, and check that it stays that way.
 
-Every `.md` file here is unwrapped; see CLAUDE.md's *Wrap width* rule for why.
+Every `.md` file here is unwrapped; CLAUDE.md's *Conventions* say why.
 Run with no arguments to report which files still hold a wrapped paragraph, and
 with ``--write`` to convert them.  Verifying by default is the same bargain
 ``word_lists.py`` and ``solutions.py`` strike: this rewrites files by hand-edited

@@ -123,7 +123,7 @@ It was rewritten end to end to undo that. These are the rules that undid it, and
 
 **Say what is true now, in the place it belongs.** When a number moves, edit the sentence that carries it. Do not add a paragraph saying it moved. If two paragraphs disagree, one of them is a patch and should not exist.
 
-**Keep superseded numbers only where the contrast is the lesson.** The possible-answer bonus growing 0.46 → 0.56 as the prior sharpens is evidence for §16's thesis, so it stays — as a clause, inside the current statement. "An earlier version of this table reported −8.08" teaches nothing and goes. The test: does the old number explain something about the solver, or only about the repo?
+**Keep superseded numbers only where the contrast is the lesson.** The possible-answer bonus growing +0.051 → +0.633 as the prior sharpens is evidence for §16's thesis, so it stays — as a clause, inside the current statement. "An earlier version of this table reported −8.08" teaches nothing and goes. The test: does the old number explain something about the solver, or only about the repo?
 
 **Never let the document talk about itself.** No "the claim this section used to make is dead", no "this section has been updated", no dates of revision. Where the project was wrong and the error is instructive — §6.3's superadditivity, §6.1's `sqrt` trap, the `fastmath` bug in §8 — tell it as something that happened to the *project*, in the past tense, as part of the argument. The reader should never be made aware they are reading a file with a git history.
 

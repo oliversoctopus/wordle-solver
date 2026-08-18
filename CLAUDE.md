@@ -20,7 +20,7 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 **Point at code by name, never by line number.** `priors.build_weights`, not `priors.py:221`. Line references go stale on the next edit and nothing checks them; a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted. A `module.function` name is stable, greppable, and fails loudly instead of quietly when the symbol is renamed.
 
-**Line endings are LF, everywhere, including `web/`.** They were mixed until 2026-08-10 and the rule that described them ("CRLF in `web/`") was never true of either side of that line; the whole tree is normalized now.
+**Line endings are LF, everywhere, including `web/`.** The whole tree is normalized, so a CRLF file is a regression rather than a local convention.
 
 Write JSON through `wordle_data.write_json`, which handles this. Anything else that rewrites a file must pass `newline=""` to `open` — Python's text mode writes CRLF on Windows, so without it every line of the file changes and the real edit disappears into a whole-file diff.
 
@@ -60,6 +60,8 @@ Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
 | `train.py` | policy iteration that fits `f` |
 | `priors.py` | the repeat and curation priors |
 | `wordle_data.py` | word lists, feedback scoring, the table |
+| `wordle_solver.py` | the terminal front end: `play`, `train`, `benchmark`, `compare`, `info` |
+| `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer |
 | `web.py` | the HTTP server and JSON API |
 | `web/app.js` | the whole page |
 | `wording.py` | the `/editor` string scanner |
@@ -112,7 +114,7 @@ Patterns cross the wire as either `"NYGNN"` or `[0, 1, 2, 0, 0]`; the server tak
 
 Every measured claim about the priors is reproduced by a script in `analysis/`, and the claims move with `solutions.json` — rerun after `solutions.py --write`, and refit before rerunning `analysis/replay.py` or it measures a stale policy against fresh answers. Nothing warns you: the estimator cache is keyed on the `PriorConfig` alone, so a fit made against a shorter answer log loads silently.
 
-`analysis/repeat_shapes.py --events 18` is the method check. It scores only the first 18 repeats and should print what the README carried before 2026-08-10 — uniform −134.5, binned −116.1. If that still holds, a number that moved moved because the data did, not because the analysis drifted.
+`analysis/repeat_shapes.py --events 18` is the method check: it scores a frozen 18 repeats, so what it prints should not move at all. `analysis/README.md` § *Rerunning them* carries those figures and the other two fixed points, and is the only place they are written down — quote them from there rather than copying them here, and never read one of them back as though it were the live number the same script prints without `--events`.
 
 ## Testing
 

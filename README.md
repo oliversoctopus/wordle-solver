@@ -128,14 +128,17 @@ Nothing to install: the server is `http.server` and the page is three static fil
 | `wordle_data.py` | word lists, the feedback table, past solutions, tile/pattern conversion |
 | `priors.py` | `PriorConfig` and the prior over answers it produces |
 | `kernels.py` | numba scorers over all ~13k guesses: information gain, E(g, S), two-turn value |
+| `fused_kernels.py` | the same scores off an answer-major copy of the table; opt-in, and a speed knob only |
 | `estimator.py` | the forms of f(n), their least-squares fit, and the parameter cache |
 | `exact.py` | exact endgame search, used wherever it is affordable |
+| `memo.py` | the bounded LRU the solver and the search cache positions in |
 | `solver.py` | `WordleSolver`: pick a guess, apply feedback, play a game out |
 | `train.py` | policy iteration, self-play evaluation, form comparison |
 | `wordle_solver.py` | command line front end |
 | `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer |
 | `web.py`, `web/` | both of the above in a browser, plus the word finder: stdlib HTTP server and a static page |
 | `wording.py` | finds every string the site says, so `/editor` can rewrite any of it |
+| `unwrap_md.py` | checks that every `.md` is one line per paragraph; `--write` converts |
 | `wordle_solver.ipynb` | the analysis behind the prior probabilities |
 | `data/`, `data/derived/` | the word lists and answer record; everything `feedback_table.py` regenerates |
 | `feedback_table.py` | one-off: builds `feedback_table.npy` from the word lists |
@@ -144,7 +147,7 @@ Nothing to install: the server is `http.server` and the page is three static fil
 | `word_lists.py` | one-off: refetches `wordles.json` and `nonwordles.json` upstream |
 | `analysis/` | the measurement scripts behind every number in the prior sections below |
 
-The last three verify against the file they would write and do nothing unless passed `--write`, since each one rewrites something the solver reads. `feedback_table.py` predates that rule and rebuilds in place as soon as it is run — or imported.
+`answer_like.py`, `solutions.py` and `word_lists.py` verify against the file they would write and do nothing unless passed `--write`, since each one rewrites something the solver reads. `feedback_table.py` predates that rule and rebuilds in place as soon as it is run — or imported.
 
 ## The two priors
 
@@ -199,9 +202,7 @@ That also prices the repeat arm, where `curation only` beats `both` by 0.571 ± 
 
 ### Sharpening the repeat prior
 
-By default `build_weights` spreads the repeat mass uniformly over all 1,858 used words, but the reuse is not uniform: 19 of the 21 repeats came from Wordle
-#1–#297 (median #116), with only `sandy` (#1227) and `smile` (#831) outside — a
-10% outlier rate, too high to zero out.
+By default `build_weights` spreads the repeat mass uniformly over all 1,858 used words, but the reuse is not uniform: 19 of the 21 repeats came from Wordle #1–#297 (median #116), with only `sandy` (#1227) and `smile` (#831) outside — a 10% outlier rate, too high to zero out.
 
 Scored prequentially — each model predicts repeat *i* from repeats 1…*i−1* only, so no parameter ever sees the point it is scored on:
 
@@ -537,7 +538,7 @@ The table divides where the opening word does. The top three are separated by 0.
 
 The loss column is the one place greedy entropy wins, and it wins by a lot: see *Losing less* for why the estimator's two thirds of a guess costs seven times the loss rate.
 
-**`IG + 2·p_win` is the second reference**, and the only row that is neither a fitted curve nor a plain greedy rule (`WordleSolver(win_bonus=...)`). It scores information gain and then pays a guess that could itself be the answer two bits for the chance that it is. Two exact facts fix that price with no data at all: one candidate takes one guess and two take 1.5, so a bit of information is worth half a guess, and winning outright saves a whole one — two bits' worth. `SOLVER_EXPLAINED.md` §13 has why a policy of that shape is what a straight-line `f` collapses to. It is a reference and deliberately not the baseline: it buys **0.632 guesses** over greedy entropy with nothing fitted, and pays for them with twelve times the loss rate, which is the trade *Losing less* is about. Greedy entropy stays the baseline because it makes no such bet.
+**`IG + 2·p_win` is the second reference**, and the only row that is neither a fitted curve nor a plain greedy rule (`WordleSolver(win_bonus=...)`). It scores information gain and then pays a guess that could itself be the answer two bits for the chance that it is. Two exact facts fix that price with no data at all: one candidate takes one guess and two take 1.5, so a bit of information is worth half a guess, and winning outright saves a whole one — two bits' worth. `SOLVER_EXPLAINED.md` §9 has why a policy of that shape is what a straight-line `f` collapses to. It is a reference and deliberately not the baseline: it buys **0.632 guesses** over greedy entropy with nothing fitted, and pays for them with twelve times the loss rate, which is the trade *Losing less* is about. Greedy entropy stays the baseline because it makes no such bet.
 
 What separates the groups is **concavity in x**, not fit quality: `anchored2` has the worst fit RMSE of any form (0.70 against `invonly`'s 0.49) and still beats the five forms below it. With `f` exactly linear in x,
 

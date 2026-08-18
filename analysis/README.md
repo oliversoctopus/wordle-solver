@@ -52,7 +52,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, its `--bound` the `-atch` values in SOLVER_EXPLAINED §12(c), SOLVER_EXPLAINED §12 and §14 |
 | `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows; its `--all-priors` the whole of README *What each prior is worth on real answers* |
 | `form_default.py` | README *Which form is the default* |
-| `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §13 |
+| `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §9 |
 | `head_to_head.py` | README *Where the estimator's guesses come from* |
 | `split_ranking.py` | README *Alternatives* under the web page, and the runners-up paragraph closing *The exact endgame* |
 | `table_layout.py` | SOLVER_EXPLAINED §8 *Storing the table the other way round*, the per-kernel figures |
