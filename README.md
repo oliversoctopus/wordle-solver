@@ -15,112 +15,6 @@ python wordle_solver.py play --no-curation-prior --mode entropy
 python wordle_solver.py train --this-config-only --no-repeat-prior --form saturating
 ```
 
-## Playing it yourself
-
-```
-python wordle_game.py                  menu: type an answer, or draw one from a prior
-python wordle_game.py --answer crane   play against a known answer
-python wordle_game.py --random         draw the answer from the prior
-```
-
-During a game, `?` shows the solver's recommendation (Enter accepts it) and `quit` gives up. `--assist` shows it every turn, `--auto` hands the game over, and `--seed` makes a `--random` answer reproducible. The game only reads the word lists — the 167 MB feedback table is loaded lazily, and only for a hint.
-
-The board is recapped at the end as colored blocks. `--share` adds the emoji grid underneath it, which is the one worth pasting somewhere else.
-
-## In a browser
-
-```
-python web.py                 serve on http://127.0.0.1:8000 and open a browser
-python web.py --port 9000     somewhere else
-python web.py --no-browser    do not open one
-```
-
-Both terminal front ends are there, plus one thing that has no terminal equivalent. The group beside *Settings* says which of the three the page is doing. It marks where you are, not where the button will take you.
-
-**Solve** is `wordle_solver.py play`. You enter the feedback by coloring tiles instead of typing `NYGNN`, and the prior toggles, `--mode`, `--form` and `--hard` all become switches. *Shape of f* leaves the choice to the cache by default and marks which form that is, since the winning form is fitted per prior and moves with the toggles. Alongside the board is a panel of alternatives and still-possible candidates, with the prior, the objective and the fitted f under *Advanced*. Each of those comes with an explanation of what it is doing, and the rates quoted in it are measured from `solutions.json` at the moment the board is built. Nothing is written into the page, so the explanation can't fall behind the answer record the way a sentence quoting "about 10%" would. The count runs one puzzle behind the table in *Both defaults describe a regime six months old* below: the server drops the last entry of `solutions.json` (`--mask-last`, default 1) to keep today's answer out of the solver's prior while you are solving today's puzzle.
-
-**Play** is `wordle_game.py`. The *Answer* box takes a word of your own, which is the quickest way to set the solver a position, and it is the only setting that deals a new game — an answer already dealt cannot be given a different one. *Hint* is the terminal game's `?` and presses again to close, the *Assist* switch is `--assist` (Enter then plays its pick, which is `--auto`), *Reveal answer* is `quit`, and the emoji grid at the end is `--share`. The answer stays on the server until the game is over, so the network traffic does not spoil it.
-
-The panel beside the board holds three cards, and all three fold away. They start closed.
-
-*Solver's pick* holds the word the solver would play here and its score. *Alternatives* holds the next four behind it; clicking one of those words puts it in the row you are typing. Both cards open when you turn *Assist* on, and both open when you press *Hint*. Neither is ever closed for you, so a card you opened with *Assist* off is still open on your next turn.
-
-Those five are five different *guesses*, which late in a game is not the same as five different words. Once few candidates remain, many words give identical feedback against every one of them, and a ranking of words is then one guess spelled several ways: at four candidates or fewer the five best words are 4.6 different guesses, each standing for two hundred-odd others (`analysis/split_ranking.py`). So the ranking names one word per distinct split, and a `+3` beside it opens the rest of that split as chips — play any of them instead and the game goes exactly as it would have. A word that could itself be the answer never has any, since only it comes back all green. The pick carries the same list, under the score.
-
-*Letter frequency* sits above those two and *Assist* doesn't touch it. You open and close it yourself, and it stays as you left it for the rest of the game. Each letter carries the chance that the answer contains it somewhere: the prior's weight on the remaining candidates that hold the letter, over the prior's weight on all of them. On an empty board E is at the top with about 40%. Vowels are listed above the other letters.
-
-The prior doing the weighting is the one the answer was drawn from, not the one the switches currently name, so turning a prior off mid-game rethinks the hint but leaves these numbers alone. A letter that no remaining candidate holds drops off the list, since 0% says nothing the gray keys have not said already. Letters at 100% stay and sort to the top, so late in a game the list opens with the ones the answer is known to contain.
-
-**Find** is the page's own, and it runs backwards from everything else here. The answer is known and the guess is the unknown. Type an answer, color the pattern that a guess came back as, and you get every word in the list that would have produced that pattern against that answer. It is the question you ask of somebody else's share grid. Neither row describes the other. That is why there is no ghost word and nothing is grayed out, and why a gray tile in the pattern is a color rather than an empty tile waiting for a letter.
-
-The match itself is exact and immediate, since the answer is one column of the feedback table and finding the words is a comparison over it instead of a scoring pass. The three numbers each word carries take more work:
-
-* **Words left** is how many candidates would survive that guess *given this pattern*, so it ranks the words with hindsight — smallest first is what would have told you the most about this particular answer.
-* **Bits** is expected information gain, averaged over every answer the guess could have faced. It does not depend on the pattern at all, so it ranks the words as openings instead.
-* **Chance** is the prior's own probability that the guess is itself the answer.
-
-The last two move with the prior switches. Nothing else on the page reaches the finder at all, which is why the mode, the shape of f and hard mode are hidden while it is showing. The finder never asks for a guess, needs no fitted `f`, and works under any prior.
-
-| key | solve | play | find |
-| --- | --- | --- | --- |
-| A–Z | write a letter into the selected tile | write a letter | write a letter of the answer |
-| ← → | move along the row | move along the row | move along the row |
-| ↑ ↓ | move between rows, never past the row being played | — | move between the answer and the pattern |
-| Space | change the selected tile: gray → yellow → green | — | change the selected pattern tile |
-| Enter | on an empty row take the suggestion, otherwise submit | guess, or play the solver's pick when it is showing | find every word that fits |
-
-Going back up to an earlier row and correcting it is the point of ↑. Every submit sends the whole board, so a tile fixed four rows up re-runs the solver from there. You never have to delete the rows under it first.
-
-### Editing the board
-
-The page keeps its own copy of every row, and typing and coloring are local until Enter sends the whole board back. The solver only ever sees complete boards, which is what makes correcting an earlier row the same operation as playing a new one. Rows the solver has not been told about yet are drawn with a dashed border.
-
-Taking a word off is the exception, and goes back on its own. Writing one is a proposal, which is what Enter is for; removing one is not, since a board cannot half-forget a word it is no longer showing. However the word goes — *Delete row*, or backspaced away letter by letter — what remains has to be the board those words alone would have made, down to the shadow and every number in the panel.
-
-Five rules fall out of that, and they are the answers to the things that used to go wrong:
-
-**A color belongs to the letter under it.** Clearing a letter clears its color, and typing a different letter into a tile resets that tile to gray. Otherwise a row typed over an old one comes back wearing the old one's feedback — a letter turning yellow for no reason because the word before it had a yellow there. Space on an *empty* tile does nothing for the same reason: the color would not show, and would then belong to whatever was typed there next.
-
-**Typing at the end of a full word replaces the last letter**, as it does in any other box that is already full. A stray keypress costs one letter, not the word. Retyping a rejected guess from scratch therefore means clearing the row first.
-
-**Backspace only ever deletes leftwards** — the tile under the cursor, then the one before it. Letters to the right of the cursor are left alone, so the first few letters of a row can go without disturbing the last ones. The backspace that empties the row is the one that takes the word off the board, and it counts as a deletion: a row cleared by hand is a row deleted, and the two cannot look different afterwards.
-
-**Delete row empties the row in place and leaves the gap.** The rows under it stay where they were played, so the word that should have been there goes straight into the hole. Submit with the gap still empty and you get *Row 2 is empty* back. Nothing closes up and nothing slides.
-
-The refusal is deliberate. A word only reaches the board because it was played, which makes a row that needs deleting nearly always a row that needs *replacing*; closing the gap would quietly claim you played those later words earlier than you did. The position is not free to move either. Both the endgame search and the estimator are fed `guesses_left = MAX_GUESSES - len(rows)`, so shifting rows up would change what the solver recommends.
-
-An empty row with nothing under it is a different thing — it is the row waiting to be played, so it is simply not sent. That is what makes *Delete row* on the last guess an undo, and what clears the board back to the opening recommendation. Only that gap-free case goes back on its own; a hole higher up waits for the word that fills it, because the board it makes is one the solver refuses anyway.
-
-**The suggestion is a shadow, not a row.** The solver's pick is drawn faint in the row after the last real word, and it follows that word rather than standing at a fixed height. Take the last guess off and the board goes back, so what comes up into the vacated row is the pick for the shorter board — the board is a row shorter and says so. *Delete row* cannot touch the shadow itself, there being nothing there to delete. Take it — click it, or press Enter on an empty row — and it stops being a shadow: it is then a word in a row, and deletes like any other.
-
-There is exactly one free row, and the shadow is in it. Otherwise a row emptied by hand leaves a second free row under it, still selectable and sitting past the end of the board the shadow describes, and typing in that one makes the shadow vanish from a row you are not even in. The board is trimmed back to the last word and its free row.
-
-The rules are one promise between them. Three words with the third taken off leaves exactly what two words played from the start would leave, and nothing on the page can tell you which of the two happened.
-
-One request is in flight at a time, since the solver is behind a single lock anyway. A second one made meanwhile is *held*, not dropped. Dropping it used to leave the page showing something nobody had asked for: a game view with no game dealt into it, every panel reading "—", and it would stay that way. The loading veil stays up until there is a board behind it for the same reason, retrying if the first request fails.
-
-**A setting throws nothing away.** The three views share one set of switches, and changing any of them — a prior, the mode, the shape of f, hard mode — asks the solver again about the position you are already in. The solve board is re-run over the rows the server has already accepted, so a word half typed into the open row is neither submitted nor lost; the game keeps its answer and re-asks the hint; the finder searches again. Only the *Answer* box deals a new game.
-
-The terminal menu works the other way round, with four combinations to choose between before the deal, because there the prior decides what the answer is drawn from. Here the answer was drawn under whatever was on at the time and it stays what it is. Turning a prior off mid-game rethinks the advice instead of dealing a new word, and that is the only reading under which you can ask what the *other* model of the editor would have played from here.
-
-Nothing is rebuilt behind your back either. A setting changed while a view is hidden marks that view for a re-run, and the re-run happens when you next look at it. The alternative would be a view quietly claiming a setting it was never built under.
-
-### Rewriting what it says
-
-`/editor` lists every string the site can say, each beside a box to rewrite it, with the page itself alongside. Save, and the page says it — no restart.
-
-Nothing is registered by hand. `wording.py` reads `index.html`, `app.js` and `web.py` and picks the text out by how it is used (between tags, assigned to `textContent`, passed to `say()` or `SolverError()`, and so on), so a string written the ordinary way is editable the moment it exists and the list cannot fall behind the site. Each is shown with the file, the line and where on the page it sits.
-
-A choice between two strings counts as one of those uses, and what marks it as text can be lines above the arm it is looking at — `why:` over a ternary laid out one arm per line. Reading only the arm's own line missed the longest prose on the page, the two explanations of the priors, until 2026-08-10.
-
-Strings are found at a character offset, so the same sentence written twice is two entries and rewriting one leaves the other alone. Edits are applied to the served bytes of `index.html` and `app.js`, and saved in `wording.json` keyed by `<file>:<hash of the text>:<n>` — which survives the code being worked on, since neither line numbers nor offsets do. What the *server* says is matched on the way out instead, values and all: `Row {index + 1} contradicts the rows above it` becomes a pattern, and whatever it captured goes back into the rewritten version. That is by wording rather than by position, so a message written twice in `web.py` is one entry.
-
-A value baked into a string is part of it: an edit may move `${count}` but not drop it, and saving is refused if one goes missing. `--no-editor` turns the whole thing off, and it is served only when the server is listening to this machine alone.
-
-**Save** leaves the source alone. The rewrites live in `wording.json` and are applied to the served bytes on the way out. **Write into the code** puts them in the files for good and clears `wording.json`. That is the end state worth reaching, because an override is matched to the code by wording and stays fragile for exactly as long as it sits outside it. Prose is re-wrapped to the indentation it lands in, and both phrases are appended to `wording_history.json`. That record is the only one kept. The bake edits the source in place with no undo, so it is worth reading the source afterwards. The server keeps running the code it started with, and its own messages need a restart before they read the new way.
-
-Nothing to install: the server is `http.server` and the page is three static files in `web/`, with three more behind `/editor`. Startup warms the feedback table and the numba kernels in the background while the page waits. That makes the first load the slow one. A single lock covers the solver. Scoring ~13k guesses already uses every core, so two requests at once would only make both slower.
-
 ## Layout
 
 | file | contents |
@@ -149,6 +43,95 @@ Nothing to install: the server is `http.server` and the page is three static fil
 
 `answer_like.py`, `solutions.py` and `word_lists.py` verify against the file they would write and do nothing unless passed `--write`, since each one rewrites something the solver reads. `feedback_table.py` predates that rule and rebuilds in place as soon as it is run — or imported.
 
+## Results
+
+Both priors on with the shipped shapes, six-guess limit, failures counted as 7. Every row is the fit archived for that form, replayed rather than refitted, by `analysis/results_tables.py`. There is no sample here and so no error bar: the solver is deterministic, so every one of the 12,947 words is played once and weighted by the prior, which *computes* each mean rather than estimating it.
+
+| form | expression | terms | opening | mean | vs. best | loss probability |
+| --- | --- | --- | --- | --- | --- | --- |
+| spline | piecewise linear, knots at x = 2/4/6/8 | 5/6 | salet | 3.0770 | — | 0.0240% |
+| saturating | a + b·x + c·log2(1+x) | 3/3 | salet | 3.0786 | +0.0016 | 0.0253% |
+| invonly | a + b·(1−1/n) | 2/2 | salet | 3.0799 | +0.0029 | 0.0233% |
+| anchored2 | 1 + a·x + b·(1−1/n) | 2/2 | salet | 3.0876 | +0.0106 | 0.0230% |
+| anchored | 1 + a·x + b·(1−1/n) + c·x² | 2/3 | raise | 3.1165 | +0.0395 | 0.0278% |
+| sqrt | a + b·x + c·√x | 3/3 | raise | 3.1165 | +0.0395 | 0.0275% |
+| cubic | a + b·x + c·x² + d·x³ | 2/4 | raise | 3.1179 | +0.0409 | 0.0335% |
+| loglinear | a + b·log2(n) | 2/2 | raise | 3.1179 | +0.0409 | 0.0335% |
+| quadratic | a + b·x + c·x² | 2/3 | raise | 3.1179 | +0.0409 | 0.0335% |
+| IG + 2·p_win | — | — | raise | 3.1187 | +0.0417 | 0.0405% |
+| greedy entropy | — | — | raise | 3.7507 | +0.6737 | 0.0033% |
+
+The table divides where the opening word does. The top three are separated by 0.0029 guesses, and since these are exact figures that ordering is a fact about this prior rather than a coin landing — though 0.0029 is still far too little to choose a *default* on, which is what the next section is for. Everything from `anchored` down gives up ~0.04 guesses, more than ten times the spread among the leaders. `anchored` and `sqrt` land on the same value, and `cubic`, `loglinear` and `quadratic` are identical because the monotonicity guard cuts all three back to the same `a + b·x`.
+
+The loss column is the one place greedy entropy wins, and it wins by a lot: see *Losing less* for why the estimator's two thirds of a guess costs seven times the loss rate.
+
+**`IG + 2·p_win` is the second reference**, and the only row that is neither a fitted curve nor a plain greedy rule (`WordleSolver(win_bonus=...)`). It scores information gain and then pays a guess that could itself be the answer two bits for the chance that it is. Two exact facts fix that price with no data at all: one candidate takes one guess and two take 1.5, so a bit of information is worth half a guess, and winning outright saves a whole one — two bits' worth. `SOLVER_EXPLAINED.md` §9 has why a policy of that shape is what a straight-line `f` collapses to. It is a reference and deliberately not the baseline: it buys **0.632 guesses** over greedy entropy with nothing fitted, and pays for them with twelve times the loss rate, which is the trade *Losing less* is about. Greedy entropy stays the baseline because it makes no such bet.
+
+What separates the groups is **concavity in x**, not fit quality: `anchored2` has the worst fit RMSE of any form (0.70 against `invonly`'s 0.49) and still beats the five forms below it. With `f` exactly linear in x,
+
+```
+E(g, S) = 1 + a·(1 − p_win) + b·(H(S) − IG(g))
+```
+
+so minimizing E is the same as maximizing `b·IG + a·p_win`: greedy entropy plus a bonus for possible answers. That is why `loglinear` picks entropy's opening word and gains the least — of the 0.67 guesses between greedy entropy and the best form, ~0.63 is that bonus and ~0.04 is curvature.
+
+Saturation is not the liability under this prior that it is under a flat one. `invonly` flattens out completely (f(200) ≈ f(2000)) and still comes third, because with the mass concentrated the effective size rarely reaches the range where the curve has gone flat.
+
+### Which form is the default
+
+`--form` defaults to **`saturating`**: it is the family `train` fits when you do not name one.
+
+The default is what gets fitted to a prior nobody has tried yet, so `analysis/form_default.py` replays every archived fit over every word the answer could be, weighted by each prior in turn. Nothing is held out because nothing needs to be: the evaluation covers the whole space, and the gaps are exact.
+
+| form | terms | mean gap to the prior's best | worst gap | worst rank of 9 |
+| --- | --- | --- | --- | --- |
+| **saturating** | 3 | **+0.0015** | +0.0045 | **6** |
+| invonly | 2 | +0.0017 | **+0.0029** | 9 |
+| spline | 5–6 | +0.0020 | +0.0062 | 8 |
+| anchored2 | 2 | +0.0046 | +0.0106 | 9 |
+| cubic | 2–4 | +0.0169 | +0.0409 | 7 |
+| sqrt | 3 | +0.0173 | +0.0409 | 9 |
+
+The top three span 0.0005 guesses on the mean and 0.0033 on the worst case, which is not enough to separate them on performance: `saturating` takes the best mean gap and `invonly` the best worst gap. The rank column discriminates less than it looks, too — on the repeat-only prior all nine forms sit within 0.0022 of each other, so `invonly` being 9th there costs almost nothing.
+
+What keeps `saturating` the default is that it is never the outlier. It is the best form outright under `frequency`, second under `wordlebot` by 0.0016, and never worse than 6th anywhere — the best worst case of the nine. `invonly` gives up 0.0029 under `wordlebot`, and `spline` carries six parameters into priors whose rollouts have never been seen, dropping to 8th on the repeat-only one.
+
+That `sqrt` is not in this group is the firm part of the result. Its mean gap is eleven times the leaders' and its worst is 0.041 guesses.
+
+Read this in preference to ranking the archives by their own stored holdout, which is the score `compare` picked the winners on: that ordering puts `anchored2` first and `saturating` third, where measuring over every answer puts `anchored2` fourth.
+
+Nothing shipped changes: all five prior combinations have a cached fit, and `load_active` prefers it. What moves is `train` with no `--form`, and any combination whose cache is missing.
+
+Per prior combination, shipped shapes, each with its own fitted form. Every word is weighted by *the solver's own prior*, so each row asks "if this model of the editor is right, how well does the solver do?" The rows are **not** comparable to each other, since a concentrated prior makes the game genuinely easier. The opening word and the solve rate are the expected-guesses mode's:
+
+| priors | form | opening | entropy mean | expected mean | solve rate |
+| --- | --- | --- | --- | --- | --- |
+| none | saturating | tares | 4.1223 | 4.0718 | 99.93% |
+| curation only | invonly | trace | 3.8455 | 3.4903 | 99.99% |
+| repeat only | loglinear | tares | 4.1033 | 4.0111 | 99.92% |
+| both | spline | salet | 3.7507 | 3.0770 | 99.98% |
+
+The gain comes from the curation prior. When the prior is nearly flat, expected guesses and information gain rank guesses almost identically — with no priors the estimator is worth **0.0505** guesses against entropy, next to **0.6737** with both priors on. Thirteen times less for the same machinery, as the identity above predicts. It is small, but being an exact figure rather than a sample it is not a question of resolving it.
+
+### Where the estimator's guesses come from
+
+Against the fit-free reference the shipped solver wins 0.0417 guesses, and `analysis/head_to_head.py` says where every one of them is. Both policies play all 12,947 words, so a word either changes hands or it does not:
+
+| guesses | shipped | `IG + 2·p_win` |
+| --- | --- | --- |
+| 2 | **13.82%** | 10.98% |
+| 3 | 67.04% | **68.86%** |
+| 4 | 17.19% | 17.83% |
+| 5 | **1.53%** | 2.03% |
+| 6 | 0.39% | **0.27%** |
+| lost | **0.0240%** | 0.0405% |
+
+The whole margin is the two-guess row. Finishing in two on 13.82% of the prior's mass against 10.98% is worth more than the 0.0417 by itself, and everywhere else the reference is level or slightly ahead — it reaches three guesses more often, and six less often. That is the fitted `f` and the priors doing the one thing they are for: leaning the second guess toward the words an editor is likely to pick, which pays out as outright wins rather than as tidier splits.
+
+They are also nothing like the same policy. The shipped solver finishes sooner on 21.85% of the prior's mass, the reference on **18.14%**, and they tie on 60%. Two policies four hundredths of a guess apart disagree about two games in five. The reference's losses are worse than its count of them suggests, too: 432 words against 300, and its heaviest is `candy` at 0.0029% of the mass, three times heavier than anything the shipped solver drops — it has no `f` with which to price a deadline, so it walks into losses that `--loss-penalty 5` buys the shipped policy out of.
+
+Because `f` estimates expected guesses, the policy is risk-neutral away from the endgame, where greedy entropy is implicitly cautious. `--loss-penalty 5` compensates, closing about two thirds of the gap in loss probability, but not for nothing and not the whole way: the estimator still loses seven times as often as entropy does (see [Losing less](#losing-less)). `--loss-penalty 1` restores risk neutrality and gives that ground back.
+
 ## The two priors
 
 The answer is not drawn uniformly, and the two departures from uniform can be switched on and off independently:
@@ -164,9 +147,9 @@ Each group also has a **shape**, which is how its mass is spread over its member
 * `--curation-shape wordlebot` (default) weights an off-list word by WordleBot's own published weight, keeping 5% of the mass outside that list as a hedge; `--curation-shape frequency` weights it by how answer-like the word is instead, which is slightly weaker but needs no vendored list.
 * `--repeat-shape uniform`, `--curation-shape uniform` give the flat spread back.
 
-Each shape is worth having on its own terms, and the two are **additive within noise**. They were adopted on a superadditivity that current data does not show; see *Shaping the two priors* below. The shape is part of the cache key because the best form of `f` depends on it. `sqrt` is right for the uniform shapes, and it picks the wrong opening word for the sharpened ones.
+Each shape is worth having on its own terms, and the two are **additive within noise**; *What the two shapes are worth together* below has the measurement. The shape is part of the cache key because the best form of `f` depends on it. `sqrt` is right for the uniform shapes, and it picks the wrong opening word for the sharpened ones.
 
-### Both defaults describe a regime six months old
+### The regime the defaults describe
 
 Measured over the 1,879 answers in `solutions.json`, through Wordle #1879 (2026-08-10). The puzzle number is `days_since_launch + 1`; the `id` field is an NYT internal key and stops matching after #506.
 
@@ -200,7 +183,7 @@ The mechanism is calibration. Ask what rates each prior implies, against the 11.
 
 That also prices the repeat arm, where `curation only` beats `both` by 0.571 ± 0.213 on the 21 answers that really were repeats. This is the ordinary cost of a calibrated prior, not a defect: a repeat averages 5.4e-5 under `--repeat-prob 0.10` against the 3.8e-4 it would hold as an ordinary curated word, and any prior that moves a class from 71.3% to 10.0% pays on the occasions the class turns up. What it buys is the fresh curated word rising from 3.9e-4 to 1.6e-3, worth +0.519 ± 0.032 across the 81.1% of the regime that is neither a repeat nor off-list.
 
-### Sharpening the repeat prior
+### The repeat prior's shape
 
 By default `build_weights` spreads the repeat mass uniformly over all 1,858 used words, but the reuse is not uniform: 19 of the 21 repeats came from Wordle #1–#297 (median #116), with only `sandy` (#1227) and `smile` (#831) outside — a 10% outlier rate, too high to zero out.
 
@@ -225,13 +208,15 @@ The paired sd is 0.36 guesses, so resolving a 0.02-guess effect at 2σ needs ~1,
 
 Whether the source window is drifting forward is likewise unresolved, and the evidence has weakened. The drift rate is how far the source moves per puzzle, so **0 is a static window and 1.0 is a fixed replay lag** — one puzzle a day means a constant lag drags the source forward one position a day. Over the first 18 events it was +0.55 ± 1.56, an interval covering both; over all 21 it is −0.10 ± 1.15, which has collapsed onto the static reading while still excluding nothing. The rank correlation between repeat order and source index fell the same way, +0.46 (p = 0.04) to +0.30 (p = 0.18), because all three of the newest repeats came from early in the answer order. The replay lag averages 4.36 years with an sd of 0.83, and 18 of 21 events sit between 4.4 and 5.1 years.
 
-## Shaping the two priors
-
-Both shapes are worth having and both ship. They were originally adopted because they looked *superadditive*, worth much more together than apart. On current data they no longer look that way; see the note under the table.
+### The curation prior's shape
 
 Weighting off-list words instead of flatly is a large modeling gain on its own. Scored prequentially over the off-list answers, uniform is −9.27 nats per event; an answer-like score fitted against the curated list as positives is −8.14 at the shipped `t` = 0.35; and WordleBot's published weights, validated against a 2023 snapshot that predates 42 of the 46 events, are −6.46, with the effective support falling from 10,638 words to 911.
 
-That does not convert into guesses by itself. Measured on three arms — the 21 real repeats and 46 off-list answers with the prior rebuilt as of each puzzle, plus the 497 still-unused curated words — blended at the regime's own mixture of 11.1% / 7.9% / 81.1%:
+Between the two sharpened shapes there is little to choose. `analysis/replay.py` runs `frequency` against the shipped `wordlebot` head to head: **−0.010 ± 0.025** blended, and +0.005 ± 0.049 over the 190 regime puzzles — a wash either way. The two trade rather than one dominating, `frequency` taking −0.381 ± 0.161 on the repeat arm and giving back +0.304 ± 0.112 on the off-list arm. `wordlebot` ships because it scores better as a model, not because it measurably plays better, and `frequency` is there for anyone who would rather not vendor a scrape.
+
+### What the two shapes are worth together
+
+Neither shape converts its modeling gain straight into guesses. Measured on three arms — the 21 real repeats and 46 off-list answers with the prior rebuilt as of each puzzle, plus the 497 still-unused curated words — blended at the regime's own mixture of 11.1% / 7.9% / 81.1%:
 
 | shapes | repeat | off-list | fresh | blended |
 | --- | --- | --- | --- | --- |
@@ -242,11 +227,9 @@ That does not convert into guesses by itself. Measured on three arms — the 21 
 
 Concentrating the off-list mass on ~850 words gives each about 1e-4 against a used word's 5.4e-5, so past answers stop competing for the solver's attention. That is where the residual penalty `wordlebot` alone carries on the repeat arm comes from.
 
-**The superadditivity is gone.** These shapes were adopted because `wordlebot` alone blended to +0.009 (a wash), `binned` alone to −0.021, and the pair to −0.091 — far more than the sum. Recomputed here they are −0.044, −0.022 and −0.064, against a sum of −0.066: additive, within noise. The pair is still the best row and still worth shipping; the *reason* given for shipping it no longer holds.
+The two shapes are **additive within noise**: −0.044 and −0.022 apart, −0.064 together, against a sum of −0.066. Each earns its place on its own modeling evidence and the pair is the best row, but nothing measured here says they need each other. `frequency` (−0.074 ± 0.028) and `wordlebot` (−0.064 ± 0.032) sit well inside each other's intervals too, so the shipped default is not measurably the better of the two.
 
-The change is worth two caveats. These numbers come from a solver whose estimator was refitted afterwards, and every configuration's winning form moved, so they are not comparable like-for-like with the published ones: the policy changed, not just the data. `frequency` (−0.074 ± 0.028) and `wordlebot` (−0.064 ± 0.032) also sit well inside each other's intervals now. The shipped default of `wordlebot` is no longer measurably the better of the two.
-
-**The first three rows are history now.** They need fits for the uniform shapes, which the repo no longer carries, and since 2026-08-10 a prior with no fit raises rather than playing an invented `f`. `analysis/replay.py` keeps the one contrast both remaining fits support, `frequency` against `wordlebot` head to head: **−0.010 ± 0.025** blended, which is exactly the distance between the last two rows, and +0.005 ± 0.049 over the 190 regime puzzles — a wash either way. The two trade rather than one dominating: `frequency` takes −0.381 ± 0.161 on the repeat arm and gives back +0.304 ± 0.112 on the off-list arm.
+**The first three rows cannot be recomputed.** They need fits for the uniform shapes, which the repo no longer carries, and a prior with no fit raises rather than playing an invented `f`. The whole table also predates a refit that moved every configuration's winning form, so it is not comparable like-for-like with anything measured since — the policy changed, not just the data. `analysis/replay.py` measures the one contrast both surviving fits support, which is the `frequency` against `wordlebot` head-to-head above.
 
 One thing this measurement still needs: the form of `f` must be refitted per shape, or `sqrt` flips the opening word to `raise`, which is worse by 0.034 ± 0.028 on its own.
 
@@ -289,6 +272,27 @@ The losses are where it really shows. Even in the default row, where the mean ba
 The opening word never changes, in any row. Every one of the 12,947 words carries prior mass, so at the first guess every word is still a possible answer and the restriction binds nothing at all.
 
 Under `--mode entropy` the restriction **helps**, by −0.2505 guesses on the default prior (3.7507 → 3.5002). That is the identity under *Results* read backwards: what greedy entropy is missing is the bonus for guessing a word that could be the answer, and hard mode supplies it by force. It pays in losses, its solve rate falling from 100.00% to 99.86%, and it still does not reach the expected-guesses policy's 3.0770 — which gets the same bonus for free, and keeps the probes.
+
+## Forms of f
+
+Any basis linear in its parameters works, so every fit is a single least-squares solve. `estimator.FORMS` holds them, all written as `f(n) = base + sum_i params[i] * term_i(n)` with `x = log2(n)` and `base` either 0 or 1 (pinning `f(1) = 1`); the result is floored at 1.
+
+f must not decrease anywhere in `[1, 12947]` — a value function that rewards a larger candidate set would let the search prefer uninformative guesses — so terms are dropped from the end (most flexible first) until it is monotone.
+
+## Policy iteration
+
+`train` alternates:
+
+1. **evaluate** — play 2,000 sampled games with the current policy, recording for every position its effective size and how many guesses were actually needed from there;
+2. **improve** — refit `f` to those pairs; acting greedily on the new `f` is the improved policy.
+
+Round 0 is seeded with greedy entropy. Training games are played with no deadline, so targets are unbiased estimates of expected guesses and `f` keeps that meaning; the six-guess limit is a constraint layered on top.
+
+The loop stops when the parameters settle, or when the measured mean stops improving (a greedy policy can cycle), and caches the parameters whose policy measured best — the form, opening word, fit history and holdout score, one file per prior combination in `estimator_cache/params_<slug>.json` (with `compare` archiving to `estimator_cache/forms/<slug>__<form>.json`). The slug names the shapes as well as the toggles, so a fit made under one shape can never be read back under another. A cached file is refused if it was fitted with different prior probabilities, or predates the form registry.
+
+**A prior with no fit does not play.** `load_active` raises `NotFitted` and names the `train` command that fixes it. The alternative was to bend a fixed reference curve onto the chosen form and play that, and the invented curve was never a measurement of any prior: under the shipped one it read f(2000) ≈ 3.69 where the fitted `f` says 2.55. It flipped the opening word from `salet` to `raise`, cost 0.034 ± 0.004 guesses paired over 20,000 games, and was never saved, so every run paid for it again. Entropy mode, which never consults `f`, still runs on any prior.
+
+The refusal carries the `train` command that ends it, so both front ends can hand it over as it stands: the terminal prints it and exits 2 rather than a traceback, and the page reports it as a 503 with the same command in it. Startup shows it on the veil instead of a stack trace, since there is nothing to debug.
 
 ## The exact endgame
 
@@ -434,7 +438,7 @@ with the exact search taking any sub-position it can reach. This is the exact se
 
 Over 20,000 paired games (5,000 per prior, identical answers, `analysis/lookahead.py`), one ply at a cap of 10 is worth **−0.0034 ± 0.0041** guesses — 0.9σ, which is to say nothing at all, for roughly 10× the wall clock. What little there is sits on the flat no-priors case at −0.0094 ± 0.0080; under the shipped prior it reads +0.0012 ± 0.0050, slightly the wrong way. A cap of 25 measured no better, the opening word stays `salet` at every cap from 5 to 40, and two plies costs 205 s for the opening position alone.
 
-Its value is not a fixed property of the solver: what lookahead measures is the room the base policy leaves above itself, so refitting `f` takes it away. This was worth a real −0.0158 ± 0.0038 under the forms that shipped before the 2026-08-10 refit.
+Its value is not a fixed property of the solver: what lookahead measures is the room the base policy leaves above itself, so a better-fitted `f` shrinks it directly. A worse-fitted one would show lookahead buying more, and that is a fact about the fit rather than about lookahead.
 
 The interesting part is that it barely matters *despite* valuing positions far better. The policy is deterministic, so the true expected guesses from a position can be computed rather than estimated — play it out once per candidate answer, weighted by the prior. Each valuation is scored against what its own play achieves, over 222 positions from real games, weighted by how often play reaches them (`analysis/lookahead_accuracy.py`):
 
@@ -495,112 +499,108 @@ Every game shares one position, and `f` decides it alone — the candidate set i
 
 What makes that worth stating is how badly `f` orders the very same words. Across the top twelve its rank correlation with the truth is **+0.371**; across the top two hundred it is **+0.724**. It cannot separate near-ties and it separates a range perfectly well — coarse discrimination and fine ordering are different jobs, and picking an opening needs only the first.
 
-## Forms of f
-
-Any basis linear in its parameters works, so every fit is a single least-squares solve. `estimator.FORMS` holds them, all written as `f(n) = base + sum_i params[i] * term_i(n)` with `x = log2(n)` and `base` either 0 or 1 (pinning `f(1) = 1`); the result is floored at 1.
-
-f must not decrease anywhere in `[1, 12947]` — a value function that rewards a larger candidate set would let the search prefer uninformative guesses — so terms are dropped from the end (most flexible first) until it is monotone.
-
-## Policy iteration
-
-`train` alternates:
-
-1. **evaluate** — play 2,000 sampled games with the current policy, recording for every position its effective size and how many guesses were actually needed from there;
-2. **improve** — refit `f` to those pairs; acting greedily on the new `f` is the improved policy.
-
-Round 0 is seeded with greedy entropy. Training games are played with no deadline, so targets are unbiased estimates of expected guesses and `f` keeps that meaning; the six-guess limit is a constraint layered on top.
-
-The loop stops when the parameters settle, or when the measured mean stops improving (a greedy policy can cycle), and caches the parameters whose policy measured best — the form, opening word, fit history and holdout score, one file per prior combination in `estimator_cache/params_<slug>.json` (with `compare` archiving to `estimator_cache/forms/<slug>__<form>.json`). The slug names the shapes as well as the toggles, so a fit made under one shape can never be read back under another. A cached file is refused if it was fitted with different prior probabilities, or predates the form registry.
-
-**A prior with no fit does not play.** `load_active` raises `NotFitted` and names the `train` command that fixes it. The alternative was to bend a fixed reference curve onto the chosen form and play that, and the invented curve was never a measurement of any prior: under the shipped one it read f(2000) ≈ 3.69 where the fitted `f` says 2.55. It flipped the opening word from `salet` to `raise`, cost 0.034 ± 0.004 guesses paired over 20,000 games, and was never saved, so every run paid for it again. Entropy mode, which never consults `f`, still runs on any prior.
-
-The refusal carries the `train` command that ends it, so both front ends can hand it over as it stands: the terminal prints it and exits 2 rather than a traceback, and the page reports it as a 503 with the same command in it. Startup shows it on the veil instead of a stack trace, since there is nothing to debug.
-
-## Results
-
-Both priors on with the shipped shapes, six-guess limit, failures counted as 7. Every row is the fit archived for that form, replayed rather than refitted, by `analysis/results_tables.py`. There is no sample here and so no error bar: the solver is deterministic, so every one of the 12,947 words is played once and weighted by the prior, which *computes* each mean rather than estimating it.
-
-| form | expression | terms | opening | mean | vs. best | loss probability |
-| --- | --- | --- | --- | --- | --- | --- |
-| spline | piecewise linear, knots at x = 2/4/6/8 | 5/6 | salet | 3.0770 | — | 0.0240% |
-| saturating | a + b·x + c·log2(1+x) | 3/3 | salet | 3.0786 | +0.0016 | 0.0253% |
-| invonly | a + b·(1−1/n) | 2/2 | salet | 3.0799 | +0.0029 | 0.0233% |
-| anchored2 | 1 + a·x + b·(1−1/n) | 2/2 | salet | 3.0876 | +0.0106 | 0.0230% |
-| anchored | 1 + a·x + b·(1−1/n) + c·x² | 2/3 | raise | 3.1165 | +0.0395 | 0.0278% |
-| sqrt | a + b·x + c·√x | 3/3 | raise | 3.1165 | +0.0395 | 0.0275% |
-| cubic | a + b·x + c·x² + d·x³ | 2/4 | raise | 3.1179 | +0.0409 | 0.0335% |
-| loglinear | a + b·log2(n) | 2/2 | raise | 3.1179 | +0.0409 | 0.0335% |
-| quadratic | a + b·x + c·x² | 2/3 | raise | 3.1179 | +0.0409 | 0.0335% |
-| IG + 2·p_win | — | — | raise | 3.1187 | +0.0417 | 0.0405% |
-| greedy entropy | — | — | raise | 3.7507 | +0.6737 | 0.0033% |
-
-The table divides where the opening word does. The top three are separated by 0.0029 guesses, and since these are exact figures that ordering is a fact about this prior rather than a coin landing — though 0.0029 is still far too little to choose a *default* on, which is what the next section is for. Everything from `anchored` down gives up ~0.04 guesses, more than ten times the spread among the leaders. `anchored` and `sqrt` land on the same value, and `cubic`, `loglinear` and `quadratic` are identical because the monotonicity guard cuts all three back to the same `a + b·x`.
-
-The loss column is the one place greedy entropy wins, and it wins by a lot: see *Losing less* for why the estimator's two thirds of a guess costs seven times the loss rate.
-
-**`IG + 2·p_win` is the second reference**, and the only row that is neither a fitted curve nor a plain greedy rule (`WordleSolver(win_bonus=...)`). It scores information gain and then pays a guess that could itself be the answer two bits for the chance that it is. Two exact facts fix that price with no data at all: one candidate takes one guess and two take 1.5, so a bit of information is worth half a guess, and winning outright saves a whole one — two bits' worth. `SOLVER_EXPLAINED.md` §9 has why a policy of that shape is what a straight-line `f` collapses to. It is a reference and deliberately not the baseline: it buys **0.632 guesses** over greedy entropy with nothing fitted, and pays for them with twelve times the loss rate, which is the trade *Losing less* is about. Greedy entropy stays the baseline because it makes no such bet.
-
-What separates the groups is **concavity in x**, not fit quality: `anchored2` has the worst fit RMSE of any form (0.70 against `invonly`'s 0.49) and still beats the five forms below it. With `f` exactly linear in x,
+## Playing it yourself
 
 ```
-E(g, S) = 1 + a·(1 − p_win) + b·(H(S) − IG(g))
+python wordle_game.py                  menu: type an answer, or draw one from a prior
+python wordle_game.py --answer crane   play against a known answer
+python wordle_game.py --random         draw the answer from the prior
 ```
 
-so minimizing E is the same as maximizing `b·IG + a·p_win`: greedy entropy plus a bonus for possible answers. That is why `loglinear` picks entropy's opening word and gains the least — of the 0.67 guesses between greedy entropy and the best form, ~0.63 is that bonus and ~0.04 is curvature.
+During a game, `?` shows the solver's recommendation (Enter accepts it) and `quit` gives up. `--assist` shows it every turn, `--auto` hands the game over, and `--seed` makes a `--random` answer reproducible. The game only reads the word lists — the 167 MB feedback table is loaded lazily, and only for a hint.
 
-Saturation is no longer the liability it was under the flat prior. `invonly` flattens out completely (f(200) ≈ f(2000)) and used to rank 6th; with the mass concentrated it comes third, because the effective size rarely reaches the range where the curve has gone flat.
+The board is recapped at the end as colored blocks. `--share` adds the emoji grid underneath it, which is the one worth pasting somewhere else.
 
-### Which form is the default
+## In a browser
 
-`--form` defaults to **`saturating`**: it is the family `train` fits when you do not name one. It was `sqrt` until 2026-08-10, on a ranking the table above no longer supports.
+```
+python web.py                 serve on http://127.0.0.1:8000 and open a browser
+python web.py --port 9000     somewhere else
+python web.py --no-browser    do not open one
+```
 
-The default is what gets fitted to a prior nobody has tried yet, so `analysis/form_default.py` replays every archived fit over every word the answer could be, weighted by each prior in turn. Nothing is held out because nothing needs to be: the evaluation covers the whole space, and the gaps are exact.
+Both terminal front ends are there, plus one thing that has no terminal equivalent. The group beside *Settings* says which of the three the page is doing. It marks where you are, not where the button will take you.
 
-| form | terms | mean gap to the prior's best | worst gap | worst rank of 9 |
-| --- | --- | --- | --- | --- |
-| **saturating** | 3 | **+0.0015** | +0.0045 | **6** |
-| invonly | 2 | +0.0017 | **+0.0029** | 9 |
-| spline | 5–6 | +0.0020 | +0.0062 | 8 |
-| anchored2 | 2 | +0.0046 | +0.0106 | 9 |
-| cubic | 2–4 | +0.0169 | +0.0409 | 7 |
-| sqrt | 3 | +0.0173 | +0.0409 | 9 |
+**Solve** is `wordle_solver.py play`. You enter the feedback by coloring tiles instead of typing `NYGNN`, and the prior toggles, `--mode`, `--form` and `--hard` all become switches. *Shape of f* leaves the choice to the cache by default and marks which form that is, since the winning form is fitted per prior and moves with the toggles. Alongside the board is a panel of alternatives and still-possible candidates, with the prior, the objective and the fitted f under *Advanced*. Each of those comes with an explanation of what it is doing, and the rates quoted in it are measured from `solutions.json` at the moment the board is built. Nothing is written into the page, so the explanation can't fall behind the answer record the way a sentence quoting "about 10%" would. The count runs one puzzle behind the table in *The regime the defaults describe* above: the server drops the last entry of `solutions.json` (`--mask-last`, default 1) to keep today's answer out of the solver's prior while you are solving today's puzzle.
 
-The top three span 0.0005 guesses on the mean and 0.0033 on the worst case, which is not enough to separate them on performance: `saturating` takes the best mean gap and `invonly` the best worst gap. The rank column discriminates less than it looks, too — on the repeat-only prior all nine forms sit within 0.0022 of each other, so `invonly` being 9th there costs almost nothing.
+**Play** is `wordle_game.py`. The *Answer* box takes a word of your own, which is the quickest way to set the solver a position, and it is the only setting that deals a new game — an answer already dealt cannot be given a different one. *Hint* is the terminal game's `?` and presses again to close, the *Assist* switch is `--assist` (Enter then plays its pick, which is `--auto`), *Reveal answer* is `quit`, and the emoji grid at the end is `--share`. The answer stays on the server until the game is over, so the network traffic does not spoil it.
 
-What keeps `saturating` the default is that it is never the outlier. It is the best form outright under `frequency`, second under `wordlebot` by 0.0016, and never worse than 6th anywhere — the best worst case of the nine. `invonly` gives up 0.0029 under `wordlebot`, and `spline` carries six parameters into priors whose rollouts have never been seen, dropping to 8th on the repeat-only one.
+The panel beside the board holds three cards, and all three fold away. They start closed.
 
-That `sqrt` is not in this group is the firm part of the result. Its mean gap is eleven times the leaders' and its worst is 0.041 guesses.
+*Solver's pick* holds the word the solver would play here and its score. *Alternatives* holds the next four behind it; clicking one of those words puts it in the row you are typing. Both cards open when you turn *Assist* on, and both open when you press *Hint*. Neither is ever closed for you, so a card you opened with *Assist* off is still open on your next turn.
 
-Read this in preference to ranking the archives by their own stored holdout, which is the score `compare` picked the winners on: that ordering puts `anchored2` first and `saturating` third, where measuring over every answer puts `anchored2` fourth.
+Those five are five different *guesses*, which late in a game is not the same as five different words. Once few candidates remain, many words give identical feedback against every one of them, and a ranking of words is then one guess spelled several ways: at four candidates or fewer the five best words are 4.6 different guesses, each standing for two hundred-odd others (`analysis/split_ranking.py`). So the ranking names one word per distinct split, and a `+3` beside it opens the rest of that split as chips — play any of them instead and the game goes exactly as it would have. A word that could itself be the answer never has any, since only it comes back all green. The pick carries the same list, under the score.
 
-Nothing shipped changes: all five prior combinations have a cached fit, and `load_active` prefers it. What moves is `train` with no `--form`, and any combination whose cache is missing.
+*Letter frequency* sits above those two and *Assist* doesn't touch it. You open and close it yourself, and it stays as you left it for the rest of the game. Each letter carries the chance that the answer contains it somewhere: the prior's weight on the remaining candidates that hold the letter, over the prior's weight on all of them. On an empty board E is at the top with about 40%. Vowels are listed above the other letters.
 
-Per prior combination, shipped shapes, each with its own fitted form. Every word is weighted by *the solver's own prior*, so each row asks "if this model of the editor is right, how well does the solver do?" The rows are **not** comparable to each other, since a concentrated prior makes the game genuinely easier. The opening word and the solve rate are the expected-guesses mode's:
+The prior doing the weighting is the one the answer was drawn from, not the one the switches currently name, so turning a prior off mid-game rethinks the hint but leaves these numbers alone. A letter that no remaining candidate holds drops off the list, since 0% says nothing the gray keys have not said already. Letters at 100% stay and sort to the top, so late in a game the list opens with the ones the answer is known to contain.
 
-| priors | form | opening | entropy mean | expected mean | solve rate |
-| --- | --- | --- | --- | --- | --- |
-| none | saturating | tares | 4.1223 | 4.0718 | 99.93% |
-| curation only | invonly | trace | 3.8455 | 3.4903 | 99.99% |
-| repeat only | loglinear | tares | 4.1033 | 4.0111 | 99.92% |
-| both | spline | salet | 3.7507 | 3.0770 | 99.98% |
+**Find** is the page's own, and it runs backwards from everything else here. The answer is known and the guess is the unknown. Type an answer, color the pattern that a guess came back as, and you get every word in the list that would have produced that pattern against that answer. It is the question you ask of somebody else's share grid. Neither row describes the other. That is why there is no ghost word and nothing is grayed out, and why a gray tile in the pattern is a color rather than an empty tile waiting for a letter.
 
-The gain comes from the curation prior. When the prior is nearly flat, expected guesses and information gain rank guesses almost identically — with no priors the estimator is worth **0.0505** guesses against entropy, next to **0.6737** with both priors on. Thirteen times less for the same machinery, as the identity above predicts. (It was reported as nothing at all before 2026-08-10; it is small, but it is there, and being exact it is no longer a question of resolving it.)
+The match itself is exact and immediate, since the answer is one column of the feedback table and finding the words is a comparison over it instead of a scoring pass. The three numbers each word carries take more work:
 
-### Where the estimator's guesses come from
+* **Words left** is how many candidates would survive that guess *given this pattern*, so it ranks the words with hindsight — smallest first is what would have told you the most about this particular answer.
+* **Bits** is expected information gain, averaged over every answer the guess could have faced. It does not depend on the pattern at all, so it ranks the words as openings instead.
+* **Chance** is the prior's own probability that the guess is itself the answer.
 
-Against the fit-free reference the shipped solver wins 0.0417 guesses, and `analysis/head_to_head.py` says where every one of them is. Both policies play all 12,947 words, so a word either changes hands or it does not:
+The last two move with the prior switches. Nothing else on the page reaches the finder at all, which is why the mode, the shape of f and hard mode are hidden while it is showing. The finder never asks for a guess, needs no fitted `f`, and works under any prior.
 
-| guesses | shipped | `IG + 2·p_win` |
-| --- | --- | --- |
-| 2 | **13.82%** | 10.98% |
-| 3 | 67.04% | **68.86%** |
-| 4 | 17.19% | 17.83% |
-| 5 | **1.53%** | 2.03% |
-| 6 | 0.39% | **0.27%** |
-| lost | **0.0240%** | 0.0405% |
+| key | solve | play | find |
+| --- | --- | --- | --- |
+| A–Z | write a letter into the selected tile | write a letter | write a letter of the answer |
+| ← → | move along the row | move along the row | move along the row |
+| ↑ ↓ | move between rows, never past the row being played | — | move between the answer and the pattern |
+| Space | change the selected tile: gray → yellow → green | — | change the selected pattern tile |
+| Enter | on an empty row take the suggestion, otherwise submit | guess, or play the solver's pick when it is showing | find every word that fits |
 
-The whole margin is the two-guess row. Finishing in two on 13.82% of the prior's mass against 10.98% is worth more than the 0.0417 by itself, and everywhere else the reference is level or slightly ahead — it reaches three guesses more often, and six less often. That is the fitted `f` and the priors doing the one thing they are for: leaning the second guess toward the words an editor is likely to pick, which pays out as outright wins rather than as tidier splits.
+Going back up to an earlier row and correcting it is the point of ↑. Every submit sends the whole board, so a tile fixed four rows up re-runs the solver from there. You never have to delete the rows under it first.
 
-They are also nothing like the same policy. The shipped solver finishes sooner on 21.85% of the prior's mass, the reference on **18.14%**, and they tie on 60%. Two policies four hundredths of a guess apart disagree about two games in five. The reference's losses are worse than its count of them suggests, too: 432 words against 300, and its heaviest is `candy` at 0.0029% of the mass, three times heavier than anything the shipped solver drops — it has no `f` with which to price a deadline, so it walks into losses that `--loss-penalty 5` buys the shipped policy out of.
+### Editing the board
 
-Because `f` estimates expected guesses, the policy is risk-neutral away from the endgame, where greedy entropy is implicitly cautious. `--loss-penalty 5` compensates, closing about two thirds of the gap in loss probability, but not for nothing and not the whole way: the estimator still loses seven times as often as entropy does (see [Losing less](#losing-less)). `--loss-penalty 1` restores risk neutrality and gives that ground back.
+The page keeps its own copy of every row, and typing and coloring are local until Enter sends the whole board back. The solver only ever sees complete boards, which is what makes correcting an earlier row the same operation as playing a new one. Rows the solver has not been told about yet are drawn with a dashed border.
+
+Taking a word off is the exception, and goes back on its own. Writing one is a proposal, which is what Enter is for; removing one is not, since a board cannot half-forget a word it is no longer showing. However the word goes — *Delete row*, or backspaced away letter by letter — what remains has to be the board those words alone would have made, down to the shadow and every number in the panel.
+
+Five rules fall out of that, and they are the answers to the things that used to go wrong:
+
+**A color belongs to the letter under it.** Clearing a letter clears its color, and typing a different letter into a tile resets that tile to gray. Otherwise a row typed over an old one comes back wearing the old one's feedback — a letter turning yellow for no reason because the word before it had a yellow there. Space on an *empty* tile does nothing for the same reason: the color would not show, and would then belong to whatever was typed there next.
+
+**Typing at the end of a full word replaces the last letter**, as it does in any other box that is already full. A stray keypress costs one letter, not the word. Retyping a rejected guess from scratch therefore means clearing the row first.
+
+**Backspace only ever deletes leftwards** — the tile under the cursor, then the one before it. Letters to the right of the cursor are left alone, so the first few letters of a row can go without disturbing the last ones. The backspace that empties the row is the one that takes the word off the board, and it counts as a deletion: a row cleared by hand is a row deleted, and the two cannot look different afterwards.
+
+**Delete row empties the row in place and leaves the gap.** The rows under it stay where they were played, so the word that should have been there goes straight into the hole. Submit with the gap still empty and you get *Row 2 is empty* back. Nothing closes up and nothing slides.
+
+The refusal is deliberate. A word only reaches the board because it was played, which makes a row that needs deleting nearly always a row that needs *replacing*; closing the gap would quietly claim you played those later words earlier than you did. The position is not free to move either. Both the endgame search and the estimator are fed `guesses_left = MAX_GUESSES - len(rows)`, so shifting rows up would change what the solver recommends.
+
+An empty row with nothing under it is a different thing — it is the row waiting to be played, so it is simply not sent. That is what makes *Delete row* on the last guess an undo, and what clears the board back to the opening recommendation. Only that gap-free case goes back on its own; a hole higher up waits for the word that fills it, because the board it makes is one the solver refuses anyway.
+
+**The suggestion is a shadow, not a row.** The solver's pick is drawn faint in the row after the last real word, and it follows that word rather than standing at a fixed height. Take the last guess off and the board goes back, so what comes up into the vacated row is the pick for the shorter board — the board is a row shorter and says so. *Delete row* cannot touch the shadow itself, there being nothing there to delete. Take it — click it, or press Enter on an empty row — and it stops being a shadow: it is then a word in a row, and deletes like any other.
+
+There is exactly one free row, and the shadow is in it. Otherwise a row emptied by hand leaves a second free row under it, still selectable and sitting past the end of the board the shadow describes, and typing in that one makes the shadow vanish from a row you are not even in. The board is trimmed back to the last word and its free row.
+
+The rules are one promise between them. Three words with the third taken off leaves exactly what two words played from the start would leave, and nothing on the page can tell you which of the two happened.
+
+One request is in flight at a time, since the solver is behind a single lock anyway. A second one made meanwhile is *held*, not dropped. Dropping it used to leave the page showing something nobody had asked for: a game view with no game dealt into it, every panel reading "—", and it would stay that way. The loading veil stays up until there is a board behind it for the same reason, retrying if the first request fails.
+
+**A setting throws nothing away.** The three views share one set of switches, and changing any of them — a prior, the mode, the shape of f, hard mode — asks the solver again about the position you are already in. The solve board is re-run over the rows the server has already accepted, so a word half typed into the open row is neither submitted nor lost; the game keeps its answer and re-asks the hint; the finder searches again. Only the *Answer* box deals a new game.
+
+The terminal menu works the other way round, with four combinations to choose between before the deal, because there the prior decides what the answer is drawn from. Here the answer was drawn under whatever was on at the time and it stays what it is. Turning a prior off mid-game rethinks the advice instead of dealing a new word, and that is the only reading under which you can ask what the *other* model of the editor would have played from here.
+
+Nothing is rebuilt behind your back either. A setting changed while a view is hidden marks that view for a re-run, and the re-run happens when you next look at it. The alternative would be a view quietly claiming a setting it was never built under.
+
+### Rewriting what it says
+
+`/editor` lists every string the site can say, each beside a box to rewrite it, with the page itself alongside. Save, and the page says it — no restart.
+
+Nothing is registered by hand. `wording.py` reads `index.html`, `app.js` and `web.py` and picks the text out by how it is used (between tags, assigned to `textContent`, passed to `say()` or `SolverError()`, and so on), so a string written the ordinary way is editable the moment it exists and the list cannot fall behind the site. Each is shown with the file, the line and where on the page it sits.
+
+A choice between two strings counts as one of those uses, and what marks it as text can be lines above the arm it is looking at — `why:` over a ternary laid out one arm per line. Reading only the arm's own line missed the longest prose on the page, the two explanations of the priors, until 2026-08-10.
+
+Strings are found at a character offset, so the same sentence written twice is two entries and rewriting one leaves the other alone. Edits are applied to the served bytes of `index.html` and `app.js`, and saved in `wording.json` keyed by `<file>:<hash of the text>:<n>` — which survives the code being worked on, since neither line numbers nor offsets do. What the *server* says is matched on the way out instead, values and all: `Row {index + 1} contradicts the rows above it` becomes a pattern, and whatever it captured goes back into the rewritten version. That is by wording rather than by position, so a message written twice in `web.py` is one entry.
+
+A value baked into a string is part of it: an edit may move `${count}` but not drop it, and saving is refused if one goes missing. `--no-editor` turns the whole thing off, and it is served only when the server is listening to this machine alone.
+
+**Save** leaves the source alone. The rewrites live in `wording.json` and are applied to the served bytes on the way out. **Write into the code** puts them in the files for good and clears `wording.json`. That is the end state worth reaching, because an override is matched to the code by wording and stays fragile for exactly as long as it sits outside it. Prose is re-wrapped to the indentation it lands in, and both phrases are appended to `wording_history.json`. That record is the only one kept. The bake edits the source in place with no undo, so it is worth reading the source afterwards. The server keeps running the code it started with, and its own messages need a restart before they read the new way.
+
+Nothing to install: the server is `http.server` and the page is three static files in `web/`, with three more behind `/editor`. Startup warms the feedback table and the numba kernels in the background while the page waits. That makes the first load the slow one. A single lock covers the solver. Scoring ~13k guesses already uses every core, so two requests at once would only make both slower.

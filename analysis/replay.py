@@ -26,7 +26,7 @@ answer log does.
     python analysis/replay.py                the two curation shapes
     python analysis/replay.py --all-priors   the four prior combinations
 
-Backs the head-to-head paragraph under README *Shaping the two priors*, and
+Backs the head-to-head paragraph under README *The curation prior's shape*, and
 with `--all-priors` the table under *What each prior is worth on real answers*.
 """
 

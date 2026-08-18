@@ -8,7 +8,7 @@ in source-index per puzzle:
     fixed replay lag  1.0     one puzzle a day, so a constant lag drags the
                               source forward one position a day
 
-Backs the closing paragraph of README *Sharpening the repeat prior*.
+Backs the closing paragraph of README *The repeat prior's shape*.
 """
 
 import numpy as np

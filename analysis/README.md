@@ -40,17 +40,17 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 
 | script | backs |
 | --- | --- |
-| `regime.py` | README *Both defaults describe a regime six months old*, SOLVER_EXPLAINED §4; its last block the implied-rate table in §6.4, which is why the two priors need each other |
-| `repeat_shapes.py` | README *Sharpening the repeat prior* table, SOLVER_EXPLAINED §5.1 |
-| `drift.py` | the closing paragraph of README *Sharpening the repeat prior* |
-| `curation_shapes.py` | SOLVER_EXPLAINED §5.2 including why the hedge is flat, the opening of README *Shaping the two priors* |
+| `regime.py` | README *The regime the defaults describe*, SOLVER_EXPLAINED §4; its last block the implied-rate table in §6.4, which is why the two priors need each other |
+| `repeat_shapes.py` | README *The repeat prior's shape* table, SOLVER_EXPLAINED §5.1 |
+| `drift.py` | the closing paragraph of README *The repeat prior's shape* |
+| `curation_shapes.py` | SOLVER_EXPLAINED §5.2 including why the hedge is flat, the opening of README *The curation prior's shape* |
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §16 |
 | `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §16 |
 | `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §16 |
 | `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, its `--bound` the `-atch` values in SOLVER_EXPLAINED §12(c), SOLVER_EXPLAINED §12 and §14 |
-| `replay.py` | the head-to-head paragraph under README *Shaping the two priors*, not the table's uniform-baseline rows; its `--all-priors` the whole of README *What each prior is worth on real answers* |
+| `replay.py` | the head-to-head paragraph under README *The curation prior's shape*, not the table's uniform-baseline rows; its `--all-priors` the whole of README *What each prior is worth on real answers* |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §9 |
 | `head_to_head.py` | README *Where the estimator's guesses come from* |
@@ -94,6 +94,6 @@ It used to compare the sharpened shapes against the uniform ones, which needed f
 
 Two claims in README *Lookahead* have no script: that a branch cap of 25 measures no better, and that two plies costs 205 s for the opening position alone. Each needs a position sample as well as a method, and that sample was not kept.
 
-Three rows of the README *Shaping the two priors* table are history now, not output: `wordlebot` alone, `binned` alone, and the uniform baseline they are measured against. Reproducing them means fitting the three uniform-shape configurations again. That is a deliberate choice about what this repo ships, and not something a rerun should do behind your back.
+Three rows of the README *What the two shapes are worth together* table are history now, not output: `wordlebot` alone, `binned` alone, and the uniform baseline they are measured against. Reproducing them means fitting the three uniform-shape configurations again. That is a deliberate choice about what this repo ships, and not something a rerun should do behind your back.
 
 Two figures the documents used to carry could not be reproduced exactly. The window variants' *spread* was −124…−129; the best variant here matches, but the worst is far worse, so the original must have defined the band more robustly. Only the best of the sixteen is quoted now, which is the number the argument actually needs. The drift rate's standard error was ±0.39 against ±1.56 here; the slope agrees to two decimals, so the parameterization is right and the error model is not.

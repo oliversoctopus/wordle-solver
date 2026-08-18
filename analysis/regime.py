@@ -1,6 +1,6 @@
 """The regime table and the pool-exhaustion arithmetic.
 
-Backs README *Both defaults describe a regime six months old* and
+Backs README *The regime the defaults describe* and
 SOLVER_EXPLAINED 4.1.  The closing block is what each prior implies about the
 repeat rate, which is why the two priors turn out to need each other (6.4) --
 it needs the weights but no solver, so it stays a seconds-long script.
