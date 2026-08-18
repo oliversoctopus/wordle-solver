@@ -1,8 +1,8 @@
 """Prequential scoring of the curation shapes over the off-list answers.
 
 Each shape is scored at the constant that actually ships, not the one it was
-fitted at.  Backs SOLVER_EXPLAINED 4.3 and the opening of README *Shaping the
-two priors*.
+fitted at.  Backs SOLVER_EXPLAINED *The off-list group* and the
+opening of README *The curation prior's shape*.
 """
 
 import numpy as np

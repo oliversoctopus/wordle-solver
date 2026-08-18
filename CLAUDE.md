@@ -41,7 +41,7 @@ python wordle_game.py             a game in the terminal
 
 Startup loads `feedback_table.npy` (167 MB) and compiles the numba kernels, which takes a while. `web.py` warms both in a background thread and the page waits behind its veil; `/api/status` reports progress and flips `ready`. Poll that before assuming the server is usable.
 
-`WordleSolver(fused=True)`, or `WORDLE_FUSED=1` in the environment, builds a second answer-major copy of the table and dispatches mid-sized positions to `fused_kernels`. It is off by default and scores bit-identically either way, so it is a speed knob and never a behavior one. Worth 1.09× over whole games in expected mode and 1.63× in entropy, for 168 MB and 0.3 s at startup; `SOLVER_EXPLAINED.md` §8 says why it is a dispatch rather than a replacement.
+`WordleSolver(fused=True)`, or `WORDLE_FUSED=1` in the environment, builds a second answer-major copy of the table and dispatches mid-sized positions to `fused_kernels`. It is off by default and scores bit-identically either way, so it is a speed knob and never a behavior one. Worth 1.09× over whole games in expected mode and 1.63× in entropy, for 168 MB and 0.3 s at startup; `SOLVER_EXPLAINED.md` *Storing the table the other way round* says why it is a dispatch rather than a replacement.
 
 The whole solver sits behind one lock. Scoring ~13k guesses already uses every core, so concurrent requests would only make both slower, and the memo tables are not written for concurrent use.
 
@@ -118,7 +118,7 @@ Every measured claim about the priors is reproduced by a script in `analysis/`, 
 
 ## Testing
 
-`tests/` holds five files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, and whether each scoring rule is the policy the documents describe.
+`tests/` holds six files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, and whether every pointer into the documents still resolves.
 
 **Nothing there asserts a number written down by hand, and nothing new should.** Each check has an oracle instead: the other front end, the answer record, or a property that holds of every board. A figure copied into a test is a fourth place for it to go stale, and there are three already.
 

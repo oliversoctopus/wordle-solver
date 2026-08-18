@@ -12,9 +12,9 @@ up, by candidate count, and how large the groups are; then what the exact
 search's `top` costs over `solve`, since asking it for runners-up loosens the
 cutoff that prunes the search and so is not free.
 
-Backs README *Alternatives* under the web page, and the closing paragraph of
-README *The exact endgame*.  The timings are a probe rather than a measurement:
-they move with the machine, so read the ratio.
+Backs the *Alternatives* card under README *In a browser*, and the closing
+paragraph of README *The exact endgame*.  The timings are a probe rather
+than a measurement: they move with the machine, so read the ratio.
 
     python analysis/split_ranking.py                 both, shipped prior
     python analysis/split_ranking.py --all-priors    all four

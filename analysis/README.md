@@ -54,7 +54,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §9 |
 | `head_to_head.py` | README *Where the estimator's guesses come from* |
-| `split_ranking.py` | README *Alternatives* under the web page, and the runners-up paragraph closing *The exact endgame* |
+| `split_ranking.py` | the *Alternatives* card under README *In a browser*, and the runners-up paragraph closing *The exact endgame* |
 | `table_layout.py` | SOLVER_EXPLAINED §8 *Storing the table the other way round*, the per-kernel figures |
 | `fused_gain.py` | the same section's whole-game figures, 1.09× and 1.63× |
 

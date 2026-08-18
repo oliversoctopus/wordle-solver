@@ -2,7 +2,7 @@
 
 Every model predicts repeat *i* from repeats 1..i-1 only, so no parameter ever
 sees the event it is scored on.  Backs README *The repeat prior's shape* and
-SOLVER_EXPLAINED 4.2.
+SOLVER_EXPLAINED *The repeat group*.
 
 Pass --events 18 to reproduce the numbers the README carried before the
 2026-08-10 update; that is the check that the method has not drifted.

@@ -8,7 +8,8 @@ of a count.  It is also faster than sampling, because the memos in
 `solver.WordleSolver` and `exact.ExactEndgame` saturate after a few thousand
 games and the rest of the sweep runs out of cache.
 
-Backs the whole of README *Losing less*, and SOLVER_EXPLAINED sections 9 and 10.
+Backs the whole of README *Losing less*, and SOLVER_EXPLAINED
+*The deadline, and what losing costs* and *Why the penalty is 5 and not 1*.
 """
 
 import argparse

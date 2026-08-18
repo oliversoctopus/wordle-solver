@@ -34,8 +34,9 @@ Value is deadline-free throughout.  That is the convention `f` is fitted under
 can be estimating, since it is handed no turn count at all.  It also means a
 playout always ends in a win, so no loss convention or penalty enters.
 
-Backs the accuracy and decision tables in README *Lookahead* and SOLVER_EXPLAINED
-section 16.  Both move with the fit -- a refit of `f` changes the base valuation
+Backs the accuracy and decision tables in README *Lookahead* and
+SOLVER_EXPLAINED *The result worth framing*.  Both move with the fit --
+a refit of `f` changes the base valuation
 directly -- so read this against a run of its own vintage.
 """
 

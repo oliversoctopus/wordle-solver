@@ -21,7 +21,7 @@ the same optimization effort as the shipped ones -- the accumulator is
 allocated once per thread rather than once per block, which was worth about 2x
 at the low end -- so this is not a draft measured against a tuned kernel.
 
-Backs SOLVER_EXPLAINED section 8, the paragraph on storing the table the other
+Backs SOLVER_EXPLAINED *Storing the table the other
 way round.  It is a timing probe, so it moves with the machine.
 """
 

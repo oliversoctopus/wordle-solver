@@ -19,8 +19,8 @@ Results are broken out by candidate count because that is where the old claim
 sat -- that the smallest positions disagree often and at no cost, being genuine
 ties.
 
-Backs README *The exact endgame: what it is worth* and SOLVER_EXPLAINED section
-12.  Moves with the fit, since the estimator arm is `f`.
+Backs README *What it is worth* and SOLVER_EXPLAINED
+*The result worth framing*.  Moves with the fit, since the estimator arm is `f`.
 """
 
 import argparse

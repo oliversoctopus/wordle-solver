@@ -5,7 +5,7 @@ python tests/run.py           a few seconds, needs nothing loaded
 python tests/run.py --full    also the parts that load the 167 MB table
 ```
 
-Five files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, and a scoring rule can stop being the policy the documents describe without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
+Six files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
 
 None of them assert numbers written down by hand. Each has something else to check against — the second implementation, the answer record, or a property that holds of every board there is — because a number copied into a test is a fourth place for it to go stale, and `README.md` § *Numbers in the documents* already has three.
 
@@ -57,6 +57,14 @@ Needs the table, so `run.py` keeps it behind `--full`.
 ```
 python tests/scoring.py --games 6     three games per mode by default
 ```
+
+## `doc_refs.py` — every pointer into the documents still points somewhere
+
+The documents cross-reference each other, `analysis/README.md` pairs each script with the claim it backs, and the scripts repeat that in their docstrings. Nothing held any of it together, and it drifted: a heading gets reworded and the pointers at it quietly stop resolving. When this was written seven references pointed nowhere, four of them at a SOLVER_EXPLAINED numbering that had not existed for some time.
+
+The headings are the oracle, so nothing here is written down by hand. A reference names its heading — `README *Results*` — and matches on a prefix, since a pointer often quotes a heading's opening words rather than all of it. SOLVER_EXPLAINED is also numbered, so a section sign or the word *section* followed by a number resolves against that numbering instead. Whitespace is collapsed first, which is the part that matters: Python is hard-wrapped, so a title in a docstring is routinely split across a line break, and a line-oriented `grep` misses exactly the references hardest to find by hand.
+
+What it cannot do is tell you a reference points at the *right* section, only that it points at a real one. A pointer that survives a renumbering by landing on the wrong existing section still passes.
 
 ## `fit_provenance.py` — the fitted `f` is a fit of the record we have
 
