@@ -8,8 +8,15 @@
 //! exactly rather than merely being accurate.
 //!
 //! Only for the places the Python reaches for `np.sum`. The kernels accumulate
-//! into their 243 buckets one candidate at a time and must keep doing exactly
-//! that, in that order; see `kernels.py`.
+//! into their 243 buckets one candidate at a time, and matching them means
+//! doing the same rather than summing pairwise.
+//!
+//! That is a matter of keeping the parity check sharp, not of correctness. The
+//! kernels' own two reduce branches already add the buckets up in different
+//! orders either side of 128 candidates, and at the opening the closest pair of
+//! scores among all 12,947 guesses differs by 1.1e-9 against an ulp of 4e-16.
+//! Reordering cannot change which word wins; it only turns an exact parity
+//! result into an approximate one, and an exact one is easier to trust.
 
 /// numpy's block size, below which it sums with eight accumulators.
 const BLOCK: usize = 128;

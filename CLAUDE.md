@@ -49,7 +49,7 @@ Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
 
 **The solver is being ported to Rust**, so it can compile to WASM behind a free static site and to a native binary that gives the sweeps back the ~79% of whole-game time that is not in the kernels. `cargo build --release`, or `./build.sh` since rustup was installed without touching PATH. The Python stays the oracle throughout and keeps `estimator.fit`, `answer_like.py`, the two fetchers and all of `analysis/`'s reporting; nothing is deleted until the Rust matches it in `tests/rust_parity.py`.
 
-Do not enable `-ffast-math` or any Rust equivalent. Letting the compiler reassociate the bucket reduction reorders a store ahead of a load and every bucket maximum reads back zero; `kernels.py` records what that looked like.
+Fast math is not a hazard you can reach by accident here: `rustc` exposes no such flag, stable or unstable, and release-mode LLVM does not reassociate a float sum. If you ever add a crate or a nightly intrinsic that grants it, know what it cost in Python — it hoisted a store above a load, every bucket maximum read back as the zero its own loop had just written, and `two_turn_scores` returned a flat 3.0 for every guess. That is a wrong answer rather than a wobbly last bit, which is why `kernels.py` carries none of it.
 
 ## The pieces
 
