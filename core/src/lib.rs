@@ -9,6 +9,7 @@
 //! `SOLVER_EXPLAINED.md` derives why it is built this way.
 
 pub mod data;
+pub mod estimator;
 pub mod feedback;
 pub mod json;
 pub mod priors;

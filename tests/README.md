@@ -74,6 +74,8 @@ The coloring rule has a complete oracle and gets the strongest check there is: e
 
 The prior weights are compared per configuration, the Rust writing raw little-endian f64 and the Python diffing with numpy — a vector of 12,947 floats is one line to compare there and a parser to get wrong here. They agree **exactly**, every weight bit for bit, which takes reproducing numpy's pairwise summation rather than adding left to right; a naive loop lands about 1e-13 out. `core/src/sum.rs` has the shape of it, and why only the places the Python reaches for `np.sum` want it — the kernels accumulate one candidate at a time and must keep doing exactly that.
 
+`f` is checked over a grid of `x` twice per form: once on synthetic coefficients, which reaches bases no fit happens to use, and once on the fit the repository actually cached, which is what really gets played. `effective_size` goes over the leading weights of each prior at sizes either side of the kernels' 128-candidate branch. All of it agrees exactly too, `2 ** -x` and `log2` and `sqrt` included.
+
 The tolerance is still 1e-12 rather than zero. Exactness here is a property of two implementations that happen to agree, not something either side promises, and a check that fails on the last bit would eventually fail for a reason nobody cares about.
 
 Needs the table, so `run.py` keeps it behind `--full`.

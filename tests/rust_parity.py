@@ -85,6 +85,73 @@ def check_priors(report):
         return True
 
 
+def check_estimator(report):
+    """``f`` over every form, and ``effective_size``, against ``estimator``."""
+    path = binary("parity_estimator")
+    if path is None:
+        return None
+
+    import estimator
+    import priors
+    from wordle_data import load_data
+
+    # the grid and the synthetic coefficients parity_estimator.rs also builds
+    xs = np.arange(1401) * 0.01
+    def synthetic(n):
+        return np.array([0.5 - 0.15 * i for i in range(n)])
+    prefixes = [1, 2, 3, 5, 8, 13, 64, 128, 129, 1000, 5000, 12947]
+
+    def f_over(params, form):
+        codes, knots, base = form.arrays()
+        return np.array([estimator.f_eval_x(x, params, codes, knots, base)
+                         for x in xs])
+
+    with tempfile.TemporaryDirectory() as out_dir:
+        done = subprocess.run([path, ROOT, out_dir], capture_output=True, text=True)
+        if done.returncode != 0:
+            report((done.stdout + done.stderr).strip())
+            return False
+
+        worst, worst_where = 0.0, None
+
+        def compare(name, mine, filename):
+            nonlocal worst, worst_where
+            got = np.fromfile(os.path.join(out_dir, filename), dtype="<f8")
+            if got.shape != mine.shape:
+                report(f"{name}: {got.shape} against {mine.shape}")
+                return False
+            gap = float(np.max(np.abs(got - mine) / np.maximum(np.abs(mine), 1e-300)))
+            if gap > worst:
+                worst, worst_where = gap, name
+            return True
+
+        for name in sorted(estimator.FORMS):
+            form = estimator.FORMS[name]
+            mine = f_over(synthetic(form.n_params), form)
+            if not compare(f"f/{name}", mine, f"f_{name}.f64"):
+                return False
+        report(f"{len(estimator.FORMS)} forms on the synthetic parameters")
+
+        data = load_data(with_feedback_table=False)
+        for config in priors.ALL_CONFIGS:
+            slug = config.slug
+            params, form = estimator.load_active(config)[:2]
+            if not compare(f"fit/{slug}", f_over(params, form), f"fit_{slug}.f64"):
+                return False
+            weights = priors.build_weights(data, config)
+            mine = np.array([estimator.effective_size(weights[:k]) for k in prefixes])
+            if not compare(f"eff/{slug}", mine, f"eff_{slug}.f64"):
+                return False
+        report(f"{len(priors.ALL_CONFIGS)} cached fits, and effective_size on each")
+
+        report(f"worst relative gap {worst:.3e}" +
+               (f" on {worst_where}" if worst_where else ""))
+        if worst > TOLERANCE:
+            report(f"over {TOLERANCE:.0e}")
+            return False
+        return True
+
+
 # (label, what agreement establishes, the check)
 CHECKS = [
     ("the coloring rule",
@@ -93,6 +160,9 @@ CHECKS = [
     ("the prior weights",
      "every configuration's weight vector matches priors.build_weights",
      check_priors),
+    ("the estimator",
+     "f over every form and every cached fit matches estimator.f_eval_x",
+     check_estimator),
 ]
 
 
