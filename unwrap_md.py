@@ -24,6 +24,10 @@ SKIP_DIRS = {".venv", ".git", "node_modules", "__pycache__"}
 
 LIST_RE = re.compile(r"^(\s*)([-*+]|\d+\.)\s+")
 RULE_RE = re.compile(r"-{3,}|\*{3,}|_{3,}")
+# A heading needs whitespace after the hashes, so a paragraph wrapping onto
+# "#1-#297 (median #116)" is prose.  Matching a bare "#" hid the one wrapped
+# paragraph left in the repo, by reading its second line as a new block.
+HEADING_RE = re.compile(r"#{1,6}(\s|$)")
 
 
 def unwrap(text):
@@ -60,7 +64,7 @@ def unwrap(text):
             continue
         if not stripped:
             flush(); out.append(""); continue
-        if stripped.startswith("#") or stripped.startswith("|"):
+        if HEADING_RE.match(stripped) or stripped.startswith("|"):
             flush(); out.append(line); continue
         if RULE_RE.fullmatch(stripped):
             flush(); out.append(line); continue
@@ -121,7 +125,7 @@ def _kind(line):
     stripped = line.strip()
     if stripped.startswith("```"):
         return "fence"
-    if stripped.startswith("#"):
+    if HEADING_RE.match(stripped):
         return "h%d" % (len(stripped) - len(stripped.lstrip("#")))
     if stripped.startswith("|"):
         return "tr"
