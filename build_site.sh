@@ -12,8 +12,23 @@ cd "$(dirname "$0")"
 export PATH="$HOME/.cargo/bin:$PATH"
 
 OUT="${1:-site}"
+
+# Vercel keeps the link between this directory and its project in .vercel/, and
+# a rebuild would throw it away -- carry it across, or every deploy after the
+# first one asks to set the project up again.
+LINK=""
+if [ -d "$OUT/.vercel" ]; then
+    LINK=$(mktemp -d)
+    cp -r "$OUT/.vercel" "$LINK/"
+fi
+
 rm -rf "$OUT"
 mkdir -p "$OUT/data/derived"
+
+if [ -n "$LINK" ]; then
+    cp -r "$LINK/.vercel" "$OUT/"
+    rm -rf "$LINK"
+fi
 
 echo "building the solver for wasm32"
 cargo build --release --target wasm32-unknown-unknown -p wordle_wasm
