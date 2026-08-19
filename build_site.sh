@@ -24,21 +24,33 @@ cargo build --release --quiet
 ./target/release/build_site "$(pwd)" "$OUT" >/dev/null
 
 echo "copying the page and the data"
-cp web/index.html web/app.js web/style.css web/wasm-api.js "$OUT/"
+cp web/style.css web/wasm-api.js "$OUT/"
 cp data/wordles.json data/solutions.json data/answer_like.json \
    data/wordlebot_weights.json "$OUT/data/"
 cp data/derived/ind2word.json "$OUT/data/derived/"
 
-# the page loads the shim before app.js, so fetch is already routed when app.js
-# makes its first call
-python - "$OUT/index.html" <<'PY'
-import io, sys
-path = sys.argv[1]
-html = io.open(path, encoding="utf-8", newline="").read()
-tag = '<script src="wasm-api.js"></script>\n'
-if "wasm-api.js" not in html:
-    html = html.replace('<script src="app.js"', tag + '    <script src="app.js"', 1)
-io.open(path, "w", encoding="utf-8", newline="").write(html)
+# The page and the script go through wording.py rather than being copied, so a
+# rewrite saved in the editor and not yet written into the code still ships.
+# The shim goes in ahead of app.js, so fetch is already routed by its first call.
+python - "$OUT" <<'PY'
+import io, os, sys
+
+from wording import Wording
+
+out = sys.argv[1]
+wording = Wording()
+for name in ("web/index.html", "web/app.js"):
+    text = wording.served(name)
+    if name.endswith("index.html") and "wasm-api.js" not in text:
+        text = text.replace('<script src="app.js"',
+                            '<script src="wasm-api.js"></script>\n'
+                            '    <script src="app.js"', 1)
+    path = os.path.join(out, os.path.basename(name))
+    io.open(path, "w", encoding="utf-8", newline="").write(text)
+
+applied = len(wording.overrides)
+if applied:
+    print(f"  {applied} rewrite{'' if applied == 1 else 's'} from wording.json")
 PY
 
 echo

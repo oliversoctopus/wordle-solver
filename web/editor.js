@@ -17,6 +17,8 @@ const FILE_NAMES = {
   "web/index.html": "The page",
   "web/app.js": "What it says as you use it",
   "web.py": "What the server says",
+  "core/src/api.rs": "What the deployed site says",
+  "core/src/state.rs": "What the deployed site says when it cannot start",
 };
 
 // kinds that describe where a string came from rather than how it is shown;
@@ -28,6 +30,10 @@ const FILE_BLURBS = {
   "web/app.js": "Recommendations, hints, board messages and the technical panel.",
   "web.py": "Errors and loading text. These are matched by wording rather than by "
     + "position, so the same sentence written twice changes in both places.",
+  "core/src/api.rs": "The same errors, said by the copy of the solver that runs in "
+    + "the browser. Most of these are written twice, once here and once in web.py, "
+    + "and rewriting only one of them is what the message parity test catches.",
+  "core/src/state.rs": "Loading and session errors from the same copy.",
 };
 
 /* ------------------------------------------------------------------- server */
@@ -278,8 +284,9 @@ async function apply() {
     $("apply").classList.add("primary");
     $("apply").textContent = "Yes, write them in";
     say("This one edits the files themselves",
-        "index.html, app.js and web.py get your wording written into them. There "
-        + "is no undo. Press again to go ahead.");
+        "The source files themselves get your wording written into them. There "
+        + "is no undo, and a phrase written into the Rust needs ./build_site.sh "
+        + "before the preview says it. Press again to go ahead.");
     return;
   }
   armed = false;

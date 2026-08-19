@@ -70,7 +70,7 @@ TILE_VALS = {"N": 0, "Y": 1, "G": 2}
 FINDER_SORTS = {"left": 1, "bits": -1, "weight": -1, "alpha": 1}
 DEFAULT_SORT = "left"
 
-# every string the page and this file say, and whatever /editor has
+# every string the page and this file say, and whatever editor.py has
 # rewritten them to
 WORDING = wording.Wording()
 
@@ -575,7 +575,6 @@ class Handler(BaseHTTPRequestHandler):
     pool = None       # all set on the class in main()
     store = None      # solver boards
     games = None      # games being played
-    editable = True   # whether /editor and its routes exist
 
     # ---------------------------------------------------------------- plumbing
 
@@ -616,14 +615,6 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
-        if path == "/editor":
-            if not self.editable:
-                return self.send_error_json("Not found", status=404)
-            return self.serve_static("/editor.html")
-        if path == "/api/wording":
-            if not self.editable:
-                return self.send_error_json("Not found", status=404)
-            return self.send_json(WORDING.manifest())
         if path == "/api/status":
             return self.send_json({
                 "ready": self.pool.ready,
@@ -644,16 +635,6 @@ class Handler(BaseHTTPRequestHandler):
             body = self.read_json()
         except SolverError as exc:
             return self.send_error_json(str(exc))
-
-        # the wording can be edited before the solver has warmed up: it needs
-        # no solver, and the loading screen is one of the things being worded
-        if path in ("/api/wording/save", "/api/wording/reset", "/api/wording/apply"):
-            if not self.editable:
-                return self.send_error_json("Not found", status=404)
-            try:
-                return self.api_wording(path, body)
-            except (SolverError, ValueError) as exc:
-                return self.send_error_json(str(exc))
 
         routes = {"/api/new": self.api_new,
                   "/api/board": self.api_board,
@@ -746,24 +727,6 @@ class Handler(BaseHTTPRequestHandler):
             self.pool, data.word2ind[answer], parse_pattern(body.get("pattern")),
             parse_config(body), parse_sort(body)))
 
-    # ------------------------------------------------------------ the wording
-
-    def api_wording(self, path, body):
-        """Save or drop rewrites.  Both take effect on the next page load: the
-        sources are re-read and re-scanned on every request."""
-        if path == "/api/wording/reset":
-            keys = body.get("keys")
-            if keys is not None and not isinstance(keys, list):
-                raise ValueError("expected a list of keys")
-            WORDING.forget(keys)
-        elif path == "/api/wording/apply":
-            # the source itself is rewritten here, so the rest of this process
-            # is now running slightly older code than the file it came from
-            return self.send_json({**WORDING.bake(), **WORDING.manifest()})
-        else:
-            WORDING.save(body.get("edits") or {})
-        return self.send_json(WORDING.manifest())
-
     # -------------------------------------------------------------- play mode
 
     def api_game_new(self, body):
@@ -852,13 +815,8 @@ def build_parser():
                         help="do not open a browser window")
     parser.add_argument("--quiet", action="store_true", help="no request log")
     parser.add_argument("--wording-file", default=None, metavar="PATH",
-                        help="where /editor's rewrites are kept (default "
-                             "wording.json).  Point a second server at a "
-                             "scratch file to try the editor out without "
-                             "touching the real one")
-    parser.add_argument("--no-editor", action="store_true",
-                        help="do not serve /editor, where every word on the "
-                             "page can be rewritten and saved")
+                        help="where the rewrites editor.py saves are kept "
+                             "(default wording.json)")
     parser.add_argument("--mask-last", type=int, default=1,
                         help="ignore the last N entries of solutions.json (default 1)")
     parser.add_argument("--no-exact", action="store_true",
@@ -906,9 +864,6 @@ def main(argv=None):
         WORDING = wording.Wording(path=os.path.abspath(args.wording_file))
 
     Handler.pool = pool
-    # anyone who can reach /editor can rewrite the page, so it is offered only
-    # when the server is listening to this machine alone
-    Handler.editable = not args.no_editor and args.host in ("127.0.0.1", "::1", "localhost")
     Handler.store = Store("board")
     Handler.games = Store("game")
 
@@ -918,8 +873,7 @@ def main(argv=None):
 
     url = f"http://{args.host}:{server.server_port}/"
     print(f"Wordle solver on {url}")
-    if Handler.editable:
-        print(f"rewrite what it says on {url}editor")
+    print("Rewrite what it says with editor.py, which edits the static build.")
     print("Warming up: the feedback table and the kernels take a moment.")
 
     threading.Thread(target=pool.warm, args=(PriorConfig(), EXPECTED, None),

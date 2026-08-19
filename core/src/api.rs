@@ -68,18 +68,17 @@ fn status() -> String {
     let mut names: Vec<&str> = crate::estimator::forms().iter().map(|f| f.name).collect();
     names.sort_unstable();
 
+    let progress = if ready {
+        "ready"
+    } else {
+        "Fetching the word lists."
+    };
+
     let mut out = String::new();
     let mut object = Object::new(&mut out);
     object
         .bool("ready", ready)
-        .str(
-            "progress",
-            if ready {
-                "ready"
-            } else {
-                "Fetching the word lists."
-            },
-        )
+        .str("progress", progress)
         .bool("error", false)
         .strings("forms", names)
         .strings("modes", ["entropy", "expected"])
@@ -673,17 +672,16 @@ fn game_new(body: &Value) -> Result<String, String> {
     let (answer, source) = if wanted.is_empty() {
         let weights = loaded.weights_for(&config)?;
         let seed = body.get("seed").and_then(|v| v.as_f64()).unwrap_or(0.0);
-        (
-            draw_answer(&weights, seed),
-            format!("drawn from {}", prior_summary(&config)),
-        )
+        let source = format!("drawn from {}", prior_summary(&config));
+        (draw_answer(&weights, seed), source)
     } else {
         let index = loaded
             .data
             .words
             .index_of(&wanted)
             .ok_or_else(|| format!("'{wanted}' is not in the word list"))?;
-        (index, "the one you chose".to_string())
+        let source = "the one you chose".to_string();
+        (index, source)
     };
 
     let game = state::Game {

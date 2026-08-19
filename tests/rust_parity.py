@@ -696,6 +696,116 @@ def _diff(got, mine, where, report):
     return 0.0
 
 
+def check_messages(report):
+    """The two implementations word an error the same way.
+
+    Every message the page can show is written twice, once in ``web.py`` and
+    once in the Rust the static build answers from.  ``/editor`` lists both
+    copies, so a rewrite has to be made twice; this is what notices when it was
+    made once.
+
+    The Python side is driven in process rather than over HTTP: a handler
+    raises before it ever writes a reply, so a bare instance with the pool on
+    it is enough to reach the message.
+    """
+    import web
+    from wordle_data import score_guess
+
+    pool = web.SolverPool(mask_last=1)
+    data = pool.data()
+    settings = web.parse_settings({})
+
+    handler = object.__new__(web.Handler)
+    handler.pool = pool
+    handler.store = web.Store("board")
+    handler.games = web.Store("game")
+    handler.send_json = lambda payload, status=200: payload
+    board = handler.store.create(web.Session(settings))
+    over = web.Game(data.word2ind["crane"], web.PriorConfig(), "the one you chose")
+    over.rows = [(data.word2ind["crane"], score_guess("crane", "crane"))]
+    finished = handler.games.create(over)
+
+    def row(word, answer):
+        return (data.word2ind[word], score_guess(word, answer))
+
+    # (what is wrong, the request, what the Python does with the same thing)
+    cases = [
+        ("a row that already won, with rows under it",
+         ("/api/board", {"session": board,
+                         "rows": [{"word": "crane", "pattern": "GGGGG"},
+                                  {"word": "salet", "pattern": "NYNYN"}]}),
+         lambda: web.build_state(pool, board, settings,
+                                 [row("crane", "crane"), row("salet", "crane")])),
+        ("rows that cannot all be true",
+         ("/api/board", {"session": board,
+                         "rows": [{"word": "crane", "pattern": "NNNNN"},
+                                  {"word": "salet", "pattern": "NYNYN"}]}),
+         lambda: web.build_state(pool, board, settings,
+                                 [row("crane", "proxy"), row("salet", "crane")])),
+        ("a row whose word is not a word",
+         ("/api/board", {"session": board,
+                         "rows": [{"word": "zzzzz", "pattern": "NNNNN"}]}),
+         lambda: handler.api_board({"session": board,
+                                    "rows": [{"word": "zzzzz",
+                                              "pattern": "NNNNN"}]})),
+        ("a row with no word in it",
+         ("/api/board", {"session": board,
+                         "rows": [{"word": "", "pattern": "NNNNN"}]}),
+         lambda: handler.api_board({"session": board,
+                                    "rows": [{"word": "", "pattern": "NNNNN"}]})),
+        ("a session that is not there",
+         ("/api/game/guess", {"session": "nope", "word": "crane"}),
+         lambda: handler.games.get("nope")),
+        # g1 because the setup below deals it first, in the one process the
+        # whole list runs in; a game's session cannot outlive that
+        ("guessing after the game is over",
+         ("/api/game/guess", {"session": "g1", "word": "crane"}),
+         lambda: handler.api_game_guess({"session": finished, "word": "crane"})),
+        ("an answer that is not a word",
+         ("/api/game/new", {"answer": "zzzzz"}),
+         lambda: handler.api_game_new({"answer": "zzzzz"})),
+        ("finding against a word that is not one",
+         ("/api/find", {"answer": "zzzzz", "pattern": "NNNNN"}),
+         lambda: handler.api_find({"answer": "zzzzz", "pattern": "NNNNN"})),
+        ("finding with no answer typed",
+         ("/api/find", {"answer": "", "pattern": "NNNNN"}),
+         lambda: handler.api_find({"answer": "", "pattern": "NNNNN"})),
+    ]
+
+    # the over-game case needs a game the module has finished too, so it is
+    # played out first and the session it lands in is the one asked about
+    setup = [("/api/game/new", {"answer": "crane"}),
+             ("/api/game/guess", {"session": "g1", "word": "crane"})]
+    replies = _probe(setup + [request for _, request, _ in cases])
+    if replies is None:
+        return None
+    replies = replies[len(setup):]
+
+    apart = 0
+    for (what, (path, _), python), got in zip(cases, replies):
+        try:
+            python()
+            report(f"{what}: the Python allowed it")
+            return False
+        except web.SolverError as error:
+            mine = str(error)
+        theirs = got.get("error")
+        if theirs is None:
+            report(f"{what}: the Rust allowed it, {path} said {got}")
+            return False
+        if theirs != mine:
+            report(f"{what}:")
+            report(f"    web.py     {mine!r}")
+            report(f"    the Rust   {theirs!r}")
+            apart += 1
+
+    report(f"{len(cases)} bad requests, both implementations refusing each")
+    if apart:
+        report(f"{apart} worded differently -- rewrite both, or neither")
+        return False
+    return True
+
+
 def _drop_tied_words(got, mine):
     """Two guesses of equal score are equally good, and which of them a ranking
     names is arbitrary -- check_exact says why.  Where the two sides picked
@@ -868,6 +978,9 @@ CHECKS = [
     ("the endpoints",
      "the finder and play mode answer with what web.py answers with",
      check_api),
+    ("the messages",
+     "both implementations refuse a bad request in the same words",
+     check_messages),
 ]
 
 

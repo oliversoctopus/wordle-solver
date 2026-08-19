@@ -36,6 +36,7 @@ python web.py                     the page, on http://127.0.0.1:8000
 python wordle_solver.py play      the solver in the terminal
 python wordle_game.py             a game in the terminal
 ./build_site.sh                   the same page as static files, in site/
+python editor.py                  rewrite what the site says, on :8001/editor
 ```
 
 `requirements.txt` splits in two: the solver needs `numpy` and `numba`, and the last two lines are for the one-off builders only. It is what `.venv` was built from; installing into the system Python is not the setup here.
@@ -77,7 +78,8 @@ Fast math is not a hazard you can reach by accident here: `rustc` exposes no suc
 | `web/app.js` | the whole page; served unmodified by both the Python and the static build |
 | `web/wasm-api.js` | stands in for `fetch` on `/api/*` in the static build, and routes into the module |
 | `build_site.sh` | assembles `site/`, the whole thing as static files |
-| `wording.py` | the `/editor` string scanner |
+| `wording.py` | the editor's string scanner |
+| `editor.py` | the editor: rewrites what the site says, previewing the static build |
 | `unwrap_md.py` | checks that every `.md` is one line per paragraph; `--write` converts |
 | `feedback_table.py` | builds `feedback_table.npy` and the index maps |
 | `answer_like.py` | builds `answer_like.json`, the answer-like scores |
@@ -122,7 +124,11 @@ Requests are serialized: one in flight, and a second made meanwhile is held, not
 
 Patterns cross the wire as either `"NYGNN"` or `[0, 1, 2, 0, 0]`; the server takes both, and the page sends whichever it has to hand. A test double for the API has to accept both too.
 
-`/editor` rewrites what the site says by scanning the source for user-visible strings. It means **string literals in `index.html`, `app.js` and `web.py` are data**: changing one changes what `/editor` lists, and any saved override keyed to the old wording is orphaned. `wording.json` holds live overrides; *Write into the code* bakes them into the source and logs the phrases to `wording_history.json`. There is no file-level undo.
+`python editor.py` rewrites what the site says by scanning the source for user-visible strings. It means **string literals in `index.html`, `app.js`, `web.py` and `core/src/api.rs` are data**: changing one changes what the editor lists, and any saved override keyed to the old wording is orphaned. `wording.json` holds live overrides; *Write into the code* bakes them into the source and logs the phrases to `wording_history.json`. There is no file-level undo.
+
+It previews `site/`, so what you are editing is what deploys, and it loads no word lists and no table — `web.py` used to serve it and had to warm the whole solver first, to change a sentence. A phrase baked into the Rust needs `./build_site.sh` before the preview says it, being inside the compiled module by then rather than in a file being served.
+
+**Every message exists twice**, once in `web.py` and once in the Rust the static build answers from. Both are listed and both have to be edited; carrying an edit across was tried and does not work, since the two write their placeholders differently and `{index + 1}` is not a name Rust can have. `tests/rust_parity.py`'s message check drives both with the same bad requests and fails when one of them was rewritten and the other was not.
 
 **`wording_history.json` is a record of the past.** Its `was:` fields quote what the code used to say. Do not sweep it with a project-wide rewrite — that makes it false. It was deliberately left British when everything else was converted.
 

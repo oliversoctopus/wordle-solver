@@ -2,9 +2,16 @@
 
 Nothing here is a list of strings to maintain.  The site's own source is read
 and the user-visible text picked out of it by how it is *used* -- text between
-tags, ``textContent = ...``, ``say(...)``, ``SolverError(...)`` and so on.  A
-string written the ordinary way is therefore editable the moment it exists, with
-no step in between.
+tags, ``textContent = ...``, ``say(...)``, ``SolverError(...)``, ``Err(...)``
+and so on.  A string written the ordinary way is therefore editable the moment
+it exists, with no step in between.
+
+The messages exist twice, once in ``web.py`` and once in the Rust the static
+build says them from, so both are scanned and both are listed.  Carrying an
+edit from one to the other automatically was tried and does not work: the two
+write their placeholders differently, and ``{index + 1}`` is not a name Rust
+can have.  ``tests/rust_parity.py`` compares what the two actually say, which
+catches an edit made to only one of them.
 
 Each occurrence is found at a character offset, so two identical strings in two
 places stay two separate things to edit.  Rewriting therefore happens
@@ -61,9 +68,10 @@ class Occurrence:
     """One place one string is written."""
 
     __slots__ = ("id", "file", "start", "end", "text", "line", "context",
-                 "kind", "quote", "slots")
+                 "kind", "quote", "slots", "style")
 
-    def __init__(self, file, start, end, text, line, context, kind, quote=""):
+    def __init__(self, file, start, end, text, line, context, kind, quote="",
+                 style=""):
         self.file = file
         # the span is where it lives in the file; the text is how it reads
         self.start = start
@@ -73,7 +81,8 @@ class Occurrence:
         self.context = context
         self.kind = kind
         self.quote = quote
-        self.slots = tuple(slots_in(text, quote))
+        self.style = style
+        self.slots = tuple(slots_in(text, quote, style))
         self.id = ""
 
     def as_dict(self, override=None):
@@ -90,10 +99,13 @@ class Occurrence:
         }
 
 
-def slots_in(text, quote):
+def slots_in(text, quote, style=""):
     """The values baked into a string, which an edit has to keep."""
     if quote == "`":
         return re.findall(r"\$\{[^{}]*\}", text)
+    if style == "rs":
+        # Rust fills a bare {} from the argument list, so the empty one counts
+        return re.findall(r"\{[a-zA-Z_][\w.]*\}|\{\d*\}", text)
     if quote in ("'", '"'):
         return re.findall(r"\{[a-zA-Z_][\w .\[\]'\"()+-]*\}", text)
     return []
@@ -249,6 +261,23 @@ def _statement(masked, offset):
     return head[cut + 1:]
 
 
+_RS_FN = re.compile(r"^\s*(?:pub )?(?:async )?fn\s+\w+", re.M)
+
+
+def _rs_statement(masked, offset):
+    """The statement a literal sits in, which in Rust is not the line it is on.
+
+    A message inside a closure is several braces down from the call that says
+    what it is for -- ``.ok_or_else(|| { if … })`` -- so cutting at a brace the
+    way the JS lookback does would throw away the only thing that marks it.
+    Cutting at the semicolon keeps the whole statement, and the enclosing
+    function bounds it so a match arm cannot reach into the one above.
+    """
+    head = masked[:offset]
+    starts = [m.start() for m in _RS_FN.finditer(head)]
+    return head[max(head.rfind(";"), starts[-1] if starts else -1) + 1:]
+
+
 def _docstrings(source):
     return [(m.start(), m.end()) for m in re.finditer(r'"""(?:.|\n)*?"""', source)]
 
@@ -273,6 +302,23 @@ _PY_LEAD = re.compile(
     r"|Game\([^()]*,\s*$"
 )
 
+# The Rust says the same things the Python server does, and the static build
+# says them instead of it.  Every user-visible message there leaves through an
+# Err or through a field of the reply, so those are what mark one.
+_RS_LEAD = re.compile(
+    r"Err\(\s*(?:format!\(\s*)?$"
+    r"|\.ok_or\(\s*$"
+    r"|\.ok_or_else\(\|\|\s*(?:format!\(\s*)?$"
+    r"|\.map_err\(\|_\|\s*(?:format!\(\s*)?$"
+    r"|error_json\(&\s*(?:format!\(\s*)?$"
+    r"|\bsource\s*=\s*(?:format!\(\s*)?$"
+)
+# ...or wherever a message is built inside the statement that says what it is
+# for: a closure body, a match arm, either half of an if.  As in JS, the thing
+# that marks it as text is then lines above rather than on its own line.
+_RS_ARM = re.compile(r"format!\(\s*$|=>\s*$|\{\s*$|,\s*$")
+_RS_TEXTY = re.compile(r"Err\(|ok_or|map_err|error_json|\b(?:source|progress)\s*=")
+
 _PREFIX = re.compile(r"[fruFRUbB]{0,2}$")
 
 
@@ -295,14 +341,56 @@ def _py_context(source, offset):
     return ""
 
 
+def _rs_context(source, offset):
+    names = re.findall(r"^\s*(?:pub )?fn\s+(\w+)", source[:offset], re.M)
+    return names[-1] + "()" if names else ""
+
+
+def _rs_tests(source):
+    """The span of a ``#[cfg(test)]`` module, whose strings nobody reads.
+
+    The Rust equivalent of skipping docstrings: an assertion message is written
+    the same way a real one is, and listing it would offer the editor a string
+    that never reaches a page.
+    """
+    spans = []
+    for match in re.finditer(r"#\[cfg\(test\)\]", source):
+        brace = source.find("{", match.end())
+        if brace < 0:
+            continue
+        depth, index = 0, brace
+        while index < len(source):
+            if source[index] == "{":
+                depth += 1
+            elif source[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            index += 1
+        spans.append((match.start(), index))
+    return spans
+
+
+LEADS = {"js": _JS_LEAD, "py": _PY_LEAD, "rs": _RS_LEAD}
+ARMS = {"js": (_JS_ARM, _JS_TEXTY), "rs": (_RS_ARM, _RS_TEXTY)}
+STATEMENTS = {"js": _statement, "rs": _rs_statement}
+CONTEXTS = {"js": _js_context, "py": _py_context, "rs": _rs_context}
+
+
 def scan_code(source, name, style):
-    lead = _JS_LEAD if style == "js" else _PY_LEAD
+    lead = LEADS[style]
     blanked = _blanked_comments(source, style)
-    masked = _blanked_literals(blanked) if style == "js" else blanked
+    masked = _blanked_literals(blanked) if style in ("js", "rs") else blanked
     skip = _docstrings(source) if style == "py" else []
-    context = _js_context if style == "js" else _py_context
+    if style == "rs":
+        skip = _rs_tests(source)
+    context = CONTEXTS[style]
     found = []
     for start, end, text, quote in _literals(blanked):
+        # Rust writes lifetimes with a single quote -- &'a str, Live<'a> -- so
+        # only a double-quoted run is a string there
+        if style == "rs" and quote != '"':
+            continue
         real = source[start:end]
         if not worth_offering(real):
             continue
@@ -310,15 +398,16 @@ def scan_code(source, name, style):
             continue
         before = _PREFIX.sub("", source[max(0, start - 60):start - 1])
         if not lead.search(before):
-            if style != "js" or not _JS_ARM.search(before):
+            arm, texty = ARMS.get(style, (None, None))
+            if arm is None or not arm.search(before):
                 continue
-            if not _JS_TEXTY.search(_statement(masked, start)):
+            if not texty.search(STATEMENTS[style](masked, start)):
                 continue
-        kind = "script" if style == "js" else "server"
+        kind = {"js": "script", "py": "server"}.get(style, "server")
         if style == "js" and re.search(r"\.title\s*=\s*$", before):
             kind = ATTRIBUTE_KINDS["title"]   # also never shown until hovered
         found.append(Occurrence(name, start, end, real, _line_of(source, start),
-                                context(source, start), kind, quote))
+                                context(source, start), kind, quote, style))
     return found
 
 
@@ -328,6 +417,12 @@ SOURCES = [
     ("web/index.html", scan_html, None),
     ("web/app.js", scan_code, "js"),
     ("web.py", scan_code, "py"),
+    # The static build says these instead of web.py's, so both are listed and
+    # both are edited.  Carrying a phrase from one to the other automatically
+    # was tried and does not work: the two write their placeholders
+    # differently, and {index + 1} is not a name Rust can have.
+    ("core/src/api.rs", scan_code, "rs"),
+    ("core/src/state.rs", scan_code, "rs"),
 ]
 
 
@@ -371,6 +466,22 @@ def escape_js(text, quote):
     return text
 
 
+def escape_rs(text):
+    """As escape_js, except that a brace is how Rust's format! takes a value.
+
+    The slots themselves are checked before an edit is accepted, so whatever
+    braces remain here are the ones that belong.
+    """
+    return text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+
+
+def written_style(name):
+    """How a replacement has to be escaped to go back into this file."""
+    if name.endswith(".html"):
+        return "html"
+    return "rs" if name.endswith(".rs") else "js"
+
+
 def rewrite(source, occurrences, overrides, style, wrap=False):
     """Apply overrides to a file's text, back to front so offsets hold.
 
@@ -387,6 +498,8 @@ def rewrite(source, occurrences, overrides, style, wrap=False):
             replacement = escape_html(replacement)
             if wrap and occurrence.kind == "markup":
                 replacement = _wrapped(source, occurrence.start, replacement)
+        elif style == "rs":
+            replacement = escape_rs(replacement)
         else:
             replacement = escape_js(replacement, occurrence.quote)
         source = source[:occurrence.start] + replacement + source[occurrence.end:]
@@ -455,9 +568,14 @@ class Wording:
             "count": len(overrides),
         }
 
-    def served(self, name):
-        """A source file with the overrides applied to it."""
-        source = read(name)
+    def served(self, name, path=None):
+        """A source file with the overrides applied to it.
+
+        ``path`` takes the bytes from somewhere else while keeping ``name``'s
+        ids, which is how the static build's copy of a page is served: it is
+        the same text with a script tag added, so every id still matches.
+        """
+        source = read(path or name)
         with self.lock:
             overrides = dict(self.overrides)
         if not overrides:
@@ -470,8 +588,7 @@ class Wording:
             index = seen.get(digest, 0)
             seen[digest] = index + 1
             occurrence.id = "%s:%s:%d" % (name, digest, index)
-        return rewrite(source, found, overrides,
-                       "html" if name.endswith(".html") else "js")
+        return rewrite(source, found, overrides, written_style(name))
 
     def message(self, text):
         """An override for a string this process is about to send.
@@ -590,8 +707,8 @@ class Wording:
             if not mine:
                 continue
             source = read(name)
-            updated = rewrite(source, mine, overrides,
-                              "html" if name.endswith(".html") else "js", wrap=True)
+            updated = rewrite(source, mine, overrides, written_style(name),
+                              wrap=True)
             # newline="" so baking a phrase does not also rewrite every line
             with open(os.path.join(HERE, name), "w", encoding="utf-8",
                       newline="") as handle:

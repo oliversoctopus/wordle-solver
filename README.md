@@ -31,7 +31,8 @@ python wordle_solver.py train --this-config-only --no-repeat-prior --form satura
 | `wordle_solver.py` | command line front end |
 | `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer |
 | `web.py`, `web/` | both of the above in a browser, plus the word finder: stdlib HTTP server and a static page |
-| `wording.py` | finds every string the site says, so `/editor` can rewrite any of it |
+| `wording.py` | finds every string the site says, so `editor.py` can rewrite any of it |
+| `editor.py` | the editor itself, previewing the static build it is editing |
 | `unwrap_md.py` | checks that every `.md` is one line per paragraph; `--write` converts |
 | `wordle_solver.ipynb` | the analysis behind the prior probabilities |
 | `data/`, `data/derived/` | the word lists and answer record; everything `feedback_table.py` regenerates |
@@ -591,19 +592,25 @@ Nothing is rebuilt behind your back either. A setting changed while a view is hi
 
 ### Rewriting what it says
 
-`/editor` lists every string the site can say, each beside a box to rewrite it, with the page itself alongside. Save, and the page says it — no restart.
+`python editor.py` lists every string the site can say, each beside a box to rewrite it, with the page itself alongside. Save, and the page says it — no restart.
 
-Nothing is registered by hand. `wording.py` reads `index.html`, `app.js` and `web.py` and picks the text out by how it is used (between tags, assigned to `textContent`, passed to `say()` or `SolverError()`, and so on), so a string written the ordinary way is editable the moment it exists and the list cannot fall behind the site. Each is shown with the file, the line and where on the page it sits.
+What it shows alongside is `site/`, the build that gets deployed, running its solver in WASM. So the editor loads no word lists, no feedback table and no numba, and starts in the time it takes to read one directory; `web.py` served it before and had to warm the whole solver first, to change a sentence.
+
+Nothing is registered by hand. `wording.py` reads `index.html`, `app.js`, `web.py` and the two Rust files the static build answers from, and picks the text out by how it is used (between tags, assigned to `textContent`, passed to `say()`, `SolverError()` or `Err()`, and so on), so a string written the ordinary way is editable the moment it exists and the list cannot fall behind the site. Each is shown with the file, the line and where on the page it sits.
+
+Rust needs a lookback the others do not. A message there is often several braces inside the call that says what it is for — `.ok_or_else(|| { if … })` — so cutting the context at a brace, which is what the JS scanner does, would throw away the only thing marking it as text. `wording._rs_statement` cuts at the semicolon instead and lets the enclosing function bound it. That one difference is what takes the Rust from 20 of its messages to all of them, and it keeps `format!("g{}", …)` out, since a session id is built in a statement that says nothing about text.
 
 A choice between two strings counts as one of those uses, and what marks it as text can be lines above the arm it is looking at — `why:` over a ternary laid out one arm per line. Reading only the arm's own line missed the longest prose on the page, the two explanations of the priors, until 2026-08-10.
 
 Strings are found at a character offset, so the same sentence written twice is two entries and rewriting one leaves the other alone. Edits are applied to the served bytes of `index.html` and `app.js`, and saved in `wording.json` keyed by `<file>:<hash of the text>:<n>` — which survives the code being worked on, since neither line numbers nor offsets do. What the *server* says is matched on the way out instead, values and all: `Row {index + 1} contradicts the rows above it` becomes a pattern, and whatever it captured goes back into the rewritten version. That is by wording rather than by position, so a message written twice in `web.py` is one entry.
 
-A value baked into a string is part of it: an edit may move `${count}` but not drop it, and saving is refused if one goes missing. `--no-editor` turns the whole thing off, and it is served only when the server is listening to this machine alone.
+A value baked into a string is part of it: an edit may move `${count}` but not drop it, and saving is refused if one goes missing. Rust's bare `{}` counts as one of those too, since that is how `format!` takes an argument. The editor listens to this machine alone; anyone who can reach it can rewrite the source it is built from.
 
-**Save** leaves the source alone. The rewrites live in `wording.json` and are applied to the served bytes on the way out. **Write into the code** puts them in the files for good and clears `wording.json`. That is the end state worth reaching, because an override is matched to the code by wording and stays fragile for exactly as long as it sits outside it. Prose is re-wrapped to the indentation it lands in, and both phrases are appended to `wording_history.json`. That record is the only one kept. The bake edits the source in place with no undo, so it is worth reading the source afterwards. The server keeps running the code it started with, and its own messages need a restart before they read the new way.
+**Save** leaves the source alone. The rewrites live in `wording.json` and are applied to the served bytes on the way out — and `build_site.sh` applies them too, so a rewrite that has only been saved still reaches the deployed page. **Write into the code** puts them in the files for good and clears `wording.json`. That is the end state worth reaching, because an override is matched to the code by wording and stays fragile for exactly as long as it sits outside it. Prose is re-wrapped to the indentation it lands in, and both phrases are appended to `wording_history.json`. That record is the only one kept. The bake edits the source in place with no undo, so it is worth reading the source afterwards. A phrase written into the Rust needs `./build_site.sh` before the preview says it, since by then it is inside the compiled module rather than in a file being served.
 
-Nothing to install: the server is `http.server` and the page is three static files in `web/`, with three more behind `/editor`. Startup warms the feedback table and the numba kernels in the background while the page waits. That makes the first load the slow one. A single lock covers the solver. Scoring ~13k guesses already uses every core, so two requests at once would only make both slower.
+**Every message the page can show is written twice**, once in `web.py` and once in the Rust the static build answers from. Both are listed and both have to be edited. Carrying an edit from one to the other automatically was tried and does not work: the two write their placeholders differently, and `{index + 1}` is not a name Rust can have, so an exact match reaches about a third of them and says nothing about the rest. What catches the omission instead is `tests/rust_parity.py`'s message check, which feeds both implementations the same nine bad requests and prints the two wordings side by side when they have come apart.
+
+Nothing to install: the server is `http.server` and the page is three static files in `web/`, with three more behind the editor. Startup warms the feedback table and the numba kernels in the background while the page waits. That makes the first load the slow one. A single lock covers the solver. Scoring ~13k guesses already uses every core, so two requests at once would only make both slower.
 
 ### Without a server
 
@@ -615,6 +622,6 @@ Nothing to install: the server is `http.server` and the page is three static fil
 
 The exception is the opening, at 12,947 guesses against 12,947 candidates. That one position is a constant per setting, so `native/src/bin/build_site.rs` computes all 180 of them ahead of time into `openings.json` — every prior against both modes, both hard-mode settings, and each of the nine forms of `f`. Entropy never consults `f`, so its share of those is one ranking written out under nine names.
 
-Two things do not survive. `/editor` rewrites the source it is scanning, which needs a server and a checkout, so it stays a local Python tool. And play mode's answer no longer sits out of reach — the module holds it, and the page still never receives it until the game is over, but "reading the network traffic does not spoil it" is now a statement about a page rather than a guarantee.
+Two things do not survive. The editor rewrites the source it is scanning, which needs a checkout, so it stays a local Python tool — one that now previews this build rather than the Python's. And play mode's answer no longer sits out of reach — the module holds it, and the page still never receives it until the game is over, but "reading the network traffic does not spoil it" is now a statement about a page rather than a guarantee.
 
 `native/src/bin/api_probe.rs` runs the same endpoints from a shell. Debugging them through a browser is guesswork on a slow loop, and this is why the API lives in `wordle_core` rather than in the `wasm` crate, which does marshalling and nothing else.
