@@ -214,8 +214,8 @@ def check_kernels(report):
         for line in done.stdout.strip().splitlines():
             report(line.strip())
 
-        floats = np.fromfile(os.path.join(out_dir, "scores.f64"), dtype="<f8")
-        blobs = np.fromfile(os.path.join(out_dir, "splits.i64"), dtype="<u1")
+        floats = np.fromfile(os.path.join(out_dir, "kernels.f64"), dtype="<f8")
+        blobs = np.fromfile(os.path.join(out_dir, "kernels.i64"), dtype="<u1")
         at, bat = 0, 0
         worst, worst_where = 0.0, None
 
@@ -284,6 +284,163 @@ def check_kernels(report):
         return True
 
 
+def _endgame_sets(data, wanted=24):
+    """Real positions small enough for the exact search to take on.
+
+    Played out rather than sliced off the front of the list: what the search
+    meets are sets left by a word, which share letters and split unevenly, and
+    an arbitrary prefix of the alphabet does not behave like one.  One ply
+    usually overshoots -- a played word leaves either a couple of candidates or
+    several hundred -- so this goes two deep and keeps a spread of sizes, which
+    is what reaches both the dedupe's packed path and the hashed one.
+    """
+    from wordle_data import score_guess
+
+    table = data.feedback_table
+    openings = ("salet", "crane", "raise")
+    answers = ("hatch", "batty", "wound", "foggy", "abbey", "squid",
+               "water", "hater", "catty", "ratty", "brook", "mushy")
+
+    by_size = {}
+    for opening in openings:
+        g = data.word2ind[opening]
+        for answer in answers:
+            first = np.flatnonzero(
+                table[g] == score_guess(opening, answer)).astype(np.int64)
+            for depth_two in ("bronc", "hatch", "dwarf"):
+                h = data.word2ind[depth_two]
+                kept = first[table[h, first] == score_guess(depth_two, answer)]
+                if 3 <= kept.size <= 60:
+                    by_size.setdefault(int(kept.size), kept)
+            if 3 <= first.size <= 60:
+                by_size.setdefault(int(first.size), first)
+
+    # a spread rather than the first n found, so both dedupe paths are reached
+    return [by_size[k] for k in sorted(by_size)][:wanted]
+
+
+def check_exact(report):
+    """The endgame search, against ``exact.ExactEndgame``.
+
+    Both the guess and the value have to match.  A guess of equal value would
+    not do: ``SPLIT_TIE_TOL`` is 1e-9 and the closest real pair of scores over a
+    whole scan is 1.1e-9, so a drifting branch order shows up as a different
+    word long before it shows up as a different number.
+    """
+    path = binary("parity_exact")
+    if path is None:
+        return None
+
+    import priors
+    from exact import ExactEndgame
+    from wordle_data import load_data
+
+    data = load_data()
+    weights = priors.build_weights(data, priors.PriorConfig())
+    sets = _endgame_sets(data)
+    arms = [(5.0, False), (1.0, False), (5.0, True)]
+    turns_list = [3, 4, 5, 6]
+    report(f"{len(sets)} positions, sizes {[int(s.size) for s in sets]}")
+
+    with tempfile.TemporaryDirectory() as out_dir:
+        sets_file = os.path.join(out_dir, "sets.bin")
+        with open(sets_file, "wb") as handle:
+            handle.write(np.uint32(len(sets)).tobytes())
+            for s in sets:
+                handle.write(np.uint32(s.size).tobytes())
+                handle.write(s.astype("<u8").tobytes())
+
+        done = subprocess.run([path, ROOT, sets_file, out_dir],
+                              capture_output=True, text=True)
+        if done.returncode != 0:
+            report((done.stdout + done.stderr).strip())
+            return False
+        for line in done.stdout.strip().splitlines():
+            report(line.strip())
+
+        ints = np.fromfile(os.path.join(out_dir, "exact.i64"), dtype="<u1")
+        floats = np.fromfile(os.path.join(out_dir, "exact.f64"), dtype="<f8")
+        iat, fat = 0, 0
+
+        def next_int():
+            nonlocal iat
+            v = int(np.frombuffer(ints[iat:iat + 8].tobytes(), dtype="<i8")[0])
+            iat += 8
+            return v
+
+        def next_indices():
+            nonlocal iat
+            k = int(np.frombuffer(ints[iat:iat + 4].tobytes(), dtype="<u4")[0])
+            iat += 4
+            got = np.frombuffer(ints[iat:iat + 8 * k].tobytes(), dtype="<i8")
+            iat += 8 * k
+            return got.astype(np.int64)
+
+        def next_floats(k):
+            nonlocal fat
+            got = floats[fat:fat + k]
+            fat += k
+            return got
+
+        worst = 0.0
+        checked = 0
+        ties = 0
+        for penalty, hard in arms:
+            for s in sets:
+                search = ExactEndgame(data.feedback_table, weights,
+                                      loss_penalty=penalty, hard=hard)
+                for turns in turns_list:
+                    guess, value = search.solve(s, turns)
+                    got_guess, got_value = next_int(), next_floats(1)[0]
+                    worst = max(worst, abs(got_value - value)
+                                / max(abs(value), 1e-300))
+                    # A position routinely has several optimal guesses, and
+                    # which one comes back depends on the order the bounds were
+                    # sorted into.  `np.argsort` sorts with quicksort, whose tie
+                    # order is unstable and documented as arbitrary, so Python's
+                    # own answer is not reproducible across numpy versions.  The
+                    # question worth asking is whether the Rust pick is *also*
+                    # optimal, so value it and see.
+                    if got_guess != guess:
+                        mine = search._evaluate(int(got_guess), s, weights[s],
+                                                weights[s].sum(), turns, np.inf)
+                        if abs(mine - value) > TOLERANCE * max(abs(value), 1.0):
+                            report(f"solve at p={penalty} hard={hard} "
+                                   f"t={turns} size={s.size}: {got_guess} is "
+                                   f"worth {mine!r}, not {value!r}")
+                            return False
+                        ties += 1
+
+                    # The values are compared elementwise and the lead word
+                    # exactly; the tail's *words* are not, and cannot be.
+                    # `_bounded_splits` routinely leaves scores of guesses tied
+                    # on the bound -- 1176 of 1177 at exactly 2.0 in one of
+                    # these positions -- and `np.argsort` breaks those ties with
+                    # quicksort, which is unstable and documented as arbitrary.
+                    # Python's own answer there is not reproducible across numpy
+                    # versions, so demanding the Rust reproduce it would be
+                    # testing an accident.
+                    top = search.top(s, turns, k=5)
+                    got_words = next_indices()
+                    got_values = next_floats(len(top))
+                    if len(got_words) != len(top):
+                        report(f"top at p={penalty} hard={hard} t={turns} "
+                               f"size={s.size}: {len(got_words)} words against "
+                               f"{len(top)}")
+                        return False
+                    for got_v, (_, v) in zip(got_values, top):
+                        worst = max(worst, abs(got_v - v) / max(abs(v), 1e-300))
+                    checked += 1
+
+        report(f"{checked} solve and top pairs; {ties} picked a different "
+               f"guess of exactly equal value")
+        report(f"worst relative gap on the values {worst:.3e}")
+        if worst > TOLERANCE:
+            report(f"over {TOLERANCE:.0e}")
+            return False
+        return True
+
+
 # (label, what agreement establishes, the check)
 CHECKS = [
     ("the coloring rule",
@@ -299,6 +456,9 @@ CHECKS = [
      "the three scorers and the split helpers match kernels, either side of "
      "both thresholds",
      check_kernels),
+    ("the endgame search",
+     "solve and top return the identical guess and value, over three arms",
+     check_exact),
 ]
 
 

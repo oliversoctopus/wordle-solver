@@ -82,6 +82,10 @@ The split helpers are compared **in order**, not as sets. `distinct_partitions` 
 
 The Rust side also checks its two feedback sources against each other before trusting either: the table the native build fills, and the live scoring the browser build uses instead. If those ever diverged the site and the sweeps would be playing different games.
 
+The endgame search is checked over positions played out two plies deep, at every turn count from three to six, under three arms — the shipped penalty, risk-neutral, and hard mode. Its *values* match to within an ulp.
+
+Its *guess* is checked differently, and the reason is worth knowing: **a position routinely has several exactly optimal guesses, and which one comes back is arbitrary.** `_bounded_splits` leaves scores of representatives tied on the bound — 1,176 of 1,177 at exactly 2.0 in one of these positions — and `np.argsort` breaks those ties with quicksort, which is unstable and documented as giving no particular order. So Python's own pick is not reproducible across numpy versions, and demanding the Rust reproduce it would be testing an accident. What the check asks instead is whether the Rust pick is *also* optimal: where the two differ it values the Rust guess with Python's own `_evaluate` and requires the same number. One of 288 positions differs that way, at `smoko` against `hakam`, both worth 2.02282365417121035.
+
 The tolerance is still 1e-12 rather than zero. Exactness here is a property of two implementations that happen to agree, not something either side promises, and a check that fails on the last bit would eventually fail for a reason nobody cares about.
 
 Needs the table, so `run.py` keeps it behind `--full`.

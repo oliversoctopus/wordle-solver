@@ -10,9 +10,11 @@
 
 pub mod data;
 pub mod estimator;
+pub mod exact;
 pub mod feedback;
 pub mod json;
 pub mod kernels;
+pub mod memo;
 pub mod priors;
 pub mod source;
 pub mod sum;
