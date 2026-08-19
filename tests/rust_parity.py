@@ -24,17 +24,23 @@ TARGET = os.path.join(ROOT, "target", "release")
 sys.path.insert(0, ROOT)
 
 # Two independent implementations of the same arithmetic differ in their last
-# bits, and nothing here should care.  What sets the bar is the tightest margin
-# any decision actually turns on: over all 12,947 guesses at the opening the
-# closest pair of scores differs by 1.1e-9 under the shipped prior and 6e-11
-# under the loosest, so anything well under 6e-11 cannot change a choice.  This
-# sits sixty times below that and ten thousand above float noise.
+# bits, and the tolerance sits in the window between what that costs and what
+# anything actually turns on.
+#
+# The floor: adding 12,947 positive floats left to right accumulates about
+# n * eps ~ 3e-12 of relative error, and the two sides add them in different
+# orders, so ~3.6e-12 shows up in effective_size and is meaningless.
+#
+# The ceiling: over all 12,947 guesses at the opening the closest pair of scores
+# differs by 1.1e-9 under the shipped prior and 6e-11 under the loosest, so a
+# disagreement has to reach 6e-11 before it can reorder anything.  This sits
+# three times over the floor and six under the ceiling.
 #
 # Absolute as well as relative, because a score of zero is an ordinary answer --
-# a guess that leaves every candidate in one bucket gains exactly no
-# information -- and dividing by it says nothing.
-ATOL = 1e-12
-RTOL = 1e-12
+# a guess leaving every candidate in one bucket gains exactly no information --
+# and dividing by it says nothing.
+ATOL = 1e-11
+RTOL = 1e-11
 
 
 def gap(got, mine):

@@ -13,7 +13,6 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::data::{load_table, WordleData};
-use crate::sum::pairwise;
 
 pub const DEFAULT_REPEAT_PROB: f64 = 0.10;
 pub const DEFAULT_NONCURATED_PROB: f64 = 0.10;
@@ -212,8 +211,7 @@ fn curation_shape(
         .iter()
         .map(|w| table.get(*w).copied().unwrap_or(0.0))
         .collect();
-    let inside: Vec<f64> = listed.iter().copied().filter(|&v| v > 0.0).collect();
-    let inside_total = pairwise(&inside);
+    let inside_total: f64 = listed.iter().copied().filter(|&v| v > 0.0).sum();
     if inside_total <= 0.0 {
         return Ok(None);
     }
@@ -304,8 +302,7 @@ pub fn build_weights(
                 }
             }
             Some(rel) => {
-                let members: Vec<f64> = (0..n).filter(|&i| mask[i]).map(|i| rel[i]).collect();
-                let total = pairwise(&members);
+                let total: f64 = (0..n).filter(|&i| mask[i]).map(|i| rel[i]).sum();
                 for i in 0..n {
                     if mask[i] {
                         weights[i] = if total > 0.0 {
@@ -319,7 +316,7 @@ pub fn build_weights(
         }
     }
 
-    let total = pairwise(&weights);
+    let total: f64 = weights.iter().sum();
     if total <= 0.0 {
         return Err("prior has no mass; check the prior probabilities".into());
     }

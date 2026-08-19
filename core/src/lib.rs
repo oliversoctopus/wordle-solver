@@ -17,7 +17,6 @@ pub mod kernels;
 pub mod memo;
 pub mod priors;
 pub mod source;
-pub mod sum;
 pub mod words;
 
 pub use data::WordleData;

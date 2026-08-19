@@ -86,18 +86,6 @@ The endgame search is checked over positions played out two plies deep, at every
 
 Its *guess* is checked differently, and the reason is worth knowing: **a position routinely has several exactly optimal guesses, and which one comes back is arbitrary.** `_bounded_splits` leaves scores of representatives tied on the bound — 1,176 of 1,177 at exactly 2.0 in one of these positions — and `np.argsort` breaks those ties with quicksort, which is unstable and documented as giving no particular order. So Python's own pick is not reproducible across numpy versions, and demanding the Rust reproduce it would be testing an accident. What the check asks instead is whether the Rust pick is *also* optimal: where the two differ it values the Rust guess with Python's own `_evaluate` and requires the same number. One of 288 positions differs that way, at `smoko` against `hakam`, both worth 2.02282365417121035.
 
-**On how close is close enough.** The two implementations happen to agree to the last bit nearly everywhere, and that is a convenience rather than the goal. What sets the bar is the tightest margin any decision actually turns on: over all 12,947 guesses at the opening the closest pair of scores differs by 1.1e-9 under the shipped prior and 6e-11 under the loosest, so a disagreement well under 6e-11 cannot change a choice. The tolerance sits sixty times below that and ten thousand above float noise, and results are reported as a fraction of it — 0.000 meaning nowhere near mattering.
+**On how close is close enough.** The tolerance sits in the window between what floating point costs and what anything actually turns on. Adding 12,947 positive floats left to right accumulates about `n * eps` ~ 3e-12 of relative error, and the two sides add them in different orders, so ~3.6e-12 turns up in `effective_size` and means nothing. At the other end, over all 12,947 guesses at the opening the closest pair of scores differs by 1.1e-9 under the shipped prior and 6e-11 under the loosest, so a disagreement has to reach 6e-11 before it can reorder anything. The tolerance is three times over the floor and six under the ceiling, and results are reported as a fraction of it.
 
-It is an absolute *and* relative tolerance, which matters more than it sounds. A score of zero is an ordinary answer here: a guess leaving every candidate in one bucket gains exactly no information, and two of the 12,947 do that on a five-candidate set. Dividing by that to get a relative error says nothing, and an earlier version of this file reported a disagreement of 1e+285 for exactly that reason. That also fixes what the kernels' totals are for — they accumulate one candidate at a time, like the buckets, so that `mass / total` comes out at exactly 1.0 and such a guess really does score zero. Everything else sums pairwise, which is simply more accurate.
-
-Needs the table, so `run.py` keeps it behind `--full`.
-
-## `fit_provenance.py` — the fitted `f` is a fit of the record we have
-
-Not a test of code. `estimator` keys its cache on the `PriorConfig` alone, so it will happily load a fit made against a shorter answer log, and nothing says so. This compares the `fitted_at` stamp each cache already carries against the newest answer the solver is allowed to see, for all four priors the page can name. What it catches is not a wrong function but a stale one.
-
-Refit whatever it names:
-
-```
-python wordle_solver.py train --this-config-only
-```
+It is an absolute *and* relative tolerance, which matters more than it sounds. A score of zero is an ordinary answer here: a guess leaving every candidate in one bucket gains exactly no information, and two of the 12,947 do that on a five-candidate set. Dividing by that to get a relative error says nothing, and an earlier version of this file reported a disagreement of 1e+285 for exactly that reason.

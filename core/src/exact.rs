@@ -121,8 +121,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     /// Mass, heaviest member's index within the slice, and that member's share.
     ///
     fn shape(&self, candidates: &[usize]) -> (f64, usize, f64) {
-        let masses: Vec<f64> = candidates.iter().map(|&c| self.weights[c]).collect();
-        let total = crate::sum::pairwise(&masses);
+        let total: f64 = candidates.iter().map(|&c| self.weights[c]).sum();
         // numpy's argmax takes the first maximum on ties
         let mut heaviest = 0;
         for (i, &c) in candidates.iter().enumerate() {
