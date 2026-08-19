@@ -50,7 +50,11 @@ impl WordList {
     /// strings, so the quoted runs are the whole of it: no escapes to unpick,
     /// no nesting to track.
     pub fn load(path: &str) -> Result<WordList, WordsError> {
-        let text = std::fs::read_to_string(path)?;
+        WordList::from_json(&std::fs::read_to_string(path)?)
+    }
+
+    /// The same, from the file's contents rather than its path.
+    pub fn from_json(text: &str) -> Result<WordList, WordsError> {
         let mut packed = Vec::new();
         let mut index = HashMap::new();
         let bytes = text.as_bytes();

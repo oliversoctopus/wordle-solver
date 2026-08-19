@@ -1,0 +1,20 @@
+[package]
+name = "wordle_wasm"
+version = "0.1.0"
+edition = "2021"
+
+# A cdylib is what the browser can instantiate. No wasm-bindgen: the whole
+# interface is one JSON string in and one out, which is a single marshalling
+# pattern rather than a surface worth generating glue for, and this keeps the
+# Rust tree free of dependencies on the target that has to stay small.
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wordle_core = { path = "../core" }
+
+[profile.release]
+opt-level = "s"   # the browser downloads this; size is worth more than the last few percent
+lto = true
+codegen-units = 1
+panic = "abort"

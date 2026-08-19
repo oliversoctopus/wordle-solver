@@ -16,7 +16,7 @@ use std::time::Instant;
 
 use wordle_core::estimator::load_fit;
 use wordle_core::game::{every_answer, exact_stats, MAX_GUESSES};
-use wordle_core::priors::{all_configs, build_weights, PriorConfig};
+use wordle_core::priors::{all_configs, build_weights, PriorConfig, ShapeTables};
 use wordle_core::solver::{Mode, Solver};
 use wordle_core::source::{Live, Table};
 use wordle_core::WordleData;
@@ -99,7 +99,8 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
             .ok_or_else(|| format!("no prior with slug {slug:?}"))?,
     };
 
-    let weights = build_weights(&data, &config, &options.root)?;
+    let tables = ShapeTables::load(&options.root)?;
+    let weights = build_weights(&data, &config, &tables)?;
     let (form, params) = load_fit(&options.root, &config.slug())?;
 
     let built = Instant::now();

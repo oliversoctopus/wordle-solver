@@ -12,7 +12,7 @@ use std::fs::{self, File};
 use std::io::{BufWriter, Write};
 use std::process::ExitCode;
 
-use wordle_core::priors::{all_configs, build_weights};
+use wordle_core::priors::{all_configs, build_weights, ShapeTables};
 use wordle_core::WordleData;
 
 /// Matches `wordle_data.load_data`'s default: today's answer is kept out of the
@@ -37,8 +37,9 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
         data.curated.len()
     );
 
+    let tables = ShapeTables::load(root)?;
     for config in all_configs() {
-        let weights = build_weights(&data, &config, root)?;
+        let weights = build_weights(&data, &config, &tables)?;
         let slug = config.slug();
         write_weights(&format!("{out_dir}/{slug}.f64"), &weights)?;
         println!("  wrote {slug} ({} weights)", weights.len());

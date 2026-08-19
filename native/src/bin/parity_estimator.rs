@@ -12,7 +12,7 @@ use std::io::{BufWriter, Write};
 use std::process::ExitCode;
 
 use wordle_core::estimator::{effective_size, f_eval_x, forms, load_fit};
-use wordle_core::priors::{all_configs, build_weights};
+use wordle_core::priors::{all_configs, build_weights, ShapeTables};
 use wordle_core::WordleData;
 
 /// x = log2(n) runs from 0 at one candidate to ~13.66 at the whole word list;
@@ -54,6 +54,7 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let data = WordleData::load(root, 1)?;
     let mut fits = 0;
+    let tables = ShapeTables::load(root)?;
     for config in all_configs() {
         let slug = config.slug();
         let (form, params) = load_fit(root, &slug)?;
@@ -62,7 +63,7 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
         fits += 1;
 
         // effective_size over the leading weights of this prior
-        let weights = build_weights(&data, &config, root)?;
+        let weights = build_weights(&data, &config, &tables)?;
         let sizes: Vec<f64> = PREFIXES
             .iter()
             .map(|&k| effective_size(&weights[..k.min(weights.len())]))

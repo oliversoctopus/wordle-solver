@@ -32,9 +32,27 @@ impl WordleData {
     /// is how today's not-yet-played answer is kept out of the "already used"
     /// prior while you are solving today's puzzle.
     pub fn load(root: &str, mask_last: usize) -> Result<WordleData, Box<dyn Error>> {
-        let words = WordList::load(&format!("{root}/data/derived/ind2word.json"))?;
+        WordleData::from_json(
+            &std::fs::read_to_string(format!("{root}/data/derived/ind2word.json"))?,
+            &std::fs::read_to_string(format!("{root}/data/wordles.json"))?,
+            &std::fs::read_to_string(format!("{root}/data/solutions.json"))?,
+            mask_last,
+        )
+    }
 
-        let curated_json = json::parse_file(&format!("{root}/data/wordles.json"))?;
+    /// The same, from the file contents rather than their paths.
+    ///
+    /// This is the constructor that matters: WASM has no filesystem, so every
+    /// input reaches the core as a string the page fetched.
+    pub fn from_json(
+        ind2word: &str,
+        wordles: &str,
+        solutions: &str,
+        mask_last: usize,
+    ) -> Result<WordleData, Box<dyn Error>> {
+        let words = WordList::from_json(ind2word)?;
+
+        let curated_json = json::parse(wordles)?;
         let curated: Vec<String> = curated_json
             .as_array()
             .ok_or("wordles.json is not an array")?
@@ -42,7 +60,7 @@ impl WordleData {
             .filter_map(|v| v.as_str().map(str::to_string))
             .collect();
 
-        let solutions_json = json::parse_file(&format!("{root}/data/solutions.json"))?;
+        let solutions_json = json::parse(solutions)?;
         let rows = solutions_json
             .as_array()
             .ok_or("solutions.json is not an array")?;
@@ -77,7 +95,12 @@ impl WordleData {
 /// A `word -> number` table, as `wordlebot_weights.json` and `answer_like.json`
 /// both are.
 pub fn load_table(path: &str) -> Result<HashMap<String, f64>, Box<dyn Error>> {
-    let value = json::parse_file(path)?;
+    parse_table(&std::fs::read_to_string(path)?)
+}
+
+/// The same, from the file's contents.
+pub fn parse_table(text: &str) -> Result<HashMap<String, f64>, Box<dyn Error>> {
+    let value = json::parse(text)?;
     let object = value.as_object().ok_or("expected a JSON object")?;
     Ok(object
         .iter()

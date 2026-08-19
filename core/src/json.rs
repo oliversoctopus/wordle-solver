@@ -307,3 +307,150 @@ mod tests {
         assert!(parse("[1,2] extra").is_err());
     }
 }
+
+// ------------------------------------------------------------------ writing
+
+/// Appends `text` as a JSON string, escapes and all.
+pub fn write_string(out: &mut String, text: &str) {
+    out.push('"');
+    for c in text.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+}
+
+/// Appends a number, or `null` where JSON has no way to say it.
+pub fn write_f64(out: &mut String, value: f64) {
+    if value.is_finite() {
+        // enough digits to round-trip, without the trailing noise of {:?}
+        out.push_str(&format!("{value}"));
+    } else {
+        out.push_str("null");
+    }
+}
+
+/// Builds one JSON object, comma placement handled.
+pub struct Object<'a> {
+    out: &'a mut String,
+    first: bool,
+}
+
+impl<'a> Object<'a> {
+    pub fn new(out: &'a mut String) -> Object<'a> {
+        out.push('{');
+        Object { out, first: true }
+    }
+
+    fn key(&mut self, name: &str) {
+        if !self.first {
+            self.out.push(',');
+        }
+        self.first = false;
+        write_string(self.out, name);
+        self.out.push(':');
+    }
+
+    pub fn str(&mut self, name: &str, value: &str) -> &mut Self {
+        self.key(name);
+        write_string(self.out, value);
+        self
+    }
+
+    pub fn num(&mut self, name: &str, value: f64) -> &mut Self {
+        self.key(name);
+        write_f64(self.out, value);
+        self
+    }
+
+    pub fn int(&mut self, name: &str, value: i64) -> &mut Self {
+        self.key(name);
+        self.out.push_str(&value.to_string());
+        self
+    }
+
+    pub fn bool(&mut self, name: &str, value: bool) -> &mut Self {
+        self.key(name);
+        self.out.push_str(if value { "true" } else { "false" });
+        self
+    }
+
+    pub fn null(&mut self, name: &str) -> &mut Self {
+        self.key(name);
+        self.out.push_str("null");
+        self
+    }
+
+    /// Writes the value with `body`, which must append exactly one JSON value.
+    pub fn raw(&mut self, name: &str, body: impl FnOnce(&mut String)) -> &mut Self {
+        self.key(name);
+        body(self.out);
+        self
+    }
+
+    pub fn strings(
+        &mut self,
+        name: &str,
+        values: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> &mut Self {
+        self.raw(name, |out| {
+            out.push('[');
+            for (i, value) in values.into_iter().enumerate() {
+                if i > 0 {
+                    out.push(',');
+                }
+                write_string(out, value.as_ref());
+            }
+            out.push(']');
+        })
+    }
+
+    pub fn end(&mut self) {
+        self.out.push('}');
+    }
+}
+
+#[cfg(test)]
+mod write_tests {
+    use super::*;
+
+    // The control characters have to leave as two-character escapes, not as
+    // themselves: a raw newline inside a JSON string is invalid, and every
+    // parser but this one's would reject it.
+    #[test]
+    fn escapes_survive_a_round_trip() {
+        let awkward = "a\"b\\c\nd\te\r\u{1}f";
+        let mut out = String::new();
+        write_string(&mut out, awkward);
+        assert!(!out.contains('\n'), "a raw newline escaped into the output");
+        assert_eq!(parse(&out).unwrap().as_str(), Some(awkward));
+    }
+
+    #[test]
+    fn round_trips_through_the_parser() {
+        let mut out = String::new();
+        let mut object = Object::new(&mut out);
+        object
+            .str("word", "sa\"let")
+            .int("turn", 3)
+            .num("score", 3.077)
+            .bool("solved", false)
+            .null("estimator")
+            .strings("rows", ["abbey", "crane"]);
+        object.end();
+
+        let parsed = parse(&out).expect("valid JSON");
+        assert_eq!(parsed.get("word").unwrap().as_str(), Some("sa\"let"));
+        assert_eq!(parsed.get("turn").unwrap().as_f64(), Some(3.0));
+        assert_eq!(parsed.get("score").unwrap().as_f64(), Some(3.077));
+        assert_eq!(parsed.get("estimator"), Some(&Value::Null));
+        assert_eq!(parsed.get("rows").unwrap().as_array().unwrap().len(), 2);
+    }
+}

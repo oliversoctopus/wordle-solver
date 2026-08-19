@@ -12,7 +12,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use crate::data::{load_table, WordleData};
+use crate::data::{load_table, parse_table, WordleData};
 
 pub const DEFAULT_REPEAT_PROB: f64 = 0.10;
 pub const DEFAULT_NONCURATED_PROB: f64 = 0.10;
@@ -110,6 +110,32 @@ pub fn all_configs() -> Vec<PriorConfig> {
     out
 }
 
+/// The two word-weight tables the sharpened curation shapes read.
+///
+/// A parameter rather than a path, because WASM has no filesystem: the page
+/// fetches these and hands them over as text. `uniform` needs neither.
+#[derive(Default)]
+pub struct ShapeTables {
+    pub answer_like: HashMap<String, f64>,
+    pub wordlebot: HashMap<String, f64>,
+}
+
+impl ShapeTables {
+    pub fn load(root: &str) -> Result<ShapeTables, Box<dyn Error>> {
+        Ok(ShapeTables {
+            answer_like: load_table(&format!("{root}/data/answer_like.json"))?,
+            wordlebot: load_table(&format!("{root}/data/wordlebot_weights.json"))?,
+        })
+    }
+
+    pub fn from_json(answer_like: &str, wordlebot: &str) -> Result<ShapeTables, Box<dyn Error>> {
+        Ok(ShapeTables {
+            answer_like: parse_table(answer_like)?,
+            wordlebot: parse_table(wordlebot)?,
+        })
+    }
+}
+
 /// Relative weights within the used group, by where the word first appeared.
 ///
 /// Reuse is not uniform over past answers: it concentrates near the start of
@@ -189,15 +215,17 @@ fn curation_shape(
     data: &WordleData,
     mask: &[bool],
     shape: CurationShape,
-    root: &str,
+    tables: &ShapeTables,
 ) -> Result<Option<Vec<f64>>, Box<dyn Error>> {
     let members: Vec<usize> = (0..mask.len()).filter(|&i| mask[i]).collect();
     let words: Vec<&str> = members.iter().map(|&i| data.words.word(i)).collect();
     let mut rel = vec![0.0f64; mask.len()];
 
     if shape == CurationShape::Frequency {
-        let table = load_table(&format!("{root}/data/answer_like.json"))?;
-        for (k, value) in answer_like(&words, &table).into_iter().enumerate() {
+        for (k, value) in answer_like(&words, &tables.answer_like)
+            .into_iter()
+            .enumerate()
+        {
             rel[members[k]] = value;
         }
         return Ok(Some(rel));
@@ -206,10 +234,9 @@ fn curation_shape(
     // 'wordlebot': the mass goes to the words WordleBot considers answerable,
     // in proportion to its weight, less a hedge spread over everything else.
     // The hedge stays flat on purpose -- see analysis/curation_shapes.py.
-    let table = load_table(&format!("{root}/data/wordlebot_weights.json"))?;
     let listed: Vec<f64> = words
         .iter()
-        .map(|w| table.get(*w).copied().unwrap_or(0.0))
+        .map(|w| tables.wordlebot.get(*w).copied().unwrap_or(0.0))
         .collect();
     let inside_total: f64 = listed.iter().copied().filter(|&v| v > 0.0).sum();
     if inside_total <= 0.0 {
@@ -233,7 +260,7 @@ fn curation_shape(
 pub fn build_weights(
     data: &WordleData,
     config: &PriorConfig,
-    root: &str,
+    tables: &ShapeTables,
 ) -> Result<Vec<f64>, Box<dyn Error>> {
     let n = data.n_words();
 
@@ -272,7 +299,7 @@ pub fn build_weights(
         let noncurated: Vec<bool> = (0..n).map(|i| rest[i] && !curated[i]).collect();
         let shape = match config.curation_shape {
             CurationShape::Uniform => None,
-            other => curation_shape(data, &noncurated, other, root)?,
+            other => curation_shape(data, &noncurated, other, tables)?,
         };
         let rest_curated: Vec<bool> = (0..n).map(|i| rest[i] && curated[i]).collect();
         groups.push((

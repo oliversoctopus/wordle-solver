@@ -15,7 +15,7 @@ use std::fs;
 use std::process::ExitCode;
 
 use wordle_core::exact::ExactEndgame;
-use wordle_core::priors::{build_weights, PriorConfig};
+use wordle_core::priors::{build_weights, PriorConfig, ShapeTables};
 use wordle_core::source::Table;
 use wordle_core::WordleData;
 use wordle_native::{read_sets, Sink};
@@ -29,7 +29,8 @@ fn run(root: &str, sets_path: &str, out_dir: &str) -> Result<(), Box<dyn std::er
     fs::create_dir_all(out_dir)?;
     let data = WordleData::load(root, 1)?;
     let config = PriorConfig::default();
-    let weights = build_weights(&data, &config, root)?;
+    let tables = ShapeTables::load(root)?;
+    let weights = build_weights(&data, &config, &tables)?;
     let table = Table::build(&data.words);
     let sets = read_sets(sets_path)?;
 

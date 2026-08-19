@@ -7,7 +7,7 @@ use std::time::Instant;
 use wordle_core::estimator::load_fit;
 use wordle_core::feedback::score_guess;
 use wordle_core::kernels::expected_guesses_all;
-use wordle_core::priors::{build_weights, PriorConfig};
+use wordle_core::priors::{build_weights, PriorConfig, ShapeTables};
 use wordle_core::source::{Live, Source, Table};
 use wordle_core::WordleData;
 
@@ -33,7 +33,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::env::args().nth(1).unwrap_or_else(|| ".".into());
     let data = WordleData::load(&root, 1)?;
     let config = PriorConfig::default();
-    let weights = build_weights(&data, &config, &root)?;
+    let tables = ShapeTables::load(&root)?;
+    let weights = build_weights(&data, &config, &tables)?;
     let (form, params) = load_fit(&root, &config.slug())?;
     let table = Table::build(&data.words);
     let live = Live::new(&data.words);
