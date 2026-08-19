@@ -89,7 +89,7 @@ struct Parser<'a> {
     at: usize,
 }
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     fn fail(&self, what: &str) -> JsonError {
         JsonError {
             at: self.at,

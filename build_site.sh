@@ -24,7 +24,7 @@ cargo build --release --quiet
 ./target/release/build_site "$(pwd)" "$OUT" >/dev/null
 
 echo "copying the page and the data"
-cp web/style.css web/wasm-api.js "$OUT/"
+cp web/style.css web/wasm-api.js web/vercel.json "$OUT/"
 cp data/wordles.json data/solutions.json data/answer_like.json \
    data/wordlebot_weights.json "$OUT/data/"
 cp data/derived/ind2word.json "$OUT/data/derived/"
@@ -52,6 +52,10 @@ applied = len(wording.overrides)
 if applied:
     print(f"  {applied} rewrite{'' if applied == 1 else 's'} from wording.json")
 PY
+
+# Vercel reads .gitignore when a deployment has no .vercelignore, and site/ is
+# gitignored, so without this an upload from here could come out empty.
+echo '# nothing to leave out: every file here is meant to deploy'     > "$OUT/.vercelignore"
 
 echo
 du -sh "$OUT" | sed 's/^/  total  /'

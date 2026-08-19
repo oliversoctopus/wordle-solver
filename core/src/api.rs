@@ -307,7 +307,7 @@ fn build_state(
 
     let turn = rows.len() + 1;
     let solved = rows.last().map(|&(_, p)| p == WIN_PATTERN).unwrap_or(false);
-    let over = solved || (!solved && turn > MAX_GUESSES);
+    let over = solved || turn > MAX_GUESSES;
 
     let mut out = String::new();
     let mut object = Object::new(&mut out);

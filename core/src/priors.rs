@@ -278,7 +278,7 @@ fn curation_shape(
     mask: &[bool],
     shape: CurationShape,
     tables: &ShapeTables,
-) -> Result<Option<Vec<f64>>, Box<dyn Error>> {
+) -> Option<Vec<f64>> {
     let members: Vec<usize> = (0..mask.len()).filter(|&i| mask[i]).collect();
     let words: Vec<&str> = members.iter().map(|&i| data.words.word(i)).collect();
     let mut rel = vec![0.0f64; mask.len()];
@@ -290,7 +290,7 @@ fn curation_shape(
         {
             rel[members[k]] = value;
         }
-        return Ok(Some(rel));
+        return Some(rel);
     }
 
     // 'wordlebot': the mass goes to the words WordleBot considers answerable,
@@ -302,7 +302,7 @@ fn curation_shape(
         .collect();
     let inside_total: f64 = listed.iter().copied().filter(|&v| v > 0.0).sum();
     if inside_total <= 0.0 {
-        return Ok(None);
+        return None;
     }
     let outside = listed.iter().filter(|&&v| v <= 0.0).count();
 
@@ -313,7 +313,7 @@ fn curation_shape(
             OFFLIST_HEDGE / outside as f64
         };
     }
-    Ok(Some(rel))
+    Some(rel)
 }
 
 /// The prior over answers as a probability vector of length `n_words`.
@@ -361,7 +361,7 @@ pub fn build_weights(
         let noncurated: Vec<bool> = (0..n).map(|i| rest[i] && !curated[i]).collect();
         let shape = match config.curation_shape {
             CurationShape::Uniform => None,
-            other => curation_shape(data, &noncurated, other, tables)?,
+            other => curation_shape(data, &noncurated, other, tables),
         };
         let rest_curated: Vec<bool> = (0..n).map(|i| rest[i] && curated[i]).collect();
         groups.push((

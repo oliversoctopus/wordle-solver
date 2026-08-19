@@ -29,6 +29,10 @@ const wasmApi = (() => {
   function writeString(text) {
     const bytes = encoder.encode(text);
     const ptr = wasm.alloc(bytes.length);
+    // alloc hands back 0 for an empty string and for a failure alike, so the
+    // length is what tells them apart; writing at 0 would land on the module's
+    // own memory rather than raise anything.
+    if (!ptr && bytes.length) throw new Error("the solver is out of memory");
     new Uint8Array(wasm.memory.buffer, ptr, bytes.length).set(bytes);
     return { ptr, len: bytes.length };
   }

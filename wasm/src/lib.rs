@@ -12,6 +12,7 @@
 //! this file.
 
 use std::alloc::{alloc as raw_alloc, dealloc as raw_dealloc, Layout};
+use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 
 /// A buffer of `len` bytes for JS to write into. Pair every call with
 /// `dealloc`, or the page leaks a request's worth of memory per call.
@@ -39,17 +40,21 @@ pub unsafe extern "C" fn dealloc(ptr: *mut u8, len: usize) {
 
 /// Where the last reply landed, since a wasm export returns one value and a
 /// string needs two. JS reads these straight after `handle`.
-static mut REPLY_PTR: *mut u8 = std::ptr::null_mut();
-static mut REPLY_LEN: usize = 0;
+///
+/// Atomics rather than `static mut`: reading a mutable static is unsafe for a
+/// race that cannot happen in a single-threaded module, and the 2024 edition
+/// rejects the pattern outright. These compile to the same plain loads here.
+static REPLY_PTR: AtomicPtr<u8> = AtomicPtr::new(std::ptr::null_mut());
+static REPLY_LEN: AtomicUsize = AtomicUsize::new(0);
 
 #[no_mangle]
 pub extern "C" fn reply_ptr() -> *mut u8 {
-    unsafe { REPLY_PTR }
+    REPLY_PTR.load(Ordering::Relaxed)
 }
 
 #[no_mangle]
 pub extern "C" fn reply_len() -> usize {
-    unsafe { REPLY_LEN }
+    REPLY_LEN.load(Ordering::Relaxed)
 }
 
 /// Answers one request. `path` and `body` are UTF-8 in linear memory; the reply
@@ -69,8 +74,8 @@ pub unsafe extern "C" fn handle(
     let reply = wordle_core::api::handle(&path, &body);
 
     let bytes = reply.into_bytes().into_boxed_slice();
-    REPLY_LEN = bytes.len();
-    REPLY_PTR = Box::into_raw(bytes) as *mut u8;
+    REPLY_LEN.store(bytes.len(), Ordering::Relaxed);
+    REPLY_PTR.store(Box::into_raw(bytes).cast::<u8>(), Ordering::Relaxed);
 }
 
 unsafe fn slice_to_str(ptr: *const u8, len: usize) -> String {
