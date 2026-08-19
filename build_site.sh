@@ -24,7 +24,7 @@ cargo build --release --quiet
 ./target/release/build_site "$(pwd)" "$OUT" >/dev/null
 
 echo "copying the page and the data"
-cp web/style.css web/wasm-api.js web/vercel.json "$OUT/"
+cp web/style.css web/wasm-api.js web/solver-worker.js web/vercel.json "$OUT/"
 cp data/wordles.json data/solutions.json data/answer_like.json \
    data/wordlebot_weights.json "$OUT/data/"
 cp data/derived/ind2word.json "$OUT/data/derived/"

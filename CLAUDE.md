@@ -53,6 +53,8 @@ Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
 
 **The page runs off the Rust with no server at all.** `./build_site.sh` writes `site/`; `README.md` § *Without a server* has what is in it and what it gives up. Two rules hold there. `web/app.js` is served unmodified — `web/wasm-api.js` stands in for `fetch` on `/api/*` instead, because `tests/board.test.js` loads `app.js` through `vm` and a fork would mean the board tests cover a file that does not ship. And the API lives in `wordle_core::api`, not in the `wasm` crate, so `native/src/bin/api_probe.rs` can drive an endpoint from a shell; every endpoint bug so far was found that way and none of them were quick to see through a browser.
 
+The module itself sits in `web/solver-worker.js` rather than on the page's thread. A wide position costs upwards of 150 ms, and on the main thread that is 150 ms in which nothing repaints or accepts a keystroke. The work takes just as long in the worker; what changes is that the page stays alive through it. The swap is invisible to `app.js` because `fetch` was always asynchronous — a request is now a `postMessage` and a reply, and the worker's event loop serializes them in arrival order for free.
+
 **Port the optimizations, not just the algorithms.** `kernels.py` declares all seven of its kernels `parallel=True` and caches the all-rows pool in `_ALL_ROWS`; leaving either out of the Rust made a whole sweep slower than the Python it replaced, and the cause was invisible until it was measured. `cargo build --release --features wordle_core/profile` times every kernel entry point, which has settled this twice where guessing got it wrong twice. The same trap caught `api::find` outside the kernels: fetching the guess's letters per candidate rather than once per guess cost 22×, and the loop looked perfectly ordinary.
 
 What the Rust still does not have is `fused_kernels`' answer-major dispatch. That is opt-in on the Python side too, so the two are comparable as they stand.
@@ -76,7 +78,8 @@ Fast math is not a hazard you can reach by accident here: `rustc` exposes no suc
 | `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer |
 | `web.py` | the HTTP server and JSON API |
 | `web/app.js` | the whole page; served unmodified by both the Python and the static build |
-| `web/wasm-api.js` | stands in for `fetch` on `/api/*` in the static build, and routes into the module |
+| `web/wasm-api.js` | stands in for `fetch` on `/api/*` in the static build, and passes it to the worker |
+| `web/solver-worker.js` | holds the module and answers those calls, off the page's thread |
 | `build_site.sh` | assembles `site/`, the whole thing as static files |
 | `wording.py` | the editor's string scanner |
 | `editor.py` | the editor: rewrites what the site says, previewing the static build |
