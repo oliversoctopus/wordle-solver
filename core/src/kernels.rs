@@ -19,6 +19,30 @@ use crate::estimator::{f_eval_x, Form};
 use crate::feedback::{N_PATTERNS, WIN_PATTERN};
 use crate::source::Source;
 
+/// Maps `f` over `0..n`, across cores natively.
+///
+/// The split helpers walk every one of the 12,947 guesses, and `kernels.py`
+/// declares all of them `parallel=True`. Leaving them serial here was most of
+/// why a whole sweep came out slower than the Python: `distinct_partitions`
+/// alone was 3.9 s against numba's 1.6 s.
+#[cfg(not(target_arch = "wasm32"))]
+fn map_guesses<T, F>(n: usize, f: F) -> Vec<T>
+where
+    T: Send,
+    F: Fn(usize) -> T + Sync + Send,
+{
+    use rayon::prelude::*;
+    (0..n).into_par_iter().map(f).collect()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn map_guesses<T, F>(n: usize, f: F) -> Vec<T>
+where
+    F: Fn(usize) -> T,
+{
+    (0..n).map(f).collect()
+}
+
 /// Least (guess, candidate) pairs worth splitting across cores.
 ///
 /// The kernels are called constantly on small candidate sets -- the exact
@@ -26,7 +50,7 @@ use crate::source::Source;
 /// candidates, tens of thousands of times over a sweep -- and below this the
 /// coordination costs more than the work it divides.
 #[cfg(not(target_arch = "wasm32"))]
-const PARALLEL_MIN_WORK: usize = 1 << 15;
+const PARALLEL_MIN_WORK: usize = 1 << 12;
 
 /// Runs `fill` over the pool, writing one score per entry.
 ///
@@ -76,11 +100,19 @@ where
 /// accumulators already in cache.
 pub const RESCAN_MAX: usize = 128;
 
-/// Resolves `pool = None` to every guess.
-fn pool_or_all(source: &impl Source, pool: Option<&[usize]>) -> Vec<usize> {
-    match pool {
-        Some(p) => p.to_vec(),
-        None => (0..source.n_guesses()).collect(),
+/// Every guess index, built once and lent out thereafter.
+///
+/// `pool = None` means "score every word", which is most calls, and building
+/// 12,947 indices each time is pure waste -- `kernels.py` caches the same array
+/// in `_ALL_ROWS` for the same reason. The length check covers the one case a
+/// single process could hold two word lists; it has never happened here.
+fn all_rows(n: usize) -> std::borrow::Cow<'static, [usize]> {
+    static CACHE: std::sync::OnceLock<Vec<usize>> = std::sync::OnceLock::new();
+    let cached = CACHE.get_or_init(|| (0..n).collect());
+    if cached.len() == n {
+        std::borrow::Cow::Borrowed(cached)
+    } else {
+        std::borrow::Cow::Owned((0..n).collect())
     }
 }
 
@@ -100,11 +132,18 @@ pub fn ig_all(
     weights: &[f64],
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
-    let pool = pool_or_all(source, pool);
+    let all;
+    let pool: &[usize] = match pool {
+        Some(p) => p,
+        None => {
+            all = all_rows(source.n_guesses());
+            &all
+        }
+    };
     let m = candidates.len();
     let total: f64 = weights.iter().sum();
 
-    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
+    scatter(pool, pool.len().saturating_mul(m), |part, out| {
         let mut mass = [0.0f64; N_PATTERNS];
         for (slot, &guess) in part.iter().enumerate() {
             for i in 0..m {
@@ -173,12 +212,19 @@ pub fn expected_guesses_all(
     form: &Form,
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
-    let pool = pool_or_all(source, pool);
+    let all;
+    let pool: &[usize] = match pool {
+        Some(p) => p,
+        None => {
+            all = all_rows(source.n_guesses());
+            &all
+        }
+    };
     let m = candidates.len();
     let total: f64 = weights.iter().sum();
     let wlw = w_log_w(weights);
 
-    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
+    scatter(pool, pool.len().saturating_mul(m), |part, out| {
         let mut buckets = Buckets::new();
         for (slot, &guess) in part.iter().enumerate() {
             for i in 0..m {
@@ -278,11 +324,18 @@ pub fn two_turn_scores(
     penalty: f64,
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
-    let pool = pool_or_all(source, pool);
+    let all;
+    let pool: &[usize] = match pool {
+        Some(p) => p,
+        None => {
+            all = all_rows(source.n_guesses());
+            &all
+        }
+    };
     let m = candidates.len();
     let total: f64 = weights.iter().sum();
 
-    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
+    scatter(pool, pool.len().saturating_mul(m), |part, out| {
         let mut mass = [0.0f64; N_PATTERNS];
         let mut heaviest = [0.0f64; N_PATTERNS];
         for (slot, &guess) in part.iter().enumerate() {
@@ -341,28 +394,24 @@ const FNV_PRIME: i64 = 1099511628211;
 /// sharing a key split the candidates identically. Callers must keep to
 /// `MAX_PACKED` candidates or fewer.
 pub fn signature_keys(source: &impl Source, candidates: &[usize]) -> Vec<i64> {
-    (0..source.n_guesses())
-        .map(|guess| {
-            let mut key = 0i64;
-            for &c in candidates {
-                key = (key << 8) | source.score(guess, c) as i64;
-            }
-            key
-        })
-        .collect()
+    map_guesses(source.n_guesses(), |guess| {
+        let mut key = 0i64;
+        for &c in candidates {
+            key = (key << 8) | source.score(guess, c) as i64;
+        }
+        key
+    })
 }
 
 /// FNV-1a over each guess's feedback vector, for grouping equal splits.
 fn partition_hash(source: &impl Source, candidates: &[usize]) -> Vec<i64> {
-    (0..source.n_guesses())
-        .map(|guess| {
-            let mut h = FNV_OFFSET;
-            for &c in candidates {
-                h = (h ^ source.score(guess, c) as i64).wrapping_mul(FNV_PRIME);
-            }
-            h
-        })
-        .collect()
+    map_guesses(source.n_guesses(), |guess| {
+        let mut h = FNV_OFFSET;
+        for &c in candidates {
+            h = (h ^ source.score(guess, c) as i64).wrapping_mul(FNV_PRIME);
+        }
+        h
+    })
 }
 
 /// `numpy.unique(keys, return_index=True)`: for each distinct key in ascending
@@ -428,8 +477,16 @@ pub fn same_split(
     guess: usize,
     pool: Option<&[usize]>,
 ) -> Vec<usize> {
-    pool_or_all(source, pool)
-        .into_iter()
+    let all;
+    let pool: &[usize] = match pool {
+        Some(p) => p,
+        None => {
+            all = all_rows(source.n_guesses());
+            &all
+        }
+    };
+    pool.iter()
+        .copied()
         .filter(|&other| {
             candidates
                 .iter()
