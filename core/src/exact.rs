@@ -17,8 +17,6 @@
 //! then spends nearly all its time proving nothing beats it, so the cap buys
 //! the answer and skips the proof. Ported from `exact.py`.
 
-use std::collections::HashMap;
-
 use crate::kernels::{distinct_partitions, signature_keys, two_turn_scores, MAX_PACKED};
 use crate::memo::Memo;
 use crate::source::Source;
@@ -342,16 +340,17 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         turns: usize,
         cutoff: f64,
     ) -> Result<f64, BudgetExceeded> {
-        // group by pattern, visiting patterns in ascending order as np.unique does
-        let mut by_pattern: HashMap<u8, Vec<usize>> = HashMap::new();
-        for &c in candidates {
-            by_pattern
-                .entry(self.source.score(guess, c))
-                .or_default()
-                .push(c);
-        }
-        let mut patterns: Vec<u8> = by_pattern.keys().copied().collect();
+        // Patterns once, then the distinct ones in ascending order, which is
+        // what np.unique gives the Python.  A map keyed on the pattern would
+        // allocate per bucket and this is the search's hot recursion; the sets
+        // here are small enough that a sort and a scan beat hashing.
+        let scored: Vec<u8> = candidates
+            .iter()
+            .map(|&c| self.source.score(guess, c))
+            .collect();
+        let mut patterns = scored.clone();
         patterns.sort_unstable();
+        patterns.dedup();
 
         let mut buckets: Vec<(f64, f64, Vec<usize>)> = Vec::new();
         let mut running = 1.0;
@@ -359,8 +358,13 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             if pattern == crate::feedback::WIN_PATTERN {
                 continue;
             }
-            let members = &by_pattern[&pattern];
-            let (mass, _, sub_p_max) = self.shape(members);
+            let members: Vec<usize> = candidates
+                .iter()
+                .zip(&scored)
+                .filter(|(_, &p)| p == pattern)
+                .map(|(&c, _)| c)
+                .collect();
+            let (mass, _, sub_p_max) = self.shape(&members);
             let share = mass / total;
             let size = members.len();
             if size == 1 {
@@ -373,7 +377,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             }
             let bound = 1.0 + (1.0 - sub_p_max) * self.bound_penalty;
             running += share * bound;
-            buckets.push((share, bound, members.clone()));
+            buckets.push((share, bound, members));
         }
 
         if running >= cutoff {

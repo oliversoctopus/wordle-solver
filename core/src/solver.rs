@@ -310,15 +310,28 @@ impl<'a, S: Source> Solver<'a, S> {
 
     /// `[(mass, members), ...]` over the non-winning feedback buckets.
     fn partition(&self, guess: usize, candidates: &[usize]) -> Vec<(f64, Vec<usize>)> {
-        let mut buckets: Vec<Vec<usize>> = vec![Vec::new(); crate::feedback::N_PATTERNS];
-        for &c in candidates {
-            buckets[self.source.score(guess, c) as usize].push(c);
-        }
-        let mut out = Vec::new();
-        for (pattern, members) in buckets.into_iter().enumerate() {
-            if members.is_empty() || pattern == crate::feedback::WIN_PATTERN as usize {
+        // One pass for the patterns and one for the distinct ones, rather than
+        // 243 vectors of which nearly all stay empty. The Python reaches the
+        // same shape with a single argsort.
+        let scored: Vec<u8> = candidates
+            .iter()
+            .map(|&c| self.source.score(guess, c))
+            .collect();
+        let mut patterns = scored.clone();
+        patterns.sort_unstable();
+        patterns.dedup();
+
+        let mut out = Vec::with_capacity(patterns.len());
+        for pattern in patterns {
+            if pattern == crate::feedback::WIN_PATTERN {
                 continue; // winning now costs nothing further
             }
+            let members: Vec<usize> = candidates
+                .iter()
+                .zip(&scored)
+                .filter(|(_, &p)| p == pattern)
+                .map(|(&c, _)| c)
+                .collect();
             let mass: f64 = members.iter().map(|&c| self.weights[c]).sum();
             out.push((mass, members));
         }

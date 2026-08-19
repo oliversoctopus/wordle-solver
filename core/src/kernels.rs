@@ -17,27 +17,42 @@
 
 use crate::estimator::{f_eval_x, Form};
 use crate::feedback::{N_PATTERNS, WIN_PATTERN};
+use crate::profile::Span;
 use crate::source::Source;
 
 /// Maps `f` over `0..n`, across cores natively.
 ///
 /// The split helpers walk every one of the 12,947 guesses, and `kernels.py`
-/// declares all of them `parallel=True`. Leaving them serial here was most of
-/// why a whole sweep came out slower than the Python: `distinct_partitions`
-/// alone was 3.9 s against numba's 1.6 s.
+/// declares all of them `parallel=True`. `work` is the pairs the whole call
+/// touches; below the threshold it runs straight through, because rayon's
+/// adaptive splitting costs more than a handful of byte comparisons is worth.
 #[cfg(not(target_arch = "wasm32"))]
-fn map_guesses<T, F>(n: usize, f: F) -> Vec<T>
+fn map_guesses<T, F>(n: usize, work: usize, f: F) -> Vec<T>
 where
-    T: Send,
+    T: Send + Default + Clone,
     F: Fn(usize) -> T + Sync + Send,
 {
     use rayon::prelude::*;
-    (0..n).into_par_iter().map(f).collect()
+
+    if work < PARALLEL_MIN_WORK || n < 2 {
+        return (0..n).map(f).collect();
+    }
+    let threads = rayon::current_num_threads().max(1);
+    let chunk = n.div_ceil(threads).max(1);
+    let mut out = vec![T::default(); n];
+    out.par_chunks_mut(chunk).enumerate().for_each(|(b, slot)| {
+        let base = b * chunk;
+        for (i, cell) in slot.iter_mut().enumerate() {
+            *cell = f(base + i);
+        }
+    });
+    out
 }
 
 #[cfg(target_arch = "wasm32")]
-fn map_guesses<T, F>(n: usize, f: F) -> Vec<T>
+fn map_guesses<T, F>(n: usize, _work: usize, f: F) -> Vec<T>
 where
+    T: Default + Clone,
     F: Fn(usize) -> T,
 {
     (0..n).map(f).collect()
@@ -132,6 +147,7 @@ pub fn ig_all(
     weights: &[f64],
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
+    let _span = Span::new(0);
     let all;
     let pool: &[usize] = match pool {
         Some(p) => p,
@@ -212,6 +228,7 @@ pub fn expected_guesses_all(
     form: &Form,
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
+    let _span = Span::new(1);
     let all;
     let pool: &[usize] = match pool {
         Some(p) => p,
@@ -324,6 +341,7 @@ pub fn two_turn_scores(
     penalty: f64,
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
+    let _span = Span::new(2);
     let all;
     let pool: &[usize] = match pool {
         Some(p) => p,
@@ -394,41 +412,62 @@ const FNV_PRIME: i64 = 1099511628211;
 /// sharing a key split the candidates identically. Callers must keep to
 /// `MAX_PACKED` candidates or fewer.
 pub fn signature_keys(source: &impl Source, candidates: &[usize]) -> Vec<i64> {
-    map_guesses(source.n_guesses(), |guess| {
-        let mut key = 0i64;
-        for &c in candidates {
-            key = (key << 8) | source.score(guess, c) as i64;
-        }
-        key
-    })
+    let _span = Span::new(4);
+    map_guesses(
+        source.n_guesses(),
+        source.n_guesses() * candidates.len(),
+        |guess| {
+            let mut key = 0i64;
+            for &c in candidates {
+                key = (key << 8) | source.score(guess, c) as i64;
+            }
+            key
+        },
+    )
 }
 
 /// FNV-1a over each guess's feedback vector, for grouping equal splits.
 fn partition_hash(source: &impl Source, candidates: &[usize]) -> Vec<i64> {
-    map_guesses(source.n_guesses(), |guess| {
-        let mut h = FNV_OFFSET;
-        for &c in candidates {
-            h = (h ^ source.score(guess, c) as i64).wrapping_mul(FNV_PRIME);
-        }
-        h
-    })
+    map_guesses(
+        source.n_guesses(),
+        source.n_guesses() * candidates.len(),
+        |guess| {
+            let mut h = FNV_OFFSET;
+            for &c in candidates {
+                h = (h ^ source.score(guess, c) as i64).wrapping_mul(FNV_PRIME);
+            }
+            h
+        },
+    )
 }
 
-/// `numpy.unique(keys, return_index=True)`: for each distinct key in ascending
-/// order, the lowest index carrying it. The order matters -- it decides which
-/// word represents a split, and so the order the search tries them in.
-fn unique_first(keys: &[i64]) -> Vec<usize> {
+/// `(representatives, the head of each guess's group)`, both out of one sort.
+///
+/// This is `np.unique(keys, return_index=True, return_inverse=True)`: the
+/// representatives in ascending key order, and for every guess the
+/// representative of its group. The order matters -- it decides which word
+/// stands for a split, and so the order the search tries them in.
+///
+/// Both come from the sort because the alternative is a map keyed on the hash,
+/// which means building it and then looking up all 12,947 guesses on every
+/// call. That was worth 0.8 s of a sweep.
+fn group_by_key(keys: &[i64]) -> (Vec<usize>, Vec<usize>) {
     let mut order: Vec<usize> = (0..keys.len()).collect();
-    order.sort_by_key(|&i| (keys[i], i));
+    order.sort_unstable_by_key(|&i| (keys[i], i));
+
     let mut first = Vec::new();
+    let mut heads = vec![0usize; keys.len()];
     let mut previous: Option<i64> = None;
+    let mut head = 0;
     for &i in &order {
         if previous != Some(keys[i]) {
             first.push(i);
+            head = i;
             previous = Some(keys[i]);
         }
+        heads[i] = head;
     }
-    first
+    (first, heads)
 }
 
 /// One representative guess per distinct split of the candidate set.
@@ -439,29 +478,21 @@ fn unique_first(keys: &[i64]) -> Vec<usize> {
 /// probabilistic: a collision can only cost a redundant representative, never
 /// lose a distinct split.
 pub fn distinct_partitions(source: &impl Source, candidates: &[usize]) -> Vec<usize> {
+    let _span = Span::new(3);
     let keys = partition_hash(source, candidates);
-    let first = unique_first(&keys);
+    let (first, heads) = group_by_key(&keys);
 
-    // head of each guess's group, by key
-    let mut head_of_key = std::collections::HashMap::with_capacity(first.len());
-    for &i in &first {
-        head_of_key.insert(keys[i], i);
-    }
-
-    let mut extra = Vec::new();
-    for guess in 0..keys.len() {
-        let head = head_of_key[&keys[guess]];
-        if head != guess
+    // the recheck walks every guess, so it splits across cores like the rest
+    let differs = map_guesses(keys.len(), keys.len() * candidates.len(), |guess| {
+        let head = heads[guess];
+        head != guess
             && candidates
                 .iter()
                 .any(|&c| source.score(guess, c) != source.score(head, c))
-        {
-            extra.push(guess);
-        }
-    }
+    });
 
     let mut out = first;
-    out.extend(extra);
+    out.extend((0..keys.len()).filter(|&guess| differs[guess]));
     out
 }
 
@@ -477,6 +508,7 @@ pub fn same_split(
     guess: usize,
     pool: Option<&[usize]>,
 ) -> Vec<usize> {
+    let _span = Span::new(5);
     let all;
     let pool: &[usize] = match pool {
         Some(p) => p,
@@ -485,13 +517,16 @@ pub fn same_split(
             &all
         }
     };
-    pool.iter()
-        .copied()
-        .filter(|&other| {
-            candidates
-                .iter()
-                .all(|&c| source.score(other, c) == source.score(guess, c))
-        })
+    // the seventh of the numba kernels, and parallel there too
+    let keep = map_guesses(pool.len(), pool.len() * candidates.len(), |slot| {
+        let other = pool[slot];
+        candidates
+            .iter()
+            .all(|&c| source.score(other, c) == source.score(guess, c))
+    });
+    (0..pool.len())
+        .filter(|&slot| keep[slot])
+        .map(|slot| pool[slot])
         .collect()
 }
 
@@ -502,6 +537,7 @@ pub fn filter_candidates(
     pattern: u8,
     candidates: &[usize],
 ) -> Vec<usize> {
+    let _span = Span::new(6);
     candidates
         .iter()
         .copied()

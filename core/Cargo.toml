@@ -5,6 +5,11 @@ edition = "2021"
 
 # Named wordle_core rather than core, which is taken by the standard library.
 # No dependencies, and the WASM build depends on it staying that way.
+[features]
+# Times the kernel entry points, for finding where a sweep's cost really is.
+# Off by default and zero cost then; `cargo build --release --features profile`.
+profile = []
+
 [dependencies]
 
 # Native only, and deliberately so: the WASM build must stay dependency-free,

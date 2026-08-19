@@ -49,6 +49,10 @@ Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
 
 **The solver is being ported to Rust**, so it can compile to WASM behind a free static site and to a native binary that gives the sweeps back the ~79% of whole-game time that is not in the kernels. `cargo build --release`, or `./build.sh` since rustup was installed without touching PATH. The Python stays the oracle throughout and keeps `estimator.fit`, `answer_like.py`, the two fetchers and all of `analysis/`'s reporting; nothing is deleted until the Rust matches it in `tests/rust_parity.py`.
 
+**Port the optimizations, not just the algorithms.** `kernels.py` declares all seven of its kernels `parallel=True` and caches the all-rows pool in `_ALL_ROWS`; leaving either out of the Rust made a whole sweep slower than the Python it replaced, and the cause was invisible until it was measured. `cargo build --release --features wordle_core/profile` times every kernel entry point, which has settled this twice where guessing got it wrong twice.
+
+What the Rust still does not have is `fused_kernels`' answer-major dispatch. That is opt-in on the Python side too, so the two are comparable as they stand.
+
 Fast math is not a hazard you can reach by accident here: `rustc` exposes no such flag, stable or unstable, and release-mode LLVM does not reassociate a float sum. If you ever add a crate or a nightly intrinsic that grants it, know what it cost in Python — it hoisted a store above a load, every bucket maximum read back as the zero its own loop had just written, and `two_turn_scores` returned a flat 3.0 for every guess. That is a wrong answer rather than a wobbly last bit, which is why `kernels.py` carries none of it.
 
 ## The pieces

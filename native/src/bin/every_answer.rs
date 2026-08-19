@@ -118,6 +118,28 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
             build_secs
         );
     } else {
+        let totals = wordle_core::profile::totals();
+        if !totals.is_empty() {
+            let mut inside = 0.0;
+            println!();
+            println!("  {:<24} {:>8} {:>10}", "entry point", "seconds", "calls");
+            for (name, (elapsed, calls)) in wordle_core::profile::NAMES.iter().zip(&totals) {
+                if *calls > 0 {
+                    println!("  {name:<24} {elapsed:>8.2} {calls:>10}");
+                }
+                if *name != "table build" {
+                    inside += elapsed;
+                }
+            }
+            println!("  {:<24} {:>8.2}", "--- inside kernels", inside);
+            println!(
+                "  {:<24} {:>8.2}  ({:.0}%)",
+                "--- everything else",
+                secs - inside,
+                100.0 * (secs - inside) / secs
+            );
+            println!();
+        }
         println!("  prior          {}", config.slug());
         println!("  opening        {opening_word}");
         println!("  mean           {mean:.4}");
