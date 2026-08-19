@@ -1,27 +1,22 @@
-//! Pairwise summation, matching what `numpy.sum` does.
+//! Pairwise summation.
 //!
 //! Adding 12,947 floats left to right accumulates error proportional to the
 //! count; splitting the range in half and recursing makes it proportional to
-//! its logarithm. numpy has done the latter since 1.9, so a naive loop here
-//! disagrees with the Python by ~1e-13 relative -- small, but it is avoidable
-//! noise in every parity check downstream, so this reproduces numpy's shape
-//! exactly rather than merely being accurate.
+//! its logarithm. That is the whole reason this is here -- it is the better
+//! way to add up a slice, and it is what every total in the core uses.
 //!
-//! Only for the places the Python reaches for `np.sum`. The kernels accumulate
-//! into their 243 buckets one candidate at a time, and matching them means
-//! doing the same rather than summing pairwise.
-//!
-//! That is a matter of keeping the parity check sharp, not of correctness. The
-//! kernels' own two reduce branches already add the buckets up in different
-//! orders either side of 128 candidates, and at the opening the closest pair of
-//! scores among all 12,947 guesses differs by 1.1e-9 against an ulp of 4e-16.
-//! Reordering cannot change which word wins; it only turns an exact parity
-//! result into an approximate one, and an exact one is easier to trust.
+//! It happens to be what `numpy.sum` does too, so the port and the Python it
+//! was ported from tend to agree to the last bit. That is a convenience when
+//! reading a parity report, not a requirement: the closest pair of scores among
+//! all 12,947 guesses at the opening differs by 1.1e-9 against an ulp of 4e-16,
+//! and `exact::SPLIT_TIE_TOL` calls anything within 1e-9 the same guess. Do not
+//! contort anything here to preserve the coincidence.
 
-/// numpy's block size, below which it sums with eight accumulators.
+/// Below this many values, sum with eight independent chains instead of
+/// recursing further. Matches numpy's block size.
 const BLOCK: usize = 128;
 
-/// The same value `numpy.sum` produces for the same slice.
+/// The sum of `values`, accumulated pairwise.
 pub fn pairwise(values: &[f64]) -> f64 {
     let n = values.len();
 

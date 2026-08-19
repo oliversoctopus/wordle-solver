@@ -23,9 +23,25 @@ ROOT = os.path.dirname(HERE)
 TARGET = os.path.join(ROOT, "target", "release")
 sys.path.insert(0, ROOT)
 
-# a weight of ~1e-4 against f64's ~1e-16 leaves eleven orders of headroom, and
-# the two implementations only ever differ in the order they add things up
-TOLERANCE = 1e-12
+# Two independent implementations of the same arithmetic differ in their last
+# bits, and nothing here should care.  What sets the bar is the tightest margin
+# any decision actually turns on: over all 12,947 guesses at the opening the
+# closest pair of scores differs by 1.1e-9 under the shipped prior and 6e-11
+# under the loosest, so anything well under 6e-11 cannot change a choice.  This
+# sits sixty times below that and ten thousand above float noise.
+#
+# Absolute as well as relative, because a score of zero is an ordinary answer --
+# a guess that leaves every candidate in one bucket gains exactly no
+# information -- and dividing by it says nothing.
+ATOL = 1e-12
+RTOL = 1e-12
+
+
+def gap(got, mine):
+    """Worst disagreement, as a multiple of what is tolerated. Passes at <= 1."""
+    got, mine = np.asarray(got, dtype=float), np.asarray(mine, dtype=float)
+    allowed = ATOL + RTOL * np.abs(mine)
+    return float(np.max(np.abs(got - mine) / allowed)) if got.size else 0.0
 
 
 def binary(name):
@@ -73,15 +89,15 @@ def check_priors(report):
                 report(f"{config.slug}: {rust.shape} against {mine.shape}")
                 return False
             # relative, since the weights span several orders of magnitude
-            gap = float(np.max(np.abs(rust - mine) / np.maximum(mine, 1e-300)))
-            report(f"{config.slug}: worst relative gap {gap:.3e}")
-            if gap > worst:
-                worst, worst_slug = gap, config.slug
+            worst_here = gap(rust, mine)
+            report(f"{config.slug}: worst {worst_here:.3f} of tolerance")
+            if worst_here > worst:
+                worst, worst_slug = worst_here, config.slug
 
-        if worst > TOLERANCE:
-            report(f"worst is {worst:.3e} on {worst_slug}, over {TOLERANCE:.0e}")
+        if worst > 1.0:
+            report(f"worst is {worst:.3f} of tolerance, on {worst_slug}")
             return False
-        report(f"all {len(priors.ALL_CONFIGS)} within {TOLERANCE:.0e}")
+        report(f"all {len(priors.ALL_CONFIGS)} inside tolerance")
         return True
 
 
@@ -120,9 +136,9 @@ def check_estimator(report):
             if got.shape != mine.shape:
                 report(f"{name}: {got.shape} against {mine.shape}")
                 return False
-            gap = float(np.max(np.abs(got - mine) / np.maximum(np.abs(mine), 1e-300)))
-            if gap > worst:
-                worst, worst_where = gap, name
+            here = gap(got, mine)
+            if here > worst:
+                worst, worst_where = here, name
             return True
 
         for name in sorted(estimator.FORMS):
@@ -144,10 +160,10 @@ def check_estimator(report):
                 return False
         report(f"{len(priors.ALL_CONFIGS)} cached fits, and effective_size on each")
 
-        report(f"worst relative gap {worst:.3e}" +
-               (f" on {worst_where}" if worst_where else ""))
-        if worst > TOLERANCE:
-            report(f"over {TOLERANCE:.0e}")
+        report(f"worst {worst:.3f} of tolerance" +
+               (f", on {worst_where}" if worst_where else ""))
+        if worst > 1.0:
+            report("over tolerance")
             return False
         return True
 
@@ -236,10 +252,9 @@ def check_kernels(report):
         def compare(name, mine):
             nonlocal worst, worst_where
             got = next_floats(mine.size)
-            gap = float(np.max(np.abs(got - mine)
-                               / np.maximum(np.abs(mine), 1e-300)))
-            if gap > worst:
-                worst, worst_where = gap, name
+            here = gap(got, mine)
+            if here > worst:
+                worst, worst_where = here, name
             return True
 
         for s in sets:
@@ -276,10 +291,10 @@ def check_kernels(report):
                 return False
 
         report("the split helpers agree exactly on every set")
-        report(f"worst relative gap {worst:.3e}" +
-               (f" on {worst_where}" if worst_where else ""))
-        if worst > TOLERANCE:
-            report(f"over {TOLERANCE:.0e}")
+        report(f"worst {worst:.3f} of tolerance" +
+               (f", on {worst_where}" if worst_where else ""))
+        if worst > 1.0:
+            report("over tolerance")
             return False
         return True
 
@@ -392,8 +407,7 @@ def check_exact(report):
                 for turns in turns_list:
                     guess, value = search.solve(s, turns)
                     got_guess, got_value = next_int(), next_floats(1)[0]
-                    worst = max(worst, abs(got_value - value)
-                                / max(abs(value), 1e-300))
+                    worst = max(worst, gap([got_value], [value]))
                     # A position routinely has several optimal guesses, and
                     # which one comes back depends on the order the bounds were
                     # sorted into.  `np.argsort` sorts with quicksort, whose tie
@@ -404,7 +418,7 @@ def check_exact(report):
                     if got_guess != guess:
                         mine = search._evaluate(int(got_guess), s, weights[s],
                                                 weights[s].sum(), turns, np.inf)
-                        if abs(mine - value) > TOLERANCE * max(abs(value), 1.0):
+                        if gap([mine], [value]) > 1.0:
                             report(f"solve at p={penalty} hard={hard} "
                                    f"t={turns} size={s.size}: {got_guess} is "
                                    f"worth {mine!r}, not {value!r}")
@@ -429,14 +443,14 @@ def check_exact(report):
                                f"{len(top)}")
                         return False
                     for got_v, (_, v) in zip(got_values, top):
-                        worst = max(worst, abs(got_v - v) / max(abs(v), 1e-300))
+                        worst = max(worst, gap([got_v], [v]))
                     checked += 1
 
         report(f"{checked} solve and top pairs; {ties} picked a different "
                f"guess of exactly equal value")
-        report(f"worst relative gap on the values {worst:.3e}")
-        if worst > TOLERANCE:
-            report(f"over {TOLERANCE:.0e}")
+        report(f"worst {worst:.3f} of tolerance on the values")
+        if worst > 1.0:
+            report("over tolerance")
             return False
         return True
 

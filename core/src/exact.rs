@@ -120,9 +120,6 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
 
     /// Mass, heaviest member's index within the slice, and that member's share.
     ///
-    /// The total goes through `pairwise` because the Python reaches for
-    /// `weights.sum()` here -- numpy, not a numba loop. The kernels are the
-    /// other way round and must stay that way.
     fn shape(&self, candidates: &[usize]) -> (f64, usize, f64) {
         let masses: Vec<f64> = candidates.iter().map(|&c| self.weights[c]).collect();
         let total = crate::sum::pairwise(&masses);

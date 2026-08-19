@@ -6,11 +6,10 @@
 //! expected guess count reduces them through the fitted `f`, and the two-turn
 //! value reduces them to the exact score when two guesses remain.
 //!
-//! Ported from `kernels.py`, down to the arithmetic order. Nothing here is
-//! decided by differences near rounding -- the closest pair of scores among all
-//! 12,947 guesses at the opening differs by 1.1e-9 against an ulp of 4e-16 --
-//! but matching the Python bit for bit is what makes the parity check able to
-//! say "identical" rather than "close enough".
+//! Ported from `kernels.py`. Not from its arithmetic order, which is not worth
+//! preserving: the closest pair of scores among all 12,947 guesses at the
+//! opening differs by 1.1e-9 against an ulp of 4e-16, so nothing the solver
+//! decides turns on the last few bits of a total.
 //!
 //! Every kernel takes a `pool` of guess indices, standing in for all of them
 //! when `None`. That parameter is what keeps a deeper search affordable, and it
@@ -19,6 +18,23 @@
 use crate::estimator::{f_eval_x, Form};
 use crate::feedback::{N_PATTERNS, WIN_PATTERN};
 use crate::source::Source;
+
+/// The candidate mass, accumulated one at a time in candidate order.
+///
+/// Deliberately not `sum::pairwise`, which is more accurate and wrong here: the
+/// buckets are filled one candidate at a time, so a guess that drops every
+/// candidate into one bucket only gets `mass / total` to come out at exactly
+/// 1.0 -- and so scores exactly zero bits, as a guess that learns nothing must
+/// -- if the total was accumulated the same way. Two of the 12,947 guesses do
+/// that on a five-candidate set.
+#[inline]
+fn bucketwise_total(values: &[f64]) -> f64 {
+    let mut total = 0.0;
+    for &v in values {
+        total += v;
+    }
+    total
+}
 
 /// Below this many candidates the reduce walks the candidates a second time
 /// rather than sweeping all 243 patterns, taking each bucket the first time it
@@ -33,17 +49,6 @@ fn pool_or_all(source: &impl Source, pool: Option<&[usize]>) -> Vec<usize> {
         Some(p) => p.to_vec(),
         None => (0..source.n_guesses()).collect(),
     }
-}
-
-/// A naive left-to-right total, which is what the numba kernels do. Not
-/// `sum::pairwise`: that matches `np.sum`, and this matches the loop.
-#[inline]
-fn running_total(values: &[f64]) -> f64 {
-    let mut total = 0.0;
-    for &v in values {
-        total += v;
-    }
-    total
 }
 
 /// `w * log2(w)` per candidate, the guess-independent half of a bucket's
@@ -64,7 +69,7 @@ pub fn ig_all(
 ) -> Vec<f64> {
     let pool = pool_or_all(source, pool);
     let m = candidates.len();
-    let total = running_total(weights);
+    let total = bucketwise_total(weights);
     let mut out = vec![0.0; pool.len()];
     let mut mass = [0.0f64; N_PATTERNS];
 
@@ -137,7 +142,7 @@ pub fn expected_guesses_all(
 ) -> Vec<f64> {
     let pool = pool_or_all(source, pool);
     let m = candidates.len();
-    let total = running_total(weights);
+    let total = bucketwise_total(weights);
     let wlw = w_log_w(weights);
     let mut out = vec![0.0; pool.len()];
 
@@ -243,7 +248,7 @@ pub fn two_turn_scores(
 ) -> Vec<f64> {
     let pool = pool_or_all(source, pool);
     let m = candidates.len();
-    let total = running_total(weights);
+    let total = bucketwise_total(weights);
     let mut out = vec![0.0; pool.len()];
 
     let mut mass = [0.0f64; N_PATTERNS];
