@@ -1,0 +1,139 @@
+//! Plays every word in the list as the answer, and reports what it cost.
+//!
+//! This is the acceptance test for the whole port, and the sharpest one
+//! available: the solver is deterministic, so playing all 12,947 words once and
+//! weighting by the prior *computes* the mean rather than estimating it. There
+//! is no sampling error to hide behind, and README's *Results* table is the
+//! number to hit.
+//!
+//!     every_answer <repo root> [--mode entropy|expected] [--hard]
+//!                              [--no-exact] [--prior <slug>] [--json]
+//!                              [--dump <path>]
+
+use std::env;
+use std::process::ExitCode;
+use std::time::Instant;
+
+use wordle_core::estimator::load_fit;
+use wordle_core::game::{every_answer, exact_stats, MAX_GUESSES};
+use wordle_core::priors::{all_configs, build_weights, PriorConfig};
+use wordle_core::solver::{Mode, Solver};
+use wordle_core::source::Table;
+use wordle_core::WordleData;
+
+struct Options {
+    root: String,
+    mode: Mode,
+    hard: bool,
+    use_exact: bool,
+    prior: Option<String>,
+    json: bool,
+    /// Where to write the per-answer guess counts, for Python to diff.
+    dump: Option<String>,
+}
+
+fn parse() -> Result<Options, String> {
+    let mut out = Options {
+        root: ".".to_string(),
+        mode: Mode::Expected,
+        hard: false,
+        use_exact: true,
+        prior: None,
+        json: false,
+        dump: None,
+    };
+    let mut args = env::args().skip(1);
+    let mut positional = 0;
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--mode" => {
+                out.mode = match args.next().as_deref() {
+                    Some("entropy") => Mode::Entropy,
+                    Some("expected") => Mode::Expected,
+                    other => return Err(format!("unknown mode {other:?}")),
+                }
+            }
+            "--hard" => out.hard = true,
+            "--no-exact" => out.use_exact = false,
+            "--prior" => out.prior = args.next(),
+            "--json" => out.json = true,
+            "--dump" => out.dump = args.next(),
+            _ if positional == 0 => {
+                out.root = arg;
+                positional += 1;
+            }
+            _ => return Err(format!("unexpected argument {arg}")),
+        }
+    }
+    Ok(out)
+}
+
+fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
+    let data = WordleData::load(&options.root, 1)?;
+    let config = match &options.prior {
+        None => PriorConfig::default(),
+        Some(slug) => all_configs()
+            .into_iter()
+            .find(|c| &c.slug() == slug)
+            .ok_or_else(|| format!("no prior with slug {slug:?}"))?,
+    };
+
+    let weights = build_weights(&data, &config, &options.root)?;
+    let (form, params) = load_fit(&options.root, &config.slug())?;
+
+    let built = Instant::now();
+    let table = Table::build(&data.words);
+    let build_secs = built.elapsed().as_secs_f64();
+
+    let mut solver = Solver::new(&table, &weights, params, form, options.mode)
+        .with_hard(options.hard)
+        .with_use_exact(options.use_exact);
+
+    let started = Instant::now();
+    let lengths = every_answer(&mut solver, MAX_GUESSES);
+    let secs = started.elapsed().as_secs_f64();
+
+    if let Some(path) = &options.dump {
+        use std::io::Write;
+        let mut file = std::io::BufWriter::new(std::fs::File::create(path)?);
+        for value in &lengths {
+            file.write_all(&value.to_le_bytes())?;
+        }
+        file.flush()?;
+    }
+
+    let (mean, loss) = exact_stats(&lengths, &weights, MAX_GUESSES);
+    let opening = solver.best_guess(&(0..data.n_words()).collect::<Vec<_>>(), Some(MAX_GUESSES));
+    let opening_word = data.words.word(opening.0);
+
+    if options.json {
+        println!(
+            "{{\"slug\": \"{}\", \"mean\": {:.17}, \"loss_probability\": {:.17}, \
+             \"opening\": \"{}\", \"seconds\": {:.3}, \"table_seconds\": {:.3}}}",
+            config.slug(),
+            mean,
+            loss,
+            opening_word,
+            secs,
+            build_secs
+        );
+    } else {
+        println!("  prior          {}", config.slug());
+        println!("  opening        {opening_word}");
+        println!("  mean           {mean:.4}");
+        println!("  loss           {:.4}%", loss * 100.0);
+        println!("  table built in {build_secs:.2} s");
+        println!("  swept in       {secs:.2} s");
+    }
+    Ok(())
+}
+
+fn main() -> ExitCode {
+    match parse().map_err(|e| e.into()).and_then(|o| run(&o)) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            println!("  FAIL: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}

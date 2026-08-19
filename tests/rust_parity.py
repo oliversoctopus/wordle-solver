@@ -573,6 +573,73 @@ def check_solver(report):
         return True
 
 
+def check_every_answer(report):
+    """The whole sweep: every word played as the answer, both sides.
+
+    This is the acceptance test for the port rather than one more comparison.
+    The solver is deterministic, so playing all 12,947 words once and weighting
+    by the prior *computes* the mean -- there is no sampling error to hide in,
+    and README *Results* is the number to hit.  Compared per answer rather than
+    on the mean, so two games that differ in opposite directions cannot cancel.
+    """
+    path = binary("every_answer")
+    if path is None:
+        return None
+
+    import priors
+    from analysis.common import every_answer, exact_stats
+    from solver import WordleSolver
+    from wordle_data import load_data
+
+    with tempfile.TemporaryDirectory() as out_dir:
+        dump = os.path.join(out_dir, "lengths.f64")
+        done = subprocess.run([path, ROOT, "--dump", dump],
+                              capture_output=True, text=True)
+        if done.returncode != 0:
+            report((done.stdout + done.stderr).strip())
+            return False
+        for line in done.stdout.strip().splitlines():
+            report(line.strip())
+
+        data = load_data()
+        config = priors.PriorConfig()
+        solver = WordleSolver(data=data, config=config, fused=False)
+        mine = every_answer(solver)
+        got = np.fromfile(dump, dtype="<f8")
+        if got.shape != mine.shape:
+            report(f"{got.shape} against {mine.shape}")
+            return False
+
+        differ = int((got != mine).sum())
+        longer = int((got > mine).sum())
+        mean, loss = exact_stats(mine, solver.weights)
+        got_mean, got_loss = exact_stats(got, solver.weights)
+        report(f"python mean {mean:.4f}, loss {loss * 100:.4f}%")
+        report(f"{differ} of {got.size} answers differ, {longer} longer "
+               f"and {differ - longer} shorter")
+        report(f"mean apart by {abs(got_mean - mean):.2e}, "
+               f"loss by {abs(got_loss - loss):.2e}")
+
+        # A different tolerance from the rest of this file, measuring a
+        # different thing.  The two are not disagreeing about arithmetic: where
+        # a position has several exactly optimal guesses they take different
+        # ones, play different games from there, and land on the same expected
+        # value by a different route -- which is why the differing games split
+        # almost exactly evenly between longer and shorter.  What must not move
+        # is anything the documents quote, and at 1e-5 nothing does.
+        if abs(got_mean - mean) > 1e-5 * mean or abs(got_loss - loss) > 1e-5:
+            report("the weighted figures moved by more than the documents' precision")
+            return False
+        if f"{got_mean:.4f}" != f"{mean:.4f}":
+            report(f"mean rounds to {got_mean:.4f}, not {mean:.4f}")
+            return False
+        if f"{got_loss * 100:.4f}" != f"{loss * 100:.4f}":
+            report(f"loss rounds to {got_loss * 100:.4f}%, not {loss * 100:.4f}%")
+            return False
+        report("both round to the figures README quotes")
+        return True
+
+
 # (label, what agreement establishes, the check)
 CHECKS = [
     ("the coloring rule",
@@ -594,6 +661,9 @@ CHECKS = [
     ("the solver dispatch",
      "the same branch answers, with the same guess, over six arms",
      check_solver),
+    ("every answer",
+     "the whole sweep reproduces the mean and loss probability README quotes",
+     check_every_answer),
 ]
 
 

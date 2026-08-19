@@ -112,6 +112,12 @@ impl<'a, S: Source> Solver<'a, S> {
         self
     }
 
+    /// How many guessable words there are, and so how big the opening
+    /// candidate set is.
+    pub fn n_words(&self) -> usize {
+        self.source.n_guesses()
+    }
+
     /// Rows of the feedback table a guess may come from: every word, or in hard
     /// mode only the words that could still be the answer.
     pub fn guess_pool<'c>(&self, candidates: &'c [usize]) -> Option<&'c [usize]> {

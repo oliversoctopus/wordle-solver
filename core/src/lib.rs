@@ -12,6 +12,7 @@ pub mod data;
 pub mod estimator;
 pub mod exact;
 pub mod feedback;
+pub mod game;
 pub mod json;
 pub mod kernels;
 pub mod memo;

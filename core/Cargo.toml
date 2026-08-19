@@ -6,3 +6,10 @@ edition = "2021"
 # Named wordle_core rather than core, which is taken by the standard library.
 # No dependencies, and the WASM build depends on it staying that way.
 [dependencies]
+
+# Native only, and deliberately so: the WASM build must stay dependency-free,
+# and threads there need SharedArrayBuffer and COOP/COEP headers anyway. What
+# this buys is a thread pool that is already up -- spawning per call costs more
+# than the work, since the kernels are called constantly on small candidate sets.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rayon = "1"

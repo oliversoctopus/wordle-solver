@@ -17,7 +17,9 @@
 use crate::feedback::score_guess;
 use crate::words::WordList;
 
-pub trait Source {
+/// `Sync` so the native build can score a pool across threads; both
+/// implementations are immutable once built, so it costs nothing.
+pub trait Source: Sync {
     /// Pattern number for this pair, in `[0, 243)`.
     fn score(&self, guess: usize, candidate: usize) -> u8;
     /// How many guessable words there are, so `pool = None` can mean all.

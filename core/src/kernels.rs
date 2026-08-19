@@ -19,6 +19,56 @@ use crate::estimator::{f_eval_x, Form};
 use crate::feedback::{N_PATTERNS, WIN_PATTERN};
 use crate::source::Source;
 
+/// Least (guess, candidate) pairs worth splitting across cores.
+///
+/// The kernels are called constantly on small candidate sets -- the exact
+/// search asks for a few hundred representatives against a handful of
+/// candidates, tens of thousands of times over a sweep -- and below this the
+/// coordination costs more than the work it divides.
+#[cfg(not(target_arch = "wasm32"))]
+const PARALLEL_MIN_WORK: usize = 1 << 15;
+
+/// Runs `fill` over the pool, writing one score per entry.
+///
+/// Natively this spreads the pool across rayon's standing thread pool when
+/// there is enough work to pay for it, which is what the numba kernels do with
+/// `prange`. Each chunk keeps accumulators of its own, so no two threads share
+/// one. Spawning threads per call instead of reusing a pool made a whole sweep
+/// slower, since most calls are far too small to pay for sixteen spawns.
+///
+/// Under WASM it runs straight through. Threads there need SharedArrayBuffer
+/// and COOP/COEP headers, and a browser solving one position at a time has no
+/// use for them.
+#[cfg(not(target_arch = "wasm32"))]
+fn scatter<F>(pool: &[usize], work: usize, fill: F) -> Vec<f64>
+where
+    F: Fn(&[usize], &mut [f64]) + Sync,
+{
+    use rayon::prelude::*;
+
+    let mut out = vec![0.0; pool.len()];
+    if work < PARALLEL_MIN_WORK || pool.len() < 2 {
+        fill(pool, &mut out);
+        return out;
+    }
+    let threads = rayon::current_num_threads().max(1);
+    let chunk = pool.len().div_ceil(threads).max(1);
+    pool.par_chunks(chunk)
+        .zip(out.par_chunks_mut(chunk))
+        .for_each(|(part, slot)| fill(part, slot));
+    out
+}
+
+#[cfg(target_arch = "wasm32")]
+fn scatter<F>(pool: &[usize], _work: usize, fill: F) -> Vec<f64>
+where
+    F: Fn(&[usize], &mut [f64]) + Sync,
+{
+    let mut out = vec![0.0; pool.len()];
+    fill(pool, &mut out);
+    out
+}
+
 /// Below this many candidates the reduce walks the candidates a second time
 /// rather than sweeping all 243 patterns, taking each bucket the first time it
 /// is reached and zeroing it there. Above it the second walk stops paying for
@@ -52,37 +102,37 @@ pub fn ig_all(
 ) -> Vec<f64> {
     let pool = pool_or_all(source, pool);
     let m = candidates.len();
-    let total = weights.iter().sum::<f64>();
-    let mut out = vec![0.0; pool.len()];
-    let mut mass = [0.0f64; N_PATTERNS];
+    let total: f64 = weights.iter().sum();
 
-    for (slot, &guess) in pool.iter().enumerate() {
-        for i in 0..m {
-            mass[source.score(guess, candidates[i]) as usize] += weights[i];
-        }
+    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
+        let mut mass = [0.0f64; N_PATTERNS];
+        for (slot, &guess) in part.iter().enumerate() {
+            for i in 0..m {
+                mass[source.score(guess, candidates[i]) as usize] += weights[i];
+            }
 
-        let mut h = 0.0;
-        if m < RESCAN_MAX {
-            for &c in candidates {
-                let r = source.score(guess, c) as usize;
-                if mass[r] > 0.0 {
-                    let p = mass[r] / total;
-                    h -= p * p.log2();
-                    mass[r] = 0.0;
+            let mut h = 0.0;
+            if m < RESCAN_MAX {
+                for &c in candidates {
+                    let r = source.score(guess, c) as usize;
+                    if mass[r] > 0.0 {
+                        let p = mass[r] / total;
+                        h -= p * p.log2();
+                        mass[r] = 0.0;
+                    }
+                }
+            } else {
+                for value in mass.iter_mut() {
+                    if *value > 0.0 {
+                        let p = *value / total;
+                        h -= p * p.log2();
+                        *value = 0.0;
+                    }
                 }
             }
-        } else {
-            for slot in mass.iter_mut() {
-                if *slot > 0.0 {
-                    let p = *slot / total;
-                    h -= p * p.log2();
-                    *slot = 0.0;
-                }
-            }
+            out[slot] = h;
         }
-        out[slot] = h;
-    }
-    out
+    })
 }
 
 /// Guesses still needed from one bucket. One and two candidates are worth
@@ -125,38 +175,37 @@ pub fn expected_guesses_all(
 ) -> Vec<f64> {
     let pool = pool_or_all(source, pool);
     let m = candidates.len();
-    let total = weights.iter().sum::<f64>();
+    let total: f64 = weights.iter().sum();
     let wlw = w_log_w(weights);
-    let mut out = vec![0.0; pool.len()];
 
-    let mut buckets = Buckets::new();
-
-    for (slot, &guess) in pool.iter().enumerate() {
-        for i in 0..m {
-            let r = source.score(guess, candidates[i]) as usize;
-            let w = weights[i];
-            buckets.mass[r] += w;
-            buckets.count[r] += 1.0;
-            buckets.wlw[r] += wlw[i];
-            if w > buckets.heaviest[r] {
-                buckets.heaviest[r] = w;
+    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
+        let mut buckets = Buckets::new();
+        for (slot, &guess) in part.iter().enumerate() {
+            for i in 0..m {
+                let r = source.score(guess, candidates[i]) as usize;
+                let w = weights[i];
+                buckets.mass[r] += w;
+                buckets.count[r] += 1.0;
+                buckets.wlw[r] += wlw[i];
+                if w > buckets.heaviest[r] {
+                    buckets.heaviest[r] = w;
+                }
             }
+
+            let mut expected = 1.0;
+            if m < RESCAN_MAX {
+                for &c in candidates {
+                    let r = source.score(guess, c) as usize;
+                    expected += buckets.take(r, total, params, form);
+                }
+            } else {
+                for r in 0..N_PATTERNS {
+                    expected += buckets.take(r, total, params, form);
+                }
+            }
+            out[slot] = expected;
         }
-
-        let mut expected = 1.0;
-        if m < RESCAN_MAX {
-            for &c in candidates {
-                let r = source.score(guess, c) as usize;
-                expected += buckets.take(r, total, params, form);
-            }
-        } else {
-            for r in 0..N_PATTERNS {
-                expected += buckets.take(r, total, params, form);
-            }
-        }
-        out[slot] = expected;
-    }
-    out
+    })
 }
 
 /// The four 243-slot accumulators the expected-guess reduce needs: a bucket's
@@ -231,53 +280,52 @@ pub fn two_turn_scores(
 ) -> Vec<f64> {
     let pool = pool_or_all(source, pool);
     let m = candidates.len();
-    let total = weights.iter().sum::<f64>();
-    let mut out = vec![0.0; pool.len()];
+    let total: f64 = weights.iter().sum();
 
-    let mut mass = [0.0f64; N_PATTERNS];
-    let mut heaviest = [0.0f64; N_PATTERNS];
-
-    for (slot, &guess) in pool.iter().enumerate() {
-        for i in 0..m {
-            let r = source.score(guess, candidates[i]) as usize;
-            let w = weights[i];
-            mass[r] += w;
-            if w > heaviest[r] {
-                heaviest[r] = w;
-            }
-        }
-
-        let mut mass_sum = 0.0;
-        let mut max_sum = 0.0;
-        // a bucket of zero mass has a zero maximum too, so mass alone says
-        // whether this bucket has already been taken
-        if m < RESCAN_MAX {
-            for &c in candidates {
-                let r = source.score(guess, c) as usize;
-                if mass[r] > 0.0 {
-                    if r != WIN_PATTERN as usize {
-                        mass_sum += mass[r];
-                        max_sum += heaviest[r];
-                    }
-                    mass[r] = 0.0;
-                    heaviest[r] = 0.0;
+    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
+        let mut mass = [0.0f64; N_PATTERNS];
+        let mut heaviest = [0.0f64; N_PATTERNS];
+        for (slot, &guess) in part.iter().enumerate() {
+            for i in 0..m {
+                let r = source.score(guess, candidates[i]) as usize;
+                let w = weights[i];
+                mass[r] += w;
+                if w > heaviest[r] {
+                    heaviest[r] = w;
                 }
             }
-        } else {
-            for r in 0..N_PATTERNS {
-                if mass[r] > 0.0 {
-                    if r != WIN_PATTERN as usize {
-                        mass_sum += mass[r];
-                        max_sum += heaviest[r];
+
+            let mut mass_sum = 0.0;
+            let mut max_sum = 0.0;
+            // a bucket of zero mass has a zero maximum too, so mass alone says
+            // whether this bucket has already been taken
+            if m < RESCAN_MAX {
+                for &c in candidates {
+                    let r = source.score(guess, c) as usize;
+                    if mass[r] > 0.0 {
+                        if r != WIN_PATTERN as usize {
+                            mass_sum += mass[r];
+                            max_sum += heaviest[r];
+                        }
+                        mass[r] = 0.0;
+                        heaviest[r] = 0.0;
                     }
-                    mass[r] = 0.0;
-                    heaviest[r] = 0.0;
+                }
+            } else {
+                for r in 0..N_PATTERNS {
+                    if mass[r] > 0.0 {
+                        if r != WIN_PATTERN as usize {
+                            mass_sum += mass[r];
+                            max_sum += heaviest[r];
+                        }
+                        mass[r] = 0.0;
+                        heaviest[r] = 0.0;
+                    }
                 }
             }
+            out[slot] = 1.0 + (mass_sum + (mass_sum - max_sum) * penalty) / total;
         }
-        out[slot] = 1.0 + (mass_sum + (mass_sum - max_sum) * penalty) / total;
-    }
-    out
+    })
 }
 
 // ------------------------------------------------------------------- splits
