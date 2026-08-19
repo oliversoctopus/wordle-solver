@@ -16,6 +16,7 @@ pub mod json;
 pub mod kernels;
 pub mod memo;
 pub mod priors;
+pub mod solver;
 pub mod source;
 pub mod words;
 

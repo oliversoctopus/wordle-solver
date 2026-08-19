@@ -461,6 +461,118 @@ def check_exact(report):
         return True
 
 
+def check_solver(report):
+    """Which branch of the dispatch answers, and what it answers with.
+
+    The point is coverage of the dispatch rather than one more number: it has
+    five ways out -- a closed form at one or two candidates, the exact search,
+    the heaviest candidate on the last turn, lookahead, and the heuristic
+    scorer -- and the arms below reach each of them.
+    """
+    path = binary("parity_solver")
+    if path is None:
+        return None
+
+    import priors
+    from solver import ENTROPY, EXPECTED, WordleSolver
+    from wordle_data import load_data
+
+    data = load_data()
+    config = priors.PriorConfig()
+    arms = [
+        (EXPECTED, False, True, 0),
+        (EXPECTED, True, True, 0),
+        (EXPECTED, False, False, 0),
+        (EXPECTED, False, True, 1),
+        (ENTROPY, False, True, 0),
+        (ENTROPY, True, True, 0),
+    ]
+    turns_list = [1, 2, 4, 6]
+
+    # one candidate through the whole list, so every branch is reached
+    sets = [np.arange(n, dtype=np.int64) for n in (1, 2, 3, 40, 61, 500)]
+    sets.append(np.arange(data.n_words, dtype=np.int64))
+    sets.extend(_endgame_sets(data, wanted=4))
+    report(f"{len(sets)} positions, sizes {[int(s.size) for s in sets]}")
+
+    with tempfile.TemporaryDirectory() as out_dir:
+        sets_file = os.path.join(out_dir, "sets.bin")
+        with open(sets_file, "wb") as handle:
+            handle.write(np.uint32(len(sets)).tobytes())
+            for s in sets:
+                handle.write(np.uint32(s.size).tobytes())
+                handle.write(s.astype("<u8").tobytes())
+
+        done = subprocess.run([path, ROOT, sets_file, out_dir],
+                              capture_output=True, text=True)
+        if done.returncode != 0:
+            report((done.stdout + done.stderr).strip())
+            return False
+
+        ints = np.fromfile(os.path.join(out_dir, "solver.i64"), dtype="<u1")
+        floats = np.fromfile(os.path.join(out_dir, "solver.f64"), dtype="<f8")
+        iat, fat = 0, 0
+
+        def next_int():
+            nonlocal iat
+            v = int(np.frombuffer(ints[iat:iat + 8].tobytes(), dtype="<i8")[0])
+            iat += 8
+            return v
+
+        def next_indices():
+            nonlocal iat
+            k = int(np.frombuffer(ints[iat:iat + 4].tobytes(), dtype="<u4")[0])
+            iat += 4
+            got = np.frombuffer(ints[iat:iat + 8 * k].tobytes(), dtype="<i8")
+            iat += 8 * k
+            return got.astype(np.int64)
+
+        worst, ties, checked = 0.0, 0, 0
+        for mode, hard, use_exact, lookahead in arms:
+            for s in sets:
+                solver = WordleSolver(data=data, config=config, mode=mode,
+                                      hard=hard, use_exact=use_exact,
+                                      lookahead=lookahead, fused=False)
+                for turns in turns_list:
+                    guess, score = solver.best_guess(s, guesses_left=turns)
+                    got_guess, got_score = next_int(), floats[fat]
+                    fat += 1
+                    got_exact = bool(next_int())
+                    worst = max(worst, gap([got_score], [score]))
+                    if got_exact != solver.solved_exactly(s, guesses_left=turns):
+                        report(f"solved_exactly at {mode} hard={hard} "
+                               f"t={turns} size={s.size}: {got_exact}")
+                        return False
+                    if got_guess != guess:
+                        # equal scores mean equally good guesses; the search's
+                        # own tie order is arbitrary, as check_exact explains
+                        mine = solver.score_one(int(got_guess), s)
+                        if gap([mine], [score]) > 1.0:
+                            report(f"best_guess at {mode} hard={hard} "
+                                   f"t={turns} size={s.size}: {got_guess} "
+                                   f"scores {mine!r}, not {score!r}")
+                            return False
+                        ties += 1
+                    checked += 1
+
+                guess, _ = solver.best_guess(s, guesses_left=6)
+                mine = solver.split_siblings(guess, s)
+                got = next_indices()
+                if not np.array_equal(np.sort(got), np.sort(mine)):
+                    report(f"split_siblings at {mode} hard={hard} "
+                           f"size={s.size}: {got.size} against {mine.size}")
+                    return False
+
+        report(f"{checked} guesses over {len(arms)} arms and "
+               f"{len(turns_list)} turn counts")
+        report(f"{ties} picked a different guess of equal score")
+        report(f"worst {worst:.3f} of tolerance on the scores")
+        if worst > 1.0:
+            report("over tolerance")
+            return False
+        return True
+
+
 # (label, what agreement establishes, the check)
 CHECKS = [
     ("the coloring rule",
@@ -479,6 +591,9 @@ CHECKS = [
     ("the endgame search",
      "solve and top return the identical guess and value, over three arms",
      check_exact),
+    ("the solver dispatch",
+     "the same branch answers, with the same guess, over six arms",
+     check_solver),
 ]
 
 
