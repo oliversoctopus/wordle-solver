@@ -1,5 +1,7 @@
 # Wordle solver
 
+It runs in a browser at **[wordle-solver-lac.vercel.app](https://wordle-solver-lac.vercel.app/)** — the whole solver, in WASM, with no server behind it. That address is Vercel's own generated one and is not meant to be permanent, so treat it as where the thing currently is rather than where it lives; a rename or a custom domain would move it.
+
 ```
 python wordle_solver.py play         # interactive solving
 python wordle_solver.py train        # fit + cache the estimator, every prior combination
@@ -614,7 +616,9 @@ Nothing to install: the server is `http.server` and the page is three static fil
 
 ### Without a server
 
-`./build_site.sh` writes `site/`, which is the same three views with no Python behind them and nothing to deploy but files. It is 1.4 MB, 419 KB of that the WASM module and 686 KB the data the server used to hold.
+`./build_site.sh` writes `site/`, which is the same three views with no Python behind them and nothing to deploy but files. It is 1.4 MB, 419 KB of that the WASM module and 686 KB the data the server used to hold — 319 KB in all over the wire, since a host that serves it with brotli gets the module down to 139 KB and `solutions.json` from 287 KB to 25.
+
+What stands in for the server has to stand in for its failures too. `web.py` refuses a contradictory board with a 400, and `app.js` is written to that: `api()` throws on a reply that is not ok and renders a board on one that is. A refusal returned as 200 is therefore applied *as a board*, and the page dies reading rows off a payload that has none. The shim answers 400 for any reply carrying an `error`, which is the whole of the distinction the page draws; which of 400, 404 and 503 the server would have chosen is not reconstructed, since nothing on the page tells them apart and the only clue here is message text the editor may rewrite.
 
 `web/app.js` is byte for byte the file `web.py` serves. It reaches the solver through `fetch`, so `web/wasm-api.js` stands in for `fetch` on `/api/*` and routes into `wordle_core::api` instead of over a network — which is possible only because the page already sends the whole board on every submit, making that boundary a pure function of (path, body) rather than a conversation. Leaving `app.js` alone matters beyond tidiness: `tests/board.test.js` loads it through `vm`, and a modified copy would mean the board tests exercise a different file from the one that ships.
 

@@ -5,7 +5,7 @@ python tests/run.py           a few seconds, needs nothing loaded
 python tests/run.py --full    also the parts that load the 167 MB table
 ```
 
-Eight files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, a pointer into the documents can stop pointing anywhere, and the deployed page can quietly be an older build than the source beside it — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
+Nine files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, a pointer into the documents can stop pointing anywhere, and the deployed page can quietly be an older build than the source beside it — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
 
 None of them assert numbers written down by hand. Each has something else to check against — the second implementation, the answer record, or a property that holds of every board there is — because a number copied into a test is a fourth place for it to go stale, and `README.md` § *Numbers in the documents* already has three.
 
@@ -111,3 +111,11 @@ The oracle is the build. `--full` runs `build_site.sh` into a temporary director
 Without `--full` it checks the part that needs no compiler: the nine files `build_site.sh` copies through untouched, and `app.js`, which it compares through `wording.Wording.served` — the same call the build makes rather than a second copy of what it does.
 
 `index.html` is left to `--full` on purpose. The build threads the `wasm-api.js` script tag into it on the way past, and repeating that rule here would be exactly the kind of duplicated knowledge this file exists to catch going stale.
+
+## `wasm_api.test.js` — the static build's shim keeps the page's contract
+
+`app.js` was written against a server, and `web/wasm-api.js` stands in for one. Standing in means more than returning the right JSON. `api()` throws on a reply that is not ok and renders a board on one that is, so a refusal that arrives as 200 is applied as though it were a board — and `applyState` reads `state.rows.map` off a payload with no rows, which takes the page down where it stands. Three gray guesses in the solve view reach a board no word can satisfy, and that was enough to do it on the deployed site.
+
+Nothing else could see it. `rust_parity.py` compares the two implementations' replies field by field and their refusals word for word, but the HTTP status is the shim's own invention on the way past, and the shim is JavaScript that no Python test loads.
+
+So the shim is loaded unmodified through `vm` against a fake worker that answers with whatever the case wants, and the checks are about the contract rather than the content: a board arrives ok, a refusal arrives not-ok and carries its message through what `api()` does with it, a reply that is not JSON at all counts as a refusal, anything outside `/api/` is passed to the real `fetch` untouched, and `/api/game/new` picks up the seed the module has no way to generate.

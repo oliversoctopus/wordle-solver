@@ -53,6 +53,23 @@ const wasmApi = (() => {
     return JSON.stringify({ ...parsed, seed: Math.random() });
   }
 
+  // Whether a reply is a refusal, which has to reach the page as a status and
+  // not just a field: `app.js` throws on a reply that is not ok and renders the
+  // board on one that is, so an error arriving as 200 gets applied as though it
+  // were a board and takes the page down with it.  `web.py` answers 400 here.
+  //
+  // Which of 400, 404 and 503 it would have been is not reconstructed. Nothing
+  // on the page tells them apart -- it shows the message either way -- and the
+  // only way to tell from here is to match on the message text, which the
+  // editor is free to rewrite.
+  function refused(text) {
+    try {
+      return JSON.parse(text).error !== undefined;
+    } catch (error) {
+      return true;
+    }
+  }
+
   // Stand in for fetch on /api/*, and leave every other request alone.
   function install() {
     const original = window.fetch.bind(window);
@@ -63,7 +80,7 @@ const wasmApi = (() => {
 
       const text = await ask(path, seeded(path, init && init.body ? init.body : ""));
       return new Response(text, {
-        status: 200,
+        status: refused(text) ? 400 : 200,
         headers: { "Content-Type": "application/json" },
       });
     };

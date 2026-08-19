@@ -143,7 +143,7 @@ Every measured claim about the priors is reproduced by a script in `analysis/`, 
 
 ## Testing
 
-`tests/` holds eight files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, whether every pointer into the documents still resolves, whether the built site is in step with the source it was built from, and whether the Rust core agrees with the Python it was ported from.
+`tests/` holds nine files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, whether every pointer into the documents still resolves, whether the static build's shim refuses in a way the page survives, whether the built site is in step with the source it was built from, and whether the Rust core agrees with the Python it was ported from.
 
 **Nothing there asserts a number written down by hand, and nothing new should.** Each check has an oracle instead: the other front end, the answer record, or a property that holds of every board. A figure copied into a test is a fourth place for it to go stale, and there are three already.
 
