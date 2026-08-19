@@ -70,6 +70,25 @@ const wasmApi = (() => {
     if (reply.error) throw new Error(reply.error);
   }
 
+  // Dealing an answer needs a random draw, and the module has no entropy
+  // source of its own.  So the randomness comes from here, while the draw
+  // itself stays in Rust, where the prior weights are.
+  function seeded(path, body) {
+    if (path !== "/api/game/new") return body;
+    const parsed = body ? JSON.parse(body) : {};
+    return JSON.stringify({ ...parsed, seed: Math.random() });
+  }
+
+  // How long the solve took.  The module has no clock, so it leaves the field
+  // at zero and this fills it in -- and what it measures is the solve itself
+  // rather than a round trip, since there is no round trip.  The page shows it
+  // past 200 ms, which the wider positions do reach.
+  function timed(reply, started) {
+    if (!reply.includes('"elapsed_ms":0')) return reply;
+    return reply.replace('"elapsed_ms":0',
+                         `"elapsed_ms":${Math.round(performance.now() - started)}`);
+  }
+
   // Stand in for fetch on /api/*, and leave every other request alone.
   function install() {
     const original = window.fetch.bind(window);
@@ -78,8 +97,10 @@ const wasmApi = (() => {
       const path = url.startsWith("http") ? new URL(url).pathname : url;
       if (!path.startsWith("/api/")) return original(input, init);
 
-      const body = init && init.body ? init.body : "";
-      const text = wasm ? call(path, body) : JSON.stringify({ ready: false });
+      const body = seeded(path, init && init.body ? init.body : "");
+      const started = performance.now();
+      const text = wasm ? timed(call(path, body), started)
+                        : JSON.stringify({ ready: false });
       return new Response(text, {
         status: 200,
         headers: { "Content-Type": "application/json" },

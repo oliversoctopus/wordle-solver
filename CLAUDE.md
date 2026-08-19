@@ -35,6 +35,7 @@ Write JSON through `wordle_data.write_json`, which handles this. Anything else t
 python web.py                     the page, on http://127.0.0.1:8000
 python wordle_solver.py play      the solver in the terminal
 python wordle_game.py             a game in the terminal
+./build_site.sh                   the same page as static files, in site/
 ```
 
 `requirements.txt` splits in two: the solver needs `numpy` and `numba`, and the last two lines are for the one-off builders only. It is what `.venv` was built from; installing into the system Python is not the setup here.
@@ -49,7 +50,9 @@ Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`
 
 **The solver is being ported to Rust**, so it can compile to WASM behind a free static site and to a native binary. What the native side is worth is measured rather than assumed: a full `every_answer` sweep runs in about 6.8 s against the Python's 10.0, because two thirds of the Python's time is outside the kernels and that part is roughly twice as fast in Rust. The kernels themselves are memory-bound in both and will not move much. `cargo build --release`, or `./build.sh` since rustup was installed without touching PATH. The Python stays the oracle throughout and keeps `estimator.fit`, `answer_like.py`, the two fetchers and all of `analysis/`'s reporting; nothing is deleted until the Rust matches it in `tests/rust_parity.py`.
 
-**Port the optimizations, not just the algorithms.** `kernels.py` declares all seven of its kernels `parallel=True` and caches the all-rows pool in `_ALL_ROWS`; leaving either out of the Rust made a whole sweep slower than the Python it replaced, and the cause was invisible until it was measured. `cargo build --release --features wordle_core/profile` times every kernel entry point, which has settled this twice where guessing got it wrong twice.
+**The page runs off the Rust with no server at all.** `./build_site.sh` writes `site/`; `README.md` § *Without a server* has what is in it and what it gives up. Two rules hold there. `web/app.js` is served unmodified — `web/wasm-api.js` stands in for `fetch` on `/api/*` instead, because `tests/board.test.js` loads `app.js` through `vm` and a fork would mean the board tests cover a file that does not ship. And the API lives in `wordle_core::api`, not in the `wasm` crate, so `native/src/bin/api_probe.rs` can drive an endpoint from a shell; every endpoint bug so far was found that way and none of them were quick to see through a browser.
+
+**Port the optimizations, not just the algorithms.** `kernels.py` declares all seven of its kernels `parallel=True` and caches the all-rows pool in `_ALL_ROWS`; leaving either out of the Rust made a whole sweep slower than the Python it replaced, and the cause was invisible until it was measured. `cargo build --release --features wordle_core/profile` times every kernel entry point, which has settled this twice where guessing got it wrong twice. The same trap caught `api::find` outside the kernels: fetching the guess's letters per candidate rather than once per guess cost 22×, and the loop looked perfectly ordinary.
 
 What the Rust still does not have is `fused_kernels`' answer-major dispatch. That is opt-in on the Python side too, so the two are comparable as they stand.
 
@@ -71,7 +74,9 @@ Fast math is not a hazard you can reach by accident here: `rustc` exposes no suc
 | `wordle_solver.py` | the terminal front end: `play`, `train`, `benchmark`, `compare`, `info` |
 | `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer |
 | `web.py` | the HTTP server and JSON API |
-| `web/app.js` | the whole page |
+| `web/app.js` | the whole page; served unmodified by both the Python and the static build |
+| `web/wasm-api.js` | stands in for `fetch` on `/api/*` in the static build, and routes into the module |
+| `build_site.sh` | assembles `site/`, the whole thing as static files |
 | `wording.py` | the `/editor` string scanner |
 | `unwrap_md.py` | checks that every `.md` is one line per paragraph; `--write` converts |
 | `feedback_table.py` | builds `feedback_table.npy` and the index maps |
@@ -79,7 +84,8 @@ Fast math is not a hazard you can reach by accident here: `rustc` exposes no suc
 | `solutions.py` | brings `solutions.json` up to date from the NYT |
 | `word_lists.py` | refetches `wordles.json` and `nonwordles.json` |
 | `analysis/` | the scripts behind every measured number in the two documents |
-| `core/` | the Rust port of the solver, in progress; compiles to WASM and to a native binary |
+| `core/` | the Rust port of the solver; compiles to WASM and to a native binary, and answers the page's API |
+| `wasm/` | marshalling and nothing else: the module's linear-memory entry points |
 | `native/` | Rust binaries the analysis scripts drive, and the parity checks against the Python |
 
 ## Where the data comes from

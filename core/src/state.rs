@@ -19,15 +19,23 @@ use crate::priors::{build_weights, PriorConfig, ShapeTables};
 use crate::source::Live;
 use crate::WordleData;
 
+/// Every fit the Python cached for one prior: the active one, which is what
+/// *Whatever is cached* means, and the archive it keeps per form.
+pub struct Fits {
+    pub active: (Form, Vec<f64>),
+    pub by_form: HashMap<String, Vec<f64>>,
+}
+
 pub struct Loaded {
     pub data: WordleData,
     pub tables: ShapeTables,
     /// Fitted `f` per prior slug, as the Python's `estimator_cache` holds it.
-    pub fits: HashMap<String, (Form, Vec<f64>)>,
+    pub fits: HashMap<String, Fits>,
     /// Precomputed answers for the opening position, per settings key. The
     /// browser cannot afford to score 12,947 guesses against 12,947 candidates.
     pub openings: HashMap<String, json::Value>,
     weights: Mutex<HashMap<String, Vec<f64>>>,
+    games: Mutex<Games>,
 }
 
 impl Loaded {
@@ -44,18 +52,97 @@ impl Loaded {
         Ok(built)
     }
 
-    pub fn fit_for(&self, config: &PriorConfig) -> Result<(Form, Vec<f64>), String> {
+    /// The fit to play with. `form` is the name the *Shape of f* menu names, or
+    /// None for whichever one the Python left active.
+    pub fn fit_for(
+        &self,
+        config: &PriorConfig,
+        form: Option<&str>,
+    ) -> Result<(Form, Vec<f64>), String> {
         let slug = config.slug();
-        self.fits.get(&slug).cloned().ok_or_else(|| {
+        let fits = self.fits.get(&slug).ok_or_else(|| {
             format!(
                 "No fitted f for this prior ({slug}). Entropy mode needs none and \
                  runs on anything; expected guesses needs one."
             )
-        })
+        })?;
+        let Some(name) = form else {
+            return Ok(fits.active.clone());
+        };
+        let shape = get_form(name).ok_or_else(|| format!("Unknown form {name}"))?;
+        let params = fits
+            .by_form
+            .get(name)
+            .ok_or_else(|| format!("No {name} fit for this prior ({slug})"))?;
+        Ok((shape, params.clone()))
+    }
+
+    /// The name of the fit `form` selects, which is what keys the openings.
+    pub fn form_name(&self, config: &PriorConfig, form: Option<&str>) -> Result<String, String> {
+        match form {
+            Some(name) => Ok(name.to_string()),
+            None => Ok(self
+                .fits
+                .get(&config.slug())
+                .map(|fits| fits.active.0.name.to_string())
+                .unwrap_or_else(|| crate::estimator::DEFAULT_FORM.to_string())),
+        }
     }
 
     pub fn source(&self) -> Live<'_> {
         Live::new(&self.data.words)
+    }
+
+    /// Runs `body` over the game store, which is where play mode's answers
+    /// live. The Python keeps them on the server so the traffic cannot spoil
+    /// them; here there is no server, and the tab holds them for as long as it
+    /// holds the page.
+    pub fn with_games<T>(&self, body: impl FnOnce(&mut Games) -> T) -> Result<T, String> {
+        let mut games = self.games.lock().map_err(|_| "game lock poisoned")?;
+        Ok(body(&mut games))
+    }
+}
+
+/// One game of play mode: the answer, the prior it was drawn from, and the
+/// rows played so far.
+#[derive(Clone)]
+pub struct Game {
+    pub answer: usize,
+    pub config: PriorConfig,
+    pub source: String,
+    pub rows: Vec<(usize, u8)>,
+    pub gave_up: bool,
+}
+
+/// The sessions, oldest dropped first, as `web.Sessions` does it.
+#[derive(Default)]
+pub struct Games {
+    order: Vec<String>,
+    games: HashMap<String, Game>,
+    next: u64,
+}
+
+/// Beyond this many, the oldest goes. One tab plays one game at a time, so the
+/// cap is only there to stop a long sitting from growing without bound.
+const MAX_GAMES: usize = 32;
+
+impl Games {
+    pub fn create(&mut self, game: Game) -> String {
+        self.next += 1;
+        let id = format!("g{}", self.next);
+        if self.order.len() >= MAX_GAMES {
+            let oldest = self.order.remove(0);
+            self.games.remove(&oldest);
+        }
+        self.order.push(id.clone());
+        self.games.insert(id.clone(), game);
+        id
+    }
+
+    pub fn get(&mut self, id: &str) -> Result<&mut Game, String> {
+        self.games
+            .get_mut(id)
+            .ok_or_else(|| "That game has expired; start a new one".to_string())
     }
 }
 
@@ -98,6 +185,16 @@ pub fn init(body: &json::Value) -> Result<(), String> {
     let tables = ShapeTables::from_json(text("answer_like")?, text("wordlebot")?)
         .map_err(|error| error.to_string())?;
 
+    let numbers = |value: Option<&json::Value>| -> Option<Vec<f64>> {
+        Some(
+            value?
+                .as_array()?
+                .iter()
+                .filter_map(|v| v.as_f64())
+                .collect(),
+        )
+    };
+
     let mut fits = HashMap::new();
     if let Some(object) = body.get("fits").and_then(|v| v.as_object()) {
         for (slug, value) in object {
@@ -107,14 +204,24 @@ pub fn init(body: &json::Value) -> Result<(), String> {
                 .ok_or_else(|| format!("fit {slug} names no form"))?;
             let form =
                 get_form(name).ok_or_else(|| format!("fit {slug} names unknown form {name}"))?;
-            let params: Vec<f64> = value
-                .get("params")
-                .and_then(|v| v.as_array())
-                .ok_or_else(|| format!("fit {slug} has no params"))?
-                .iter()
-                .filter_map(|v| v.as_f64())
-                .collect();
-            fits.insert(slug.clone(), (form, params));
+            let params =
+                numbers(value.get("params")).ok_or_else(|| format!("fit {slug} has no params"))?;
+
+            let mut by_form = HashMap::new();
+            if let Some(archive) = value.get("forms").and_then(|v| v.as_object()) {
+                for (other, params) in archive {
+                    if let Some(params) = numbers(Some(params)) {
+                        by_form.insert(other.clone(), params);
+                    }
+                }
+            }
+            fits.insert(
+                slug.clone(),
+                Fits {
+                    active: (form, params),
+                    by_form,
+                },
+            );
         }
     }
 
@@ -131,6 +238,7 @@ pub fn init(body: &json::Value) -> Result<(), String> {
         fits,
         openings,
         weights: Mutex::new(HashMap::new()),
+        games: Mutex::new(Games::default()),
     });
     Ok(())
 }

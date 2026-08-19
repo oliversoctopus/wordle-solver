@@ -640,6 +640,207 @@ def check_every_answer(report):
         return True
 
 
+def _probe(requests):
+    """Run api_probe over ``[(path, body), ...]``, returning the parsed replies.
+
+    One process for the whole list, because a game's session lives in it: the
+    module holds the answer the way web.py's Store does, and a second process
+    would not know about it.
+    """
+    import json
+
+    path = binary("api_probe")
+    if path is None:
+        return None
+    argv = [path, ROOT]
+    for endpoint, body in requests:
+        argv += [endpoint, json.dumps(body)]
+    done = subprocess.run(argv, capture_output=True, text=True,
+                          encoding="utf-8")
+    replies = [json.loads(line) for line in done.stdout.splitlines()
+               if line.startswith("{")]
+    return replies if len(replies) == len(requests) else None
+
+
+def _diff(got, mine, where, report):
+    """Every leaf of two replies, compared. Floats go through ``gap``; anything
+    else has to be equal.  Returns the worst float disagreement, or None once
+    something has been reported."""
+    if isinstance(mine, dict):
+        if set(got) - set(mine) or set(mine) - set(got):
+            report(f"{where}: keys {sorted(set(got) ^ set(mine))} on one side only")
+            return None
+        worst = 0.0
+        for key in mine:
+            here = _diff(got[key], mine[key], f"{where}.{key}", report)
+            if here is None:
+                return None
+            worst = max(worst, here)
+        return worst
+    if isinstance(mine, list):
+        if len(got) != len(mine):
+            report(f"{where}: {len(got)} entries against {len(mine)}")
+            return None
+        worst = 0.0
+        for i, (a, b) in enumerate(zip(got, mine)):
+            here = _diff(a, b, f"{where}[{i}]", report)
+            if here is None:
+                return None
+            worst = max(worst, here)
+        return worst
+    if isinstance(mine, float) and isinstance(got, (int, float)):
+        return gap([got], [mine])
+    if got != mine:
+        report(f"{where}: {got!r}, not {mine!r}")
+        return None
+    return 0.0
+
+
+def _drop_tied_words(got, mine):
+    """Two guesses of equal score are equally good, and which of them a ranking
+    names is arbitrary -- check_exact says why.  Where the two sides picked
+    differently at the same score, everything that follows from the word goes,
+    and the score stays.  Returns how many entries that was.
+    """
+    ties = 0
+    for key in ("recommendation", "alternatives"):
+        pairs = zip(got[key] or [], mine[key] or []) if key == "alternatives" \
+            else [(got[key], mine[key])] if got[key] and mine[key] else []
+        for a, b in pairs:
+            if a["word"] == b["word"] or gap([a["score"]], [b["score"]]) > 1.0:
+                continue
+            ties += 1
+            for entry in (a, b):
+                for field in ("word", "same_split", "same_split_count",
+                              "possible", "win_probability"):
+                    entry.pop(field, None)
+    return ties
+
+
+def check_api(report):
+    """The endpoints the page calls, against the ones web.py answers with.
+
+    Every leaf of every reply, not just the numbers: the page reads the shape
+    as much as the values, and a field that is missing or spelled differently
+    breaks it just as thoroughly as a wrong score would.  The switches are
+    covered here too, since nothing above this reads a request body.
+    """
+
+    import priors
+    import web
+
+    settings = [
+        {},
+        {"repeat": False, "curation": False},
+        {"repeat": False},
+        {"mode": "entropy"},
+        {"hard": True},
+        {"form": "cubic"},
+        {"form": "invonly", "top": 3},
+    ]
+    played = [[], [("salet", "NYNYN")], [("crane", "NNNNN"), ("moist", "NYNNY")]]
+    boards = [("crane", "NNNNN", "left"), ("crane", "NNNNN", "bits"),
+              ("salet", "GNYNN", "weight"), ("proxy", "NYNNG", "alpha"),
+              ("fuzzy", "GGGGY", "left")]      # the last gives no match at all
+    plays = [("crane", ["salet", "brand"]), ("proxy", ["adieu", "proxy"])]
+
+    requests = []
+    for switches in settings:
+        for rows in played:
+            requests.append(("/api/board", {
+                **{"repeat": True, "curation": True, "mode": "expected",
+                   "hard": False, "top": 5}, **switches,
+                "rows": [{"word": word, "pattern": pattern}
+                         for word, pattern in rows]}))
+    requests += [("/api/find", {"answer": answer, "pattern": pattern,
+                                "sort": sort, "repeat": True, "curation": True})
+                 for answer, pattern, sort in boards]
+    for n, (answer, words) in enumerate(plays, start=1):
+        requests.append(("/api/game/new", {"answer": answer, "repeat": True,
+                                           "curation": True}))
+        requests += [("/api/game/guess", {"session": f"g{n}", "word": word})
+                     for word in words]
+
+    replies = _probe(requests)
+    if replies is None:
+        return None
+
+    pool = web.SolverPool(mask_last=1)
+    data = pool.data()
+    config = priors.PriorConfig()
+    worst, at, ties = 0.0, "", 0
+
+    at_reply = 0
+    for switches in settings:
+        for rows in played:
+            got = replies[at_reply]
+            body = {"repeat": True, "curation": True, "mode": "expected",
+                    "hard": False, "top": 5, **switches}
+            at_reply += 1
+            parsed = web.parse_settings(body)
+            mine = web.build_state(
+                pool, got["session"], parsed,
+                [(data.word2ind[word], web.parse_pattern(pattern))
+                 for word, pattern in rows])
+            with pool.lock:
+                solver_weights = pool.solver_for(parsed).weights
+            # neither is meaningful across the two: one has no network at all,
+            # and the session is the module's own name for the board
+            for key in ("session", "elapsed_ms"):
+                mine.pop(key, None)
+                got.pop(key, None)
+            # "the 80 likeliest" is ambiguous when more than 80 words tie, and
+            # most of them do: numpy's argsort is not stable, so which of the
+            # tied ones it lists is arbitrary.  What has to match is the
+            # weights, which is what likeliest means.
+            for reply in (got, mine):
+                reply["possible_answers"] = [float(solver_weights[data.word2ind[w]])
+                                             for w in reply["possible_answers"]]
+            ties += _drop_tied_words(got, mine)
+            here = _diff(got, mine, f"board {switches} after {len(rows)}", report)
+            if here is None:
+                return False
+            if here > worst:
+                worst, at = here, f"the board under {switches or 'the defaults'}"
+    report(f"{len(settings)} sets of switches over {len(played)} boards, "
+           "every field of every reply")
+    report(f"{ties} entries named a different guess of equal score")
+
+    found = replies[at_reply:at_reply + len(boards)]
+    at_reply += len(boards)
+    for (answer, pattern, sort), got in zip(boards, found):
+        mine = web.find_guesses(pool, data.word2ind[answer],
+                                web.parse_pattern(pattern), config, sort)
+        for reply in (got, mine):
+            reply.pop("elapsed_ms", None)
+        here = _diff(got, mine, f"find {answer}/{pattern}/{sort}", report)
+        if here is None:
+            return False
+        if here > worst:
+            worst, at = here, f"find {answer}/{pattern} by {sort}"
+    report(f"{len(boards)} finder queries, "
+           f"{sum(r['total'] for r in found)} matches in all")
+
+    for answer, words in plays:
+        game = web.Game(data.word2ind[answer], config, "the one you chose")
+        for step in range(len(words) + 1):
+            got = replies[at_reply]
+            at_reply += 1
+            mine = web.game_state(pool, got["session"], game)
+            here = _diff(got, mine, f"play {answer} after {step}", report)
+            if here is None:
+                return False
+            if here > worst:
+                worst, at = here, f"the letter odds of {answer} after {step}"
+            if step < len(words):
+                guess = data.word2ind[words[step]]
+                game.rows.append((guess, web.score_guess(words[step], answer)))
+
+    report(f"{len(plays)} games played out, share grids and all")
+    report(f"worst {worst:.3f} of tolerance, on {at}")
+    return worst <= 1.0
+
+
 # (label, what agreement establishes, the check)
 CHECKS = [
     ("the coloring rule",
@@ -664,6 +865,9 @@ CHECKS = [
     ("every answer",
      "the whole sweep reproduces the mean and loss probability README quotes",
      check_every_answer),
+    ("the endpoints",
+     "the finder and play mode answer with what web.py answers with",
+     check_api),
 ]
 
 

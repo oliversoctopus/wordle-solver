@@ -203,6 +203,30 @@ pub fn effective_size(weights: &[f64]) -> f64 {
     terms.iter().sum::<f64>().exp2()
 }
 
+/// The Python's archived fit for one (prior, form) pair, which is what the
+/// page's *Shape of f* menu selects between.
+pub fn load_form_fit(root: &str, slug: &str, form: &str) -> Result<Vec<f64>, Box<dyn Error>> {
+    let path = format!("{root}/estimator_cache/forms/{slug}__{form}.json");
+    let value = json::parse_file(&path)?;
+    let shape = get_form(form).ok_or_else(|| format!("unknown form {form}"))?;
+    let params: Vec<f64> = value
+        .get("params")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| format!("{path} has no params"))?
+        .iter()
+        .filter_map(|v| v.as_f64())
+        .collect();
+    if params.len() != shape.codes.len() {
+        return Err(format!(
+            "{path}: {} params for a {}-term form",
+            params.len(),
+            shape.codes.len()
+        )
+        .into());
+    }
+    Ok(params)
+}
+
 /// A fit the Python cached, as `(form, params)`.
 pub fn load_fit(root: &str, slug: &str) -> Result<(Form, Vec<f64>), Box<dyn Error>> {
     let path = format!("{root}/estimator_cache/params_{slug}.json");

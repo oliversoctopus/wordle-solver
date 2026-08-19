@@ -604,3 +604,17 @@ A value baked into a string is part of it: an edit may move `${count}` but not d
 **Save** leaves the source alone. The rewrites live in `wording.json` and are applied to the served bytes on the way out. **Write into the code** puts them in the files for good and clears `wording.json`. That is the end state worth reaching, because an override is matched to the code by wording and stays fragile for exactly as long as it sits outside it. Prose is re-wrapped to the indentation it lands in, and both phrases are appended to `wording_history.json`. That record is the only one kept. The bake edits the source in place with no undo, so it is worth reading the source afterwards. The server keeps running the code it started with, and its own messages need a restart before they read the new way.
 
 Nothing to install: the server is `http.server` and the page is three static files in `web/`, with three more behind `/editor`. Startup warms the feedback table and the numba kernels in the background while the page waits. That makes the first load the slow one. A single lock covers the solver. Scoring ~13k guesses already uses every core, so two requests at once would only make both slower.
+
+### Without a server
+
+`./build_site.sh` writes `site/`, which is the same three views with no Python behind them and nothing to deploy but files. It is 1.4 MB, 419 KB of that the WASM module and 686 KB the data the server used to hold.
+
+`web/app.js` is byte for byte the file `web.py` serves. It reaches the solver through `fetch`, so `web/wasm-api.js` stands in for `fetch` on `/api/*` and routes into `wordle_core::api` instead of over a network — which is possible only because the page already sends the whole board on every submit, making that boundary a pure function of (path, body) rather than a conversation. Leaving `app.js` alone matters beyond tidiness: `tests/board.test.js` loads it through `vm`, and a modified copy would mean the board tests exercise a different file from the one that ships.
+
+**The table does not come with it.** 167 MB is not a download and not something a tab can rebuild, so the browser scores feedback live — `source.Live` against `source.Table`, chosen as a generic parameter so the inner loop dispatches statically. Live costs about 3.5× a lookup, which does not matter, because the absolute figure is what the page lives with: 168 ms to rank every guess after one word, 743 ms for the widest thing the finder can be asked.
+
+The exception is the opening, at 12,947 guesses against 12,947 candidates. That one position is a constant per setting, so `native/src/bin/build_site.rs` computes all 180 of them ahead of time into `openings.json` — every prior against both modes, both hard-mode settings, and each of the nine forms of `f`. Entropy never consults `f`, so its share of those is one ranking written out under nine names.
+
+Two things do not survive. `/editor` rewrites the source it is scanning, which needs a server and a checkout, so it stays a local Python tool. And play mode's answer no longer sits out of reach — the module holds it, and the page still never receives it until the game is over, but "reading the network traffic does not spoil it" is now a statement about a page rather than a guarantee.
+
+`native/src/bin/api_probe.rs` runs the same endpoints from a shell. Debugging them through a browser is guesswork on a slow loop, and this is why the API lives in `wordle_core` rather than in the `wasm` crate, which does marshalling and nothing else.
