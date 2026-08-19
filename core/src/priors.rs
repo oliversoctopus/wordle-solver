@@ -110,6 +110,68 @@ pub fn all_configs() -> Vec<PriorConfig> {
     out
 }
 
+/// The rates the two default probabilities are set from, measured rather than
+/// written down, so they follow `solutions.json` as it grows.
+pub struct Regime {
+    pub start_puzzle: i64,
+    pub puzzles: usize,
+    pub regime_repeat: f64,
+    pub regime_noncurated: f64,
+    pub all_time_repeat: f64,
+    pub all_time_noncurated: f64,
+    pub words: usize,
+    pub curated: usize,
+    pub used: usize,
+}
+
+/// The regime starts at the first repeat in the record: nothing repeated before
+/// it, and nothing was off-list before it either. Off-list is conditional on
+/// not being a repeat, the same order the model draws in.
+pub fn regime_stats(data: &WordleData) -> Regime {
+    let words = &data.past_solutions;
+    let curated: std::collections::HashSet<&str> =
+        data.curated.iter().map(|w| w.as_str()).collect();
+
+    let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let mut repeats = Vec::with_capacity(words.len());
+    for word in words {
+        repeats.push(seen.contains(word.as_str()));
+        seen.insert(word.as_str());
+    }
+    let start = repeats.iter().position(|&r| r).unwrap_or(0);
+
+    let rates = |lo: usize| -> (f64, f64) {
+        let window = lo..words.len();
+        let count = window.len().max(1);
+        let repeat = window.clone().filter(|&i| repeats[i]).count() as f64 / count as f64;
+        let fresh: Vec<usize> = window.filter(|&i| !repeats[i]).collect();
+        let noncurated = fresh
+            .iter()
+            .filter(|&&i| !curated.contains(words[i].as_str()))
+            .count() as f64
+            / fresh.len().max(1) as f64;
+        (repeat, noncurated)
+    };
+
+    let (regime_repeat, regime_noncurated) = rates(start);
+    let (all_time_repeat, all_time_noncurated) = rates(0);
+    Regime {
+        start_puzzle: data.puzzle_numbers.get(start).copied().unwrap_or(1),
+        puzzles: words.len() - start,
+        regime_repeat,
+        regime_noncurated,
+        all_time_repeat,
+        all_time_noncurated,
+        words: data.n_words(),
+        curated: curated.len(),
+        // the repeat group is the used words the solver can actually name
+        used: seen
+            .iter()
+            .filter(|w| data.words.index_of(w).is_some())
+            .count(),
+    }
+}
+
 /// The two word-weight tables the sharpened curation shapes read.
 ///
 /// A parameter rather than a path, because WASM has no filesystem: the page

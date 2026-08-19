@@ -9,3 +9,6 @@ target/
 # of data/derived/ is a few hundred KB of index maps and is kept: they are what
 # make the table readable, and they cost nothing to store.
 data/derived/feedback_table.npy
+
+# what build_site.sh assembles; every file in it is generated
+site/

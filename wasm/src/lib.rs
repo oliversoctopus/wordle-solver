@@ -13,9 +13,6 @@
 
 use std::alloc::{alloc as raw_alloc, dealloc as raw_dealloc, Layout};
 
-mod api;
-mod state;
-
 /// A buffer of `len` bytes for JS to write into. Pair every call with
 /// `dealloc`, or the page leaks a request's worth of memory per call.
 ///
@@ -69,7 +66,7 @@ pub unsafe extern "C" fn handle(
 ) {
     let path = slice_to_str(path_ptr, path_len);
     let body = slice_to_str(body_ptr, body_len);
-    let reply = api::handle(&path, &body);
+    let reply = wordle_core::api::handle(&path, &body);
 
     let bytes = reply.into_bytes().into_boxed_slice();
     REPLY_LEN = bytes.len();

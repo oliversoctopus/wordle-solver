@@ -115,6 +115,27 @@ pub fn forms() -> Vec<Form> {
     ]
 }
 
+impl Form {
+    /// How each term reads in an equation, which is how the page sets `f`.
+    pub fn term_labels(&self) -> Vec<String> {
+        self.codes
+            .iter()
+            .zip(&self.knots)
+            .map(|(&code, &knot)| match code {
+                TERM_CONST => "1".to_string(),
+                TERM_X => "x".to_string(),
+                TERM_X2 => "x^2".to_string(),
+                TERM_X3 => "x^3".to_string(),
+                TERM_INVN => "1-1/n".to_string(),
+                TERM_LOG1PX => "log2(1+x)".to_string(),
+                TERM_SQRTX => "sqrt(x)".to_string(),
+                // Rust prints 2 for 2.0, which is the %g the Python labels use
+                _ => format!("(x-{knot})+"),
+            })
+            .collect()
+    }
+}
+
 /// Fitted when no form is asked for.
 pub const DEFAULT_FORM: &str = "saturating";
 

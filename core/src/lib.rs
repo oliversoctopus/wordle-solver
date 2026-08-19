@@ -8,6 +8,7 @@
 //! `README.md` is the reference for what the solver does and
 //! `SOLVER_EXPLAINED.md` derives why it is built this way.
 
+pub mod api;
 pub mod data;
 pub mod estimator;
 pub mod exact;
@@ -20,6 +21,7 @@ pub mod priors;
 pub mod profile;
 pub mod solver;
 pub mod source;
+pub mod state;
 pub mod words;
 
 pub use data::WordleData;

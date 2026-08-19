@@ -12,9 +12,3 @@ crate-type = ["cdylib"]
 
 [dependencies]
 wordle_core = { path = "../core" }
-
-[profile.release]
-opt-level = "s"   # the browser downloads this; size is worth more than the last few percent
-lto = true
-codegen-units = 1
-panic = "abort"

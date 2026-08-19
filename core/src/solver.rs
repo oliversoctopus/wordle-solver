@@ -11,7 +11,7 @@
 //! feedback sources in `source` already cover the same ground for this port.
 
 use crate::estimator::{effective_size, Form};
-use crate::exact::{BudgetExceeded, ExactEndgame, MAX_TURNS};
+use crate::exact::{BudgetExceeded, ExactEndgame, MAX_TURNS, SPLIT_TIE_TOL};
 use crate::kernels;
 use crate::memo::Memo;
 use crate::source::Source;
@@ -423,6 +423,77 @@ impl<'a, S: Source> Solver<'a, S> {
         candidates.len() <= 2
             || guesses_left == Some(1)
             || self.exact_applies(candidates.len(), turns, None)
+    }
+
+    /// `[(guess, score), ...]` for the k best guesses, best first.
+    ///
+    /// One word per distinct split: the rest of a split's words give the same
+    /// feedback against every candidate, so listing them would be listing the
+    /// same guess spelled several ways, and `split_siblings` names them
+    /// instead. Where the position is one the solver settles exactly the scores
+    /// are true values, and the list never mixes those with estimates.
+    pub fn top_guesses(
+        &mut self,
+        candidates: &[usize],
+        k: usize,
+        guesses_left: Option<usize>,
+    ) -> Vec<(usize, f64)> {
+        let k = k.max(1);
+        if self.solved_exactly(candidates, guesses_left) {
+            let turns = guesses_left.unwrap_or(MAX_TURNS);
+            if let Ok(top) = self.exact.top(candidates, turns, k) {
+                return top.into_iter().map(|(g, v)| (g as usize, v)).collect();
+            }
+        }
+
+        let pool = self.guess_pool(candidates);
+        let scores = self.score_all(candidates, pool);
+        let mut order: Vec<usize> = (0..scores.len()).collect();
+        // stable, so a tie leaves the winner where argmin and argmax have it
+        // and the ranking opens on the guess best_guess would play
+        order.sort_by(|&a, &b| {
+            let (x, y) = if self.mode == Mode::Entropy {
+                (scores[b], scores[a])
+            } else {
+                (scores[a], scores[b])
+            };
+            x.partial_cmp(&y).unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let mut kept: Vec<(usize, f64, Vec<u8>)> = Vec::new();
+        for i in order {
+            let guess = Self::row(pool, i);
+            let score = scores[i];
+            let split: Vec<u8> = candidates
+                .iter()
+                .map(|&c| self.source.score(guess, c))
+                .collect();
+            let duplicate = kept
+                .iter()
+                .any(|(_, seen, other)| (score - seen).abs() <= SPLIT_TIE_TOL && *other == split);
+            if duplicate {
+                continue;
+            }
+            kept.push((guess, score, split));
+            if kept.len() == k {
+                break;
+            }
+        }
+        kept.into_iter().map(|(g, s, _)| (g, s)).collect()
+    }
+
+    /// The prior probability that `guess` is itself the answer, here.
+    pub fn win_probability(&self, candidates: &[usize], guess: usize) -> f64 {
+        let total: f64 = candidates.iter().map(|&c| self.weights[c]).sum();
+        if total <= 0.0 {
+            return 0.0;
+        }
+        candidates
+            .iter()
+            .filter(|&&c| c == guess)
+            .map(|&c| self.weights[c])
+            .sum::<f64>()
+            / total
     }
 
     /// Every other word that gives the same feedback as `guess` against every

@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["core", "native"]
+members = ["core", "native", "wasm"]
+# `wasm` is a member so fmt and clippy see it, but not a default one: it is a
+# cdylib, and building that for the host walks into the same MinGW linker fault
+# that made the C++ attempt use -static. It only ever wants the wasm32 target:
+#     cargo build --release --target wasm32-unknown-unknown -p wordle_wasm
+default-members = ["core", "native"]
 
 # The solver is memory-bound at its hottest, so what matters here is that LLVM
 # can see across the whole core rather than that it unrolls harder.
@@ -8,6 +13,12 @@ members = ["core", "native"]
 opt-level = 3
 lto = true
 codegen-units = 1
+
+# The browser downloads the WASM build, so there size is worth more than the
+# last few percent of speed. A profile in wasm/Cargo.toml would be ignored --
+# in a workspace, profiles only count at the root.
+[profile.release.package.wordle_wasm]
+opt-level = "s"
 
 # No fast-math equivalent is enabled anywhere, and none should be.  Letting the
 # compiler reassociate the bucket reduction reorders a store ahead of a load and
