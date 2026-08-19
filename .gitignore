@@ -10,5 +10,8 @@ target/
 # make the table readable, and they cost nothing to store.
 data/derived/feedback_table.npy
 
-# what build_site.sh assembles; every file in it is generated
-site/
+# What build_site.sh assembles.  Every file in it is generated, and it would
+# normally be ignored -- it is committed because Vercel deploys this repo by
+# cloning it, and building it there would mean installing Rust on every deploy.
+# So it is a build artifact kept for the deploy, and rebuilt before each one.
+site/.vercel/
