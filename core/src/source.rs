@@ -4,11 +4,17 @@
 //! for free. The native build fills the 167 MB table once and reads it; the
 //! WASM build has no table and scores the pair on the spot.
 //!
-//! Live scoring is not the poor relation it sounds. A scattered table read
-//! spends a whole 64-byte cache line to use one byte of it, while `score_guess`
-//! is a couple of dozen integer operations on data already in registers, and
-//! the browser only ever sees scattered sets: after the opening the largest
-//! bucket is 864 candidates and the median is 13.
+//! Live scoring is the slower of the two and is still the right answer for the
+//! browser. Measured on one position -- `native/src/bin/bench_position.rs` --
+//! the table wins 0.2 ms against 0.7 ms on a median turn-two bucket and 5.3 ms
+//! against 18.5 ms on the worst, so about 3.5x. Reasoning from cache lines
+//! suggested otherwise and was wrong: a scattered read does cost a whole line,
+//! but the rows a position touches stay resident and most reads then hit.
+//!
+//! What settles it is the absolute number rather than the ratio. 18.5 ms is the
+//! worst a browser turn can cost, natively, against a table that would have to
+//! be downloaded at 167 MB or rebuilt in the tab at 167 million scorings. The
+//! ratio is real and irrelevant.
 //!
 //! This is a generic parameter rather than a trait object on purpose. The inner
 //! loop runs up to 167 million times, and a vtable lookup there would cost more

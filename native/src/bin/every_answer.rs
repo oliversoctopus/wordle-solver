@@ -18,7 +18,7 @@ use wordle_core::estimator::load_fit;
 use wordle_core::game::{every_answer, exact_stats, MAX_GUESSES};
 use wordle_core::priors::{all_configs, build_weights, PriorConfig};
 use wordle_core::solver::{Mode, Solver};
-use wordle_core::source::Table;
+use wordle_core::source::{Live, Table};
 use wordle_core::WordleData;
 
 struct Options {
@@ -28,6 +28,8 @@ struct Options {
     use_exact: bool,
     prior: Option<String>,
     json: bool,
+    /// Score pairs on the spot instead of building the table, as WASM must.
+    live: bool,
     /// Where to write the per-answer guess counts, for Python to diff.
     dump: Option<String>,
 }
@@ -40,6 +42,7 @@ fn parse() -> Result<Options, String> {
         use_exact: true,
         prior: None,
         json: false,
+        live: false,
         dump: None,
     };
     let mut args = env::args().skip(1);
@@ -57,6 +60,7 @@ fn parse() -> Result<Options, String> {
             "--no-exact" => out.use_exact = false,
             "--prior" => out.prior = args.next(),
             "--json" => out.json = true,
+            "--live" => out.live = true,
             "--dump" => out.dump = args.next(),
             _ if positional == 0 => {
                 out.root = arg;
@@ -66,6 +70,23 @@ fn parse() -> Result<Options, String> {
         }
     }
     Ok(out)
+}
+
+/// Plays every answer, whichever way feedback is coming from.
+fn sweep<S: wordle_core::source::Source>(
+    source: &S,
+    weights: &[f64],
+    params: Vec<f64>,
+    form: wordle_core::estimator::Form,
+    options: &Options,
+    n_words: usize,
+) -> (Vec<f64>, usize) {
+    let mut solver = Solver::new(source, weights, params, form, options.mode)
+        .with_hard(options.hard)
+        .with_use_exact(options.use_exact);
+    let lengths = every_answer(&mut solver, MAX_GUESSES);
+    let opening = solver.best_guess(&(0..n_words).collect::<Vec<_>>(), Some(MAX_GUESSES));
+    (lengths, opening.0)
 }
 
 fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
@@ -82,15 +103,25 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
     let (form, params) = load_fit(&options.root, &config.slug())?;
 
     let built = Instant::now();
-    let table = Table::build(&data.words);
+    let table = if options.live {
+        None
+    } else {
+        Some(Table::build(&data.words))
+    };
     let build_secs = built.elapsed().as_secs_f64();
 
-    let mut solver = Solver::new(&table, &weights, params, form, options.mode)
-        .with_hard(options.hard)
-        .with_use_exact(options.use_exact);
-
     let started = Instant::now();
-    let lengths = every_answer(&mut solver, MAX_GUESSES);
+    let (lengths, opening_index) = match &table {
+        Some(table) => sweep(table, &weights, params, form, options, data.n_words()),
+        None => sweep(
+            &Live::new(&data.words),
+            &weights,
+            params,
+            form,
+            options,
+            data.n_words(),
+        ),
+    };
     let secs = started.elapsed().as_secs_f64();
 
     if let Some(path) = &options.dump {
@@ -103,8 +134,7 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let (mean, loss) = exact_stats(&lengths, &weights, MAX_GUESSES);
-    let opening = solver.best_guess(&(0..data.n_words()).collect::<Vec<_>>(), Some(MAX_GUESSES));
-    let opening_word = data.words.word(opening.0);
+    let opening_word = data.words.word(opening_index);
 
     if options.json {
         println!(
@@ -144,6 +174,10 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
         println!("  opening        {opening_word}");
         println!("  mean           {mean:.4}");
         println!("  loss           {:.4}%", loss * 100.0);
+        println!(
+            "  feedback       {}",
+            if options.live { "scored live" } else { "table" }
+        );
         println!("  table built in {build_secs:.2} s");
         println!("  swept in       {secs:.2} s");
     }
