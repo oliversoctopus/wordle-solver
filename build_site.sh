@@ -69,8 +69,14 @@ if applied:
 PY
 
 # Vercel reads .gitignore when a deployment has no .vercelignore, and site/ is
-# gitignored, so without this an upload from here could come out empty.
-echo '# nothing to leave out: every file here is meant to deploy'     > "$OUT/.vercelignore"
+# gitignored, so without this an upload from here could come out empty.  The
+# two exclusions are the CLI's own leavings rather than anything built: the
+# project link, and an OIDC token that has no business being served.
+{
+    echo '# everything built here is meant to deploy; these two are not built'
+    echo '.vercel'
+    echo '.env*'
+} > "$OUT/.vercelignore"
 
 echo
 du -sh "$OUT" | sed 's/^/  total  /'
