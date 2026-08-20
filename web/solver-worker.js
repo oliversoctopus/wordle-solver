@@ -73,8 +73,23 @@ function serve(request) {
   postMessage({ kind: "reply", id: request.id, text });
 }
 
+// Streaming compilation refuses a module the host did not label
+// application/wasm, so a host that mislabels it compiles from the bytes
+// instead.  The clone is what leaves those bytes still readable afterwards.
+async function instantiate() {
+  const response = await fetch("wordle.wasm");
+  if (!response.ok) {
+    throw new Error(`wordle.wasm: ${response.status} ${response.statusText}`);
+  }
+  try {
+    return await WebAssembly.instantiateStreaming(response.clone(), {});
+  } catch (error) {
+    return WebAssembly.instantiate(await response.arrayBuffer(), {});
+  }
+}
+
 async function boot() {
-  const module = await WebAssembly.instantiateStreaming(fetch("wordle.wasm"), {});
+  const module = await instantiate();
   wasm = module.instance.exports;
 
   // From here the module can answer for itself, and /api/status starts

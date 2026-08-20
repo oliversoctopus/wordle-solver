@@ -620,7 +620,7 @@ Nothing to install: the server is `http.server` and the page is three static fil
 
 ### Without a server
 
-`./build_site.sh` writes `site/`, which is the same three views with no Python behind them and nothing to deploy but files. It is 1.6 MB, 445 KB of that the WASM module and 686 KB the data the server used to hold — 355 KB in all over the wire, since a host that serves it with brotli gets the module down to 142 KB and `solutions.json` from 287 KB to 24.
+`./build_site.sh` writes `site/`, which is the same three views with no Python behind them and nothing to deploy but files. It is 1.6 MB, 445 KB of that the WASM module and 686 KB the data the server used to hold — 355 KB in all over the wire, since a host that serves it with brotli gets the module down to 142 KB and `solutions.json` from 287 KB to 24. Nothing else is asked of a host. `vercel.json` labels the module `application/wasm`, which is what streaming compilation insists on, and where that label is wrong the worker compiles the bytes it already fetched instead — so the build deploys anywhere that serves files.
 
 What stands in for the server has to stand in for its failures too. `web.py` refuses a contradictory board with a 400, and `app.js` is written to that: `api()` throws on a reply that is not ok and renders a board on one that is. A refusal returned as 200 is therefore applied *as a board*, and the page dies reading rows off a payload that has none. The shim answers 400 for any reply carrying an `error`, which is the whole of the distinction the page draws; which of 400, 404 and 503 the server would have chosen is not reconstructed, since nothing on the page tells them apart and the only clue here is message text the editor may rewrite.
 
