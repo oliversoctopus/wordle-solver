@@ -23,8 +23,6 @@ FAST = [
     ("the fitted f is current", [sys.executable, os.path.join(HERE, "fit_provenance.py")]),
     ("every document reference resolves",
      [sys.executable, os.path.join(HERE, "doc_refs.py")]),
-    ("the built site is in step with its source",
-     [sys.executable, os.path.join(HERE, "site_current.py")]),
 ]
 
 SLOW = [
@@ -36,8 +34,6 @@ SLOW = [
      [sys.executable, os.path.join(HERE, "scoring.py")]),
     ("the Rust core agrees with the Python",
      [sys.executable, os.path.join(HERE, "rust_parity.py")]),
-    ("the built site rebuilds to what is committed",
-     [sys.executable, os.path.join(HERE, "site_current.py"), "--full"]),
 ]
 
 

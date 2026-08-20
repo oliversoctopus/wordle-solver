@@ -36,6 +36,7 @@ python web.py                     the page, on http://127.0.0.1:8000
 python wordle_solver.py play      the solver in the terminal
 python wordle_game.py             a game in the terminal
 ./build_site.sh                   the same page as static files, in site/
+./deploy.sh                       build that, and upload it to Vercel
 python editor.py                  rewrite what the site says, on :8001/editor
 ```
 
@@ -87,6 +88,7 @@ Fast math is not a hazard you can reach by accident here: `rustc` exposes no suc
 | `web/wasm-api.js` | stands in for `fetch` on `/api/*` in the static build, and passes it to the worker |
 | `web/solver-worker.js` | holds the module and answers those calls, off the page's thread |
 | `build_site.sh` | assembles `site/`, the whole thing as static files |
+| `deploy.sh` | runs that and uploads the result; `site/` is generated, not committed |
 | `wording.py` | the editor's string scanner |
 | `editor.py` | the editor: rewrites what the site says, previewing the static build |
 | `unwrap_md.py` | checks that every `.md` is one line per paragraph; `--write` converts |
@@ -149,7 +151,7 @@ Every measured claim about the priors is reproduced by a script in `analysis/`, 
 
 ## Testing
 
-`tests/` holds nine files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, whether every pointer into the documents still resolves, whether the static build's shim refuses in a way the page survives, whether the built site is in step with the source it was built from, and whether the Rust core agrees with the Python it was ported from.
+`tests/` holds eight files and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, whether every pointer into the documents still resolves, whether the static build's shim refuses in a way the page survives, and whether the Rust core agrees with the Python it was ported from.
 
 **Nothing there asserts a number written down by hand, and nothing new should.** Each check has an oracle instead: the other front end, the answer record, or a property that holds of every board. A figure copied into a test is a fourth place for it to go stale, and there are three already.
 
