@@ -848,7 +848,17 @@ def check_api(report):
         {"form": "cubic"},
         {"form": "invonly", "top": 3},
     ]
-    played = [[], [("salet", "NYNYN")], [("crane", "NNNNN"), ("moist", "NYNNY")]]
+    # One row of each opening the prior switches can produce, since a board
+    # starting on that word is the only one served from `openings.json` rather
+    # than solved on the spot -- any other first word falls through to the live
+    # search, and the precomputed entries would have nothing checking them.
+    # All three patterns are deliberately wide: the two implementations order
+    # equally-bounded branches differently, so under the cap they can search
+    # different guesses and name different ones, and only positions that never
+    # reach the endgame compare cleanly.
+    played = [[], [("salet", "NYNYN")], [("tares", "NYNYN")],
+              [("trace", "NYNYN")],
+              [("crane", "NNNNN"), ("moist", "NYNNY")]]
     boards = [("crane", "NNNNN", "left"), ("crane", "NNNNN", "bits"),
               ("salet", "GNYNN", "weight"), ("proxy", "NYNNG", "alpha"),
               ("fuzzy", "GGGGY", "left")]      # the last gives no match at all

@@ -6,11 +6,12 @@
 //! million scorings, which no tab can afford live -- and it is a constant per
 //! setting, so it is computed here once for every set of switches.
 //!
-//! Turn two is the other, and only for the switches the page opens with. A tab
-//! can afford it, but visibly: the opening splits the list into 194 buckets and
+//! Turn two is the other, and for the four the prior switches reach. A tab
+//! can afford it, but visibly: an opening splits the list into ~190 buckets and
 //! most are small enough to engage the exact endgame, which is about a second
-//! of sitting still. Doing all 180 settings would take an hour here and several
-//! megabytes there, and every session starts on the defaults.
+//! of sitting still. The other two menus stay at their defaults, expected mode
+//! and whichever form each prior was fitted in, because doing all 180 settings
+//! would take an hour here and several megabytes there.
 //!
 //! The *Shape of f* menu is why there are 180 of those rather than 20: a form
 //! is a different `f`, which is what expected mode ranks by. Entropy consults
@@ -91,9 +92,9 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     let mut fits = String::from("{");
     let mut openings = String::from("{");
     let mut first_fit = true;
-    // the word the page opens with before any switch is touched, which is
-    // the board turn two is worked out behind
-    let mut default_opening: Option<usize> = None;
+    // the word each prior opens with under the page's other defaults, which
+    // is the board turn two is worked out behind
+    let mut page_openings: Vec<(String, usize)> = Vec::new();
     let mut first_opening = true;
 
     let params_list = |out: &mut String, params: &[f64]| {
@@ -159,9 +160,8 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
                 .with_hard(hard);
                 let top = solver.top_guesses(&everything, TOP, Some(6));
                 let key = settings_key(&config, Mode::Expected, hard, form.name);
-                if !hard && form.name == active.name && slug == PriorConfig::default().slug()
-                {
-                    default_opening = Some(top[0].0);
+                if !hard && form.name == active.name {
+                    page_openings.push((slug.clone(), top[0].0));
                 }
                 write_ranking(
                     &mut openings,
@@ -195,34 +195,53 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    if let Some(opening) = default_opening {
-        let config = PriorConfig::default();
-        let (form, params) = load_fit(root, &config.slug())?;
-        let key = settings_key(&config, Mode::Expected, false, form.name);
-        let weights = build_weights(&data, &config, &tables)?;
-        // one solver for all of them, so what each bucket works out is still
-        // in the memo when the next one asks
-        let mut solver = Solver::new(&table, &weights, params, form, Mode::Expected);
+    // The four the two prior switches can reach, built as `api::parse_config`
+    // builds them. Each has its own opening and so its own set of patterns.
+    for repeat in [false, true] {
+        for curation in [false, true] {
+            let config = PriorConfig {
+                repeat,
+                curation,
+                ..Default::default()
+            };
+            let slug = config.slug();
+            let Some(&(_, opening)) = page_openings.iter().find(|(at, _)| *at == slug) else {
+                continue;
+            };
+            let (form, params) = load_fit(root, &slug)?;
+            let key = settings_key(&config, Mode::Expected, false, form.name);
+            let weights = build_weights(&data, &config, &tables)?;
+            // one solver for all the patterns, so what each bucket works out is
+            // still in the memo when the next one asks
+            let mut solver = Solver::new(&table, &weights, params, form, Mode::Expected);
 
-        let mut written = 0;
-        for pattern in 0..N_PATTERNS as u8 {
-            // all green ends the board, and the page asks for no ranking there
-            if pattern == WIN_PATTERN {
-                continue;
+            let mut written = 0;
+            for pattern in 0..N_PATTERNS as u8 {
+                // all green ends the board, and the page asks for no ranking there
+                if pattern == WIN_PATTERN {
+                    continue;
+                }
+                let candidates = solver.filter(opening, pattern, &everything);
+                if candidates.is_empty() {
+                    continue;
+                }
+                let top = solver.top_guesses(&candidates, TOP, Some(5));
+                write_ranking(
+                    &mut openings,
+                    &mut first_opening,
+                    &format!("{key}|{}", pattern_text(pattern)),
+                    &top,
+                    &data,
+                    false,
+                );
+                written += 1;
             }
-            let candidates = solver.filter(opening, pattern, &everything);
-            if candidates.is_empty() {
-                continue;
-            }
-            let top = solver.top_guesses(&candidates, TOP, Some(5));
-            let key = format!("{key}|{}", pattern_text(pattern));
-            write_ranking(&mut openings, &mut first_opening, &key, &top, &data, false);
-            written += 1;
+            println!(
+                "  {:<56} {written} patterns behind {}",
+                format!("{key}|*"),
+                data.words.word(opening)
+            );
         }
-        println!(
-            "  {:<56} {written} patterns",
-            format!("{}|*", settings_key(&config, Mode::Expected, false, "")),
-        );
     }
 
     fits.push('}');
