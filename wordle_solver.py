@@ -314,9 +314,8 @@ def build_parser():
     tr.add_argument("--this-config-only", action="store_true",
                     help="fit only the prior combination given by the prior flags, "
                          "instead of all four")
-    # f is only ever queried where the exact search does not reach, and fitting
-    # under the search moves the curve by under 0.03 guesses while costing ~50x
-    # the wall clock, so training keeps only the free part of it by default
+    # f is only ever queried where the exact search does not reach, so training
+    # fits only that free part by default; README *What it is worth* has why
     tr.set_defaults(func=cmd_train, default_exact_max=0)
 
     bench = sub.add_parser("benchmark", parents=[common],

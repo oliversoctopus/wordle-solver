@@ -115,10 +115,8 @@ def exact_stats(lengths, weights, max_guesses=MAX_GUESSES):
 
 # ------------------------------------------------- positions and their values
 #
-# What a position is worth is computable rather than estimable: the policy is
-# deterministic, so playing it out once per candidate answer and weighting by
-# the prior *is* its expected guesses.  These are the shared parts of
-# `lookahead_accuracy.py` and `exact_decisions.py`.
+# The shared parts of `lookahead_accuracy.py` and `exact_decisions.py`: what a
+# position is worth, computed by playing the policy out rather than estimated.
 
 # a deadline-free playout ends when one candidate is left, so this is a backstop
 # against a bug rather than a real limit

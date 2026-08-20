@@ -52,16 +52,10 @@ TILE_COLOR = {"G": GREEN, "Y": YELLOW, "N": GRAY}
 TILE_RANK = {"N": 0, "Y": 1, "G": 2}
 
 # The share grid is drawn as blocks of color rather than as the emoji below,
-# which the console sets ragged: it draws U+1F7E9 and U+1F7E8 double width, but
-# has no emoji glyph for U+2B1B and falls back to a single-width text one.
-#
-# A cell is twice as tall as it is wide, so a tile three cells across is three
-# half-cells tall if it is to come out square: a full line of background, then
-# U+2580 to color the top half of the next one.  The half-line it leaves is
-# the gap below.  Squeezing a tile into a single line instead would make the
-# gap either nothing or a whole line, both of which have been tried.  The
-# glyphs have no padding of their own, unlike the emoji, so the gap along a row
-# has to be a space; without it the row runs together into one bar.
+# which the console sets ragged at mismatched widths.  A cell is twice as tall
+# as it is wide, so a square tile three cells across is a full line plus U+2580
+# over the top half of the next, and the half-line left over is the gap below.
+# The gap along a row has to be a space, or the row runs together into one bar.
 BLOCK_RGB = {"G": LEAF, "Y": GOLD, "N": SLATE}
 TILE_BLOCK = {"G": "\U0001F7E9", "Y": "\U0001F7E8", "N": "⬛"}
 

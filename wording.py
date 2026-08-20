@@ -417,10 +417,8 @@ SOURCES = [
     ("web/index.html", scan_html, None),
     ("web/app.js", scan_code, "js"),
     ("web.py", scan_code, "py"),
-    # The static build says these instead of web.py's, so both are listed and
-    # both are edited.  Carrying a phrase from one to the other automatically
-    # was tried and does not work: the two write their placeholders
-    # differently, and {index + 1} is not a name Rust can have.
+    # the static build says these instead of web.py's, so both are listed and
+    # both are edited by hand; CLAUDE.md *The web page* has why
     ("core/src/api.rs", scan_code, "rs"),
     ("core/src/state.rs", scan_code, "rs"),
 ]

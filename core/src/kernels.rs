@@ -72,13 +72,9 @@ const PARALLEL_MIN_WORK: usize = 1 << 12;
 ///
 /// Natively this spreads the pool across rayon's standing thread pool when
 /// there is enough work to pay for it, which is what the numba kernels do with
-/// `prange`. Each chunk keeps accumulators of its own, so no two threads share
-/// one. Spawning threads per call instead of reusing a pool made a whole sweep
-/// slower, since most calls are far too small to pay for sixteen spawns.
-///
-/// Under WASM it runs straight through. Threads there need SharedArrayBuffer
-/// and COOP/COEP headers, and a browser solving one position at a time has no
-/// use for them.
+/// `prange`; each chunk keeps accumulators of its own. Under WASM it runs
+/// straight through, threads there needing SharedArrayBuffer and headers a
+/// static host does not set.
 #[cfg(not(target_arch = "wasm32"))]
 fn scatter<F>(pool: &[usize], work: usize, fill: F) -> Vec<f64>
 where
@@ -447,11 +443,9 @@ fn partition_hash(source: &impl Source, candidates: &[usize]) -> Vec<i64> {
 /// This is `np.unique(keys, return_index=True, return_inverse=True)`: the
 /// representatives in ascending key order, and for every guess the
 /// representative of its group. The order matters -- it decides which word
-/// stands for a split, and so the order the search tries them in.
-///
-/// Both come from the sort because the alternative is a map keyed on the hash,
-/// which means building it and then looking up all 12,947 guesses on every
-/// call. That was worth 0.8 s of a sweep.
+/// stands for a split, and so the order the search tries them in. Both come out
+/// of the one sort rather than a map keyed on the hash, which would have to be
+/// built and then looked up once per guess on every call.
 fn group_by_key(keys: &[i64]) -> (Vec<usize>, Vec<usize>) {
     let mut order: Vec<usize> = (0..keys.len()).collect();
     order.sort_unstable_by_key(|&i| (keys[i], i));

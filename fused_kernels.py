@@ -38,11 +38,8 @@ from wordle_data import N_PATTERNS, WIN_PATTERN
 
 # candidate counts the fused path is used for.  Below the floor a position is
 # too cheap for the dispatch to be worth taking; above the ceiling the tile
-# stops fitting in cache and the shipped kernels win.  The ceiling is measured
-# against the candidate sets real play produces, which cluster across a row far
-# more than random ones of the same size and so cost the shipped kernels less
-# than a random sweep suggests: 1.40x at 200-400, 1.20x at 401-600, and 0.96x
-# by 601-800.
+# stops fitting in cache and the shipped kernels win.  SOLVER_EXPLAINED
+# *Storing the table the other way round* has where the ceiling comes from.
 FUSED_MIN = 13
 FUSED_MAX = 600
 

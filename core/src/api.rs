@@ -237,15 +237,10 @@ fn settings_key(config: &PriorConfig, mode: Mode, hard: bool, form: &str) -> Str
 
 /// The ranking for this position, if one was precomputed.
 ///
-/// Two positions are. The opening, which a browser cannot afford at all --
-/// 12,947 guesses against 12,947 candidates -- and turn two behind the opening
-/// this setting recommends, which it can afford but visibly: most of the 194
-/// buckets are small enough to engage the exact endgame, and that is a second
-/// of a tab sitting still. Both are constants, so `build_site` works them out.
-///
-/// Turn two is precomputed for the switches the page opens with and no others.
-/// There are 180 settings and 194 patterns each; every session starts on the
-/// defaults, and turn three costs a sixth of what turn two does anyway.
+/// Two positions are: the opening, and turn two behind the word that setting
+/// opens with. Both are constants, so `build_site` works them out ahead of
+/// time. `README.md` § *Without a server* has which settings get a turn two and
+/// why nothing deeper is worth the trouble.
 fn precomputed_ranking(
     loaded: &state::Loaded,
     settings: &Settings,

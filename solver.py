@@ -56,10 +56,8 @@ class WordleSolver:
     expanding the best ``lookahead_max_branch`` guesses at each node and scoring
     each by what its buckets are really worth rather than by f alone.  The cap
     is a fan-out per node, not a frontier of fixed size, so a second ply
-    multiplies the work by the cap again.  It is off by default: one ply measures
-    -0.0034 +- 0.0041 guesses over 20,000 paired games, which is nothing at 0.9
-    sigma, for roughly 10x the wall clock, and two plies costs minutes per
-    position.  See the README for the numbers.
+    multiplies the work by the cap again.  It is off by default; README
+    *Lookahead* has what one ply buys and what it costs.
 
     ``hard`` restricts every guess to a word that could still be the answer,
     which is a strictly smaller choice than the ~13k words the solver usually

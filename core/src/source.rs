@@ -2,19 +2,8 @@
 //!
 //! Two answers, and the difference is the whole reason this port can be hosted
 //! for free. The native build fills the 167 MB table once and reads it; the
-//! WASM build has no table and scores the pair on the spot.
-//!
-//! Live scoring is the slower of the two and is still the right answer for the
-//! browser. Measured on one position -- `native/src/bin/bench_position.rs` --
-//! the table wins 0.2 ms against 0.7 ms on a median turn-two bucket and 5.3 ms
-//! against 18.5 ms on the worst, so about 3.5x. Reasoning from cache lines
-//! suggested otherwise and was wrong: a scattered read does cost a whole line,
-//! but the rows a position touches stay resident and most reads then hit.
-//!
-//! What settles it is the absolute number rather than the ratio. 18.5 ms is the
-//! worst a browser turn can cost, natively, against a table that would have to
-//! be downloaded at 167 MB or rebuilt in the tab at 167 million scorings. The
-//! ratio is real and irrelevant.
+//! WASM build has no table and scores the pair on the spot. `README.md`
+//! § *Without a server* has what live scoring costs and why it is affordable.
 //!
 //! This is a generic parameter rather than a trait object on purpose. The inner
 //! loop runs up to 167 million times, and a vtable lookup there would cost more
@@ -99,14 +88,10 @@ impl Source for Table {
 /// Every guess scored against one small candidate set, held for as long as a
 /// search runs.
 ///
-/// The endgame rescans the whole pool at every node it visits -- 524 of them at
-/// a 34-candidate position -- and every candidate it ever sees belongs to the
-/// set it started from, since each bucket is a subset of the one above. So the
-/// same 12,947 by 34 pairs are scored hundreds of times over. Tabulating them
-/// once costs one scan and 440 KB, and turns the rest into a byte load.
-///
-/// This is the part of the 167 MB table a browser can afford: not the whole
-/// matrix, only the columns one position asks about.
+/// The endgame rescans the whole pool at every node it visits, and every
+/// candidate it ever sees belongs to the set it started from, since each bucket
+/// is a subset of the one above. One scan up front therefore turns all the rest
+/// into a byte load. `README.md` § *Without a server* has what that saves.
 pub struct Columns {
     /// Guess-major, so a kernel walking the pool reads its candidates from
     /// consecutive bytes rather than striding.

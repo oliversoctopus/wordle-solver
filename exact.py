@@ -83,10 +83,8 @@ MAX_PACKED = 7
 # one and get a provable optimum; see the note on the branch cap above.
 DEFAULT_MAX_BRANCH = 50
 
-# how many the node being *ranked* may try.  Only that node ranks, and its
-# runners-up sit near the cap in a way its winner does not; see the note above.
-# set WORDLE_ROOT_BRANCH to narrow it back for every solver in the process --
-# the Rust reads the same variable, so the two stay in step under it
+# how many the node being *ranked* may try; see the note on the cap above.
+# WORDLE_ROOT_BRANCH narrows it back, and the Rust reads the same variable
 DEFAULT_ROOT_BRANCH = int(os.environ.get("WORDLE_ROOT_BRANCH") or 150)
 
 # two guesses that split the candidates identically score identically, so this
