@@ -5,7 +5,8 @@ import numpy as np
 import estimator
 import fused_kernels
 import kernels
-from exact import (DEFAULT_MAX_BRANCH, MAX_TURNS, SPLIT_TIE_TOL, ExactEndgame,
+from exact import (DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH, MAX_TURNS,
+                   SPLIT_TIE_TOL, ExactEndgame,
                    SearchBudgetExceeded)
 from memo import Memo
 from priors import PriorConfig, build_weights
@@ -74,7 +75,8 @@ class WordleSolver:
                  form=None, load_cached=True,
                  use_exact=True, exact_max=DEFAULT_EXACT_MAX,
                  loss_penalty=DEFAULT_LOSS_PENALTY,
-                 exact_max_branch=DEFAULT_MAX_BRANCH, hard=False,
+                 exact_max_branch=DEFAULT_MAX_BRANCH,
+                 exact_root_branch=DEFAULT_ROOT_BRANCH, hard=False,
                  lookahead=0, lookahead_max_branch=DEFAULT_LOOKAHEAD_BRANCH,
                  lookahead_exact_max=None, fused=None, win_bonus=0.0):
         if mode not in MODES:
@@ -121,7 +123,8 @@ class WordleSolver:
                            if fused else None)
         self.exact = ExactEndgame(self.data.feedback_table, self.weights,
                                   loss_penalty=loss_penalty,
-                                  max_branch=exact_max_branch, hard=self.hard,
+                                  max_branch=exact_max_branch,
+                                  root_branch=exact_root_branch, hard=self.hard,
                                   transposed=self.transposed)
         self.exact_hits = 0
         self.exact_bailouts = 0
@@ -350,7 +353,10 @@ class WordleSolver:
 
         pool = self.guess_pool(candidates)
         scores = self.score_all(candidates, pool=pool)
-        branch = np.argsort(scores)[:self.lookahead_max_branch]
+        # stable, for the reason ExactEndgame._branch_order gives: a tie decides
+        # which guesses the branch cap keeps, so the rule has to be one the Rust
+        # can spell too
+        branch = np.argsort(scores, kind="stable")[:self.lookahead_max_branch]
         total = float(self.weights[candidates].sum())
 
         best_guess, best_value = self._row(pool, int(branch[0])), np.inf

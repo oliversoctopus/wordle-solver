@@ -9,6 +9,7 @@
 use std::error::Error;
 
 use crate::json;
+use crate::sum::pairwise;
 
 // term codes, shared with the Python by value
 pub const TERM_CONST: i64 = 0; // 1
@@ -190,7 +191,7 @@ pub fn effective_size(weights: &[f64]) -> f64 {
     if weights.is_empty() {
         return 1.0;
     }
-    let total: f64 = weights.iter().sum();
+    let total = pairwise(weights);
     if total <= 0.0 {
         return 1.0;
     }
@@ -200,7 +201,7 @@ pub fn effective_size(weights: &[f64]) -> f64 {
         .filter(|&p| p > 0.0)
         .map(|p| -(p * p.log2()))
         .collect();
-    terms.iter().sum::<f64>().exp2()
+    pairwise(&terms).exp2()
 }
 
 /// The Python's archived fit for one (prior, form) pair, which is what the

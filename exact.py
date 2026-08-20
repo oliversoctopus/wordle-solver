@@ -51,6 +51,14 @@ for a large amount of time:
   The value returned is therefore an upper bound on the true one rather than
   the true one, and ``solve`` is optimal-within-the-cap, not provably optimal.
   Set ``max_branch=None`` to get the proof back.
+
+  ``top`` needs a wider cap than ``solve``, which is what ``root_branch`` is.
+  A ranking is not one answer but five, and the runners-up sit near the cap in
+  a way the winner does not: over 80 positions at four turns a cap of 50 gets
+  every winner exactly right and still leaves one list 0.0055 guesses off the
+  uncapped one, while 80 is the smallest that measured clean.  The default of
+  150 leaves the same margin as above, and costs only the node being ranked --
+  everything under it needs its winner alone, so it keeps ``max_branch``.
 """
 
 import numpy as np
@@ -66,6 +74,10 @@ MAX_PACKED = 7
 # how many splits a node may try, best-bound first.  Set to None to search every
 # one and get a provable optimum; see the note on the branch cap above.
 DEFAULT_MAX_BRANCH = 50
+
+# how many the node being *ranked* may try.  Only that node ranks, and its
+# runners-up sit near the cap in a way its winner does not; see the note above.
+DEFAULT_ROOT_BRANCH = 150
 
 # two guesses that split the candidates identically score identically, so this
 # only decides when their feedback vectors are worth comparing; the comparison
@@ -91,7 +103,8 @@ class ExactEndgame:
 
     def __init__(self, feedback_table, weights, loss_penalty=1.0,
                  max_nodes=DEFAULT_MAX_NODES, memo_limit=500_000,
-                 max_branch=DEFAULT_MAX_BRANCH, hard=False, transposed=None):
+                 max_branch=DEFAULT_MAX_BRANCH,
+                 root_branch=DEFAULT_ROOT_BRANCH, hard=False, transposed=None):
         self.feedback_table = feedback_table
         # answer-major copy, or None to score the shipped way
         self.transposed = transposed
@@ -103,6 +116,9 @@ class ExactEndgame:
         self.bound_penalty = min(self.loss_penalty, 1.0)
         self.max_nodes = max_nodes
         self.max_branch = max_branch
+        # asking for the proof means asking for it at the ranked node too, or
+        # the list is still the capped one
+        self.root_branch = None if max_branch is None else root_branch
         self.memo = Memo(memo_limit)
         self.nodes = 0
         self.searches = 0
@@ -177,12 +193,7 @@ class ExactEndgame:
             raise SearchBudgetExceeded(f"more than {self.max_nodes} nodes")
 
         representatives, rep_bounds = self._bounded_splits(candidates, weights)
-        order = np.argsort(rep_bounds)
-        if self.max_branch is not None:
-            # keep only the most promising splits.  Where the dedupe already
-            # did its job this never binds, so the endgame stays exact and only
-            # the wide positions -- the ones that cost seconds -- are truncated.
-            order = order[:self.max_branch]
+        order = self._branch_order(rep_bounds, self.max_branch)
 
         best_value = np.inf
         best_guess = -1
@@ -243,10 +254,10 @@ class ExactEndgame:
         if self.nodes > self.max_nodes:
             raise SearchBudgetExceeded(f"more than {self.max_nodes} nodes")
 
+        # the node the caller asked about is the only one that ranks, and
+        # ``_evaluate`` recurses into ``_solve``, so this is the only ``top``
         representatives, rep_bounds = self._bounded_splits(candidates, weights)
-        order = np.argsort(rep_bounds)
-        if self.max_branch is not None:
-            order = order[:self.max_branch]
+        order = self._branch_order(rep_bounds, self.root_branch)
 
         best = []   # (value, guess), best first, never longer than k
         for j in order:
@@ -264,6 +275,19 @@ class ExactEndgame:
         # the same word solve would return and worth leaving in the memo
         self.memo.put((candidates.tobytes(), turns), (best[0][1], float(best[0][0])))
         return [(guess, float(value)) for value, guess in best]
+
+    def _branch_order(self, bounds, cap):
+        """Splits in the order to try them, best bound first, keeping the best
+        ``cap``.  Where the dedupe already did its job the cap never binds, so
+        the endgame stays exact and only the wide positions are truncated.
+
+        Stable, so a tie goes to the lower word index rather than to whatever
+        quicksort leaves it at.  The bounds tie in bulk -- a position can hold a
+        thousand splits at one value -- so which of them the cap keeps rests
+        entirely on this, and ``exact.rs`` has to be able to spell the same rule.
+        """
+        order = np.argsort(bounds, kind="stable")
+        return order if cap is None else order[:cap]
 
     def _duplicates(self, guess, score, listed, candidates):
         """Whether ``guess`` splits the candidates as something already listed

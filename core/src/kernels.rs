@@ -6,10 +6,11 @@
 //! expected guess count reduces them through the fitted `f`, and the two-turn
 //! value reduces them to the exact score when two guesses remain.
 //!
-//! Ported from `kernels.py`. Not from its arithmetic order, which is not worth
-//! preserving: the closest pair of scores among all 12,947 guesses at the
-//! opening differs by 1.1e-9 against an ulp of 4e-16, so nothing the solver
-//! decides turns on the last few bits of a total.
+//! Ported from `kernels.py`, arithmetic order included, so a score here is the
+//! same float the numba kernel produces rather than merely a close one. The
+//! candidate weights are summed left to right for the same reason: `sum.rs`
+//! reproduces `np.sum`, and these loops are the one place the Python does not
+//! reach for it.
 //!
 //! Every kernel takes a `pool` of guess indices, standing in for all of them
 //! when `None`. That parameter is what keeps a deeper search affordable, and it

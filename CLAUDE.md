@@ -59,6 +59,10 @@ The module itself sits in `web/solver-worker.js` rather than on the page's threa
 
 What the Rust still does not have is `fused_kernels`' answer-major dispatch. That is opt-in on the Python side too, so the two are comparable as they stand.
 
+**Reduce a float vector through `sum::pairwise`, and break a tie by index.** Those two rules are what make the two implementations bit-identical rather than merely close, and both were bought rather than assumed. `np.sum` adds pairwise, so its error grows as log n where a left-to-right loop grows as n; `sum.rs` transcribes it, which is the more accurate of the two orders as well as the reproducible one. Use it wherever the Python spells `.sum()` on floats. The exception is `kernels.rs`, where the numba loops accumulate left to right and a naive sum is what matches — `api::find` stands in for `kernels.ig_all` and belongs to that exception too. The unreachable case is a numpy `@`: BLAS reduces in an order that is neither documented nor stable across builds, which is why the letter odds are the one field `tests/rust_parity.py` still compares on a tolerance.
+
+The tie-break matters because the endgame's branch cap keeps the best fifty splits and the bounds tie in bulk — one position holds 1,176 of its 1,177 at exactly 2.0. Sorting them unstably means each side searches a different fifty, which is a real difference and not a cosmetic one: the two used to return runners-up 0.02 guesses apart. Both now sort stably, so a tie goes to the lower word index. Weights that differ in their last bits break a tie the same way, which is why the two rules only work together.
+
 Fast math is not a hazard you can reach by accident here: `rustc` exposes no such flag, stable or unstable, and release-mode LLVM does not reassociate a float sum. If you ever add a crate or a nightly intrinsic that grants it, know what it cost in Python — it hoisted a store above a load, every bucket maximum read back as the zero its own loop had just written, and `two_turn_scores` returned a flat 3.0 for every guess. That is a wrong answer rather than a wobbly last bit, which is why `kernels.py` carries none of it.
 
 ## The pieces

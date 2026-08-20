@@ -12,6 +12,7 @@
 
 use crate::solver::Solver;
 use crate::source::Source;
+use crate::sum::{pairwise, pairwise_of};
 
 pub const MAX_GUESSES: usize = 6;
 
@@ -71,16 +72,14 @@ pub fn every_answer<S: Source>(solver: &mut Solver<S>, max_guesses: usize) -> Ve
 /// Prior-weighted mean and loss probability -- computed, not estimated.
 pub fn exact_stats(lengths: &[f64], weights: &[f64], max_guesses: usize) -> (f64, f64) {
     let limit = max_guesses as f64;
-    let mean: f64 = lengths
-        .iter()
-        .zip(weights)
-        .map(|(&len, &w)| w * len)
-        .sum::<f64>();
-    let lost: f64 = lengths
+    // the mean is the one reduction that cannot be matched: the Python spells
+    // it `weights @ lengths`, and BLAS reduces in an order of its own choosing
+    let mean = pairwise_of(lengths.len(), |i| weights[i] * lengths[i]);
+    let lost: Vec<f64> = lengths
         .iter()
         .zip(weights)
         .filter(|(&len, _)| len > limit)
         .map(|(_, &w)| w)
-        .sum();
-    (mean, lost)
+        .collect();
+    (mean, pairwise(&lost))
 }

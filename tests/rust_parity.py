@@ -23,18 +23,16 @@ ROOT = os.path.dirname(HERE)
 TARGET = os.path.join(ROOT, "target", "release")
 sys.path.insert(0, ROOT)
 
-# Two independent implementations of the same arithmetic differ in their last
-# bits, and the tolerance sits in the window between what that costs and what
-# anything actually turns on.
-#
-# The floor: adding 12,947 positive floats left to right accumulates about
-# n * eps ~ 3e-12 of relative error, and the two sides add them in different
-# orders, so ~3.6e-12 shows up in effective_size and is meaningless.
+# Almost nothing needs this any more: `core/src/sum.rs` reproduces `np.sum`, so
+# the two sides reduce a vector to the same float and every check below but one
+# comes out at exactly zero.  What is left is what numpy hands to BLAS -- the
+# letter odds are `weights @ letter_presence` and `f_value` is a matrix product
+# too -- and BLAS reduces in an order that is neither written down nor stable
+# across builds.  That is worth about 2e-14 in practice.
 #
 # The ceiling: over all 12,947 guesses at the opening the closest pair of scores
 # differs by 1.1e-9 under the shipped prior and 6e-11 under the loosest, so a
-# disagreement has to reach 6e-11 before it can reorder anything.  This sits
-# three times over the floor and six under the ceiling.
+# disagreement has to reach 6e-11 before it can reorder anything.
 #
 # Absolute as well as relative, because a score of zero is an ordinary answer --
 # a guess leaving every candidate in one bucket gains exactly no information --
@@ -415,12 +413,11 @@ def check_exact(report):
                     got_guess, got_value = next_int(), next_floats(1)[0]
                     worst = max(worst, gap([got_value], [value]))
                     # A position routinely has several optimal guesses, and
-                    # which one comes back depends on the order the bounds were
-                    # sorted into.  `np.argsort` sorts with quicksort, whose tie
-                    # order is unstable and documented as arbitrary, so Python's
-                    # own answer is not reproducible across numpy versions.  The
-                    # question worth asking is whether the Rust pick is *also*
-                    # optimal, so value it and see.
+                    # which one comes back is decided by the order the bounds
+                    # were sorted into.  Both sides now sort stably and so break
+                    # a tie by word index, which is why this finds nothing; it
+                    # stays because it reports a divergence in terms of what the
+                    # guess is worth rather than merely that there was one.
                     if got_guess != guess:
                         mine = search._evaluate(int(got_guess), s, weights[s],
                                                 weights[s].sum(), turns, np.inf)
@@ -431,15 +428,13 @@ def check_exact(report):
                             return False
                         ties += 1
 
-                    # The values are compared elementwise and the lead word
-                    # exactly; the tail's *words* are not, and cannot be.
-                    # `_bounded_splits` routinely leaves scores of guesses tied
-                    # on the bound -- 1176 of 1177 at exactly 2.0 in one of
-                    # these positions -- and `np.argsort` breaks those ties with
-                    # quicksort, which is unstable and documented as arbitrary.
-                    # Python's own answer there is not reproducible across numpy
-                    # versions, so demanding the Rust reproduce it would be
-                    # testing an accident.
+                    # Words as well as values, all five of them.  That is only
+                    # askable because the branch order is now the same rule on
+                    # both sides: `_bounded_splits` routinely leaves scores of
+                    # guesses tied on the bound -- 1176 of 1177 at exactly 2.0
+                    # in one of these positions -- so the cap keeps whichever
+                    # the sort left in front, and an unstable sort there meant
+                    # each side ranked a different fifty guesses.
                     top = search.top(s, turns, k=5)
                     got_words = next_indices()
                     got_values = next_floats(len(top))
@@ -448,8 +443,13 @@ def check_exact(report):
                                f"size={s.size}: {len(got_words)} words against "
                                f"{len(top)}")
                         return False
-                    for got_v, (_, v) in zip(got_values, top):
+                    for got_w, got_v, (w, v) in zip(got_words, got_values, top):
                         worst = max(worst, gap([got_v], [v]))
+                        if got_w != w:
+                            report(f"top at p={penalty} hard={hard} t={turns} "
+                                   f"size={s.size}: {got_w} where the Python "
+                                   f"ranks {w}, at {got_v!r} against {v!r}")
+                            return False
                     checked += 1
 
         report(f"{checked} solve and top pairs; {ties} picked a different "
@@ -848,17 +848,18 @@ def check_api(report):
         {"form": "cubic"},
         {"form": "invonly", "top": 3},
     ]
-    # One row of each opening the prior switches can produce, since a board
+    # Two rows of each opening the prior switches can produce, since a board
     # starting on that word is the only one served from `openings.json` rather
     # than solved on the spot -- any other first word falls through to the live
     # search, and the precomputed entries would have nothing checking them.
-    # All three patterns are deliberately wide, keeping clear of the endgame.
-    # The bounds its branch order sorts on are largely tied and numpy breaks
-    # those ties unstably, so under the cap the two search different guesses --
-    # far enough apart that one can name an alternative the other never valued,
-    # which is past anything `_drop_tied_words` can excuse.
-    played = [[], [("salet", "NYNYN")], [("tares", "NYNYN")],
-              [("trace", "NYNYN")],
+    # One wide pattern each and one narrow enough to reach the exact endgame,
+    # where the two used to be free to differ: the search orders its branches on
+    # bounds that tie in bulk, and until both sides broke those ties by word
+    # index the cap kept a different fifty on each.
+    played = [[],
+              [("salet", "NYNYN")], [("salet", "GYNNY")],
+              [("tares", "NYNYN")], [("tares", "NYYNY")],
+              [("trace", "NYNYN")], [("trace", "GNNYN")],
               [("crane", "NNNNN"), ("moist", "NYNNY")]]
     boards = [("crane", "NNNNN", "left"), ("crane", "NNNNN", "bits"),
               ("salet", "GNYNN", "weight"), ("proxy", "NYNNG", "alpha"),

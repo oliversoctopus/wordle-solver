@@ -22,6 +22,7 @@ pub mod profile;
 pub mod solver;
 pub mod source;
 pub mod state;
+pub mod sum;
 pub mod words;
 
 pub use data::WordleData;

@@ -19,7 +19,7 @@ import sys
 
 import estimator
 import train as training
-from exact import DEFAULT_MAX_BRANCH
+from exact import DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH
 from priors import ALL_CONFIGS, CURATION_SHAPES, REPEAT_SHAPES, PriorConfig
 from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
                     DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED, MODES,
@@ -53,6 +53,7 @@ def solver_kwargs(args):
         "exact_max": exact_max,
         "loss_penalty": args.loss_penalty,
         "exact_max_branch": None if args.exact_branch <= 0 else args.exact_branch,
+        "exact_root_branch": args.exact_root_branch,
         # only play and benchmark offer it: f is cached per prior alone, so
         # training under the restriction would overwrite the ordinary fit
         "hard": getattr(args, "hard", False),
@@ -267,6 +268,9 @@ def build_parser():
                              "best first (default %(default)s); 0 tries every one, "
                              "which is provably optimal but can take tens of seconds "
                              "on a hard position")
+    common.add_argument("--exact-root-branch", type=int, default=DEFAULT_ROOT_BRANCH,
+                        help="how many it tries at the position being ranked, which "
+                             "wants more than the pick does (default %(default)s)")
     common.add_argument("--lookahead", type=int, default=0,
                         help="plies of branch-capped lookahead above the exact "
                              "search (default %(default)s, off).  1 measures "

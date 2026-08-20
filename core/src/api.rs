@@ -12,6 +12,7 @@ use crate::priors::{CurationShape, PriorConfig, RepeatShape};
 use crate::solver::{Mode, Solver};
 
 use crate::state;
+use crate::sum::{pairwise, pairwise_of};
 
 pub const MAX_GUESSES: usize = 6;
 const MAX_LISTED_CANDIDATES: usize = 80;
@@ -723,7 +724,7 @@ fn game_new(body: &Value) -> Result<String, String> {
 /// the module has no clock and no entropy source of its own, and the page has
 /// `Math.random`.
 fn draw_answer(weights: &[f64], seed: f64) -> usize {
-    let total: f64 = weights.iter().sum();
+    let total = pairwise(weights);
     let mut want = seed.clamp(0.0, 1.0) * total;
     let mut last = 0;
     for (index, &weight) in weights.iter().enumerate() {
@@ -990,11 +991,12 @@ fn letter_odds(loaded: &state::Loaded, game: &state::Game) -> Result<Vec<(usize,
         candidates.retain(|&c| words.score(guess, c) == pattern);
     }
 
+    // the odds themselves are a matrix product on the Python's side and BLAS
+    // reduces in an order of its own; the mass at least is the same float
+    let total = pairwise_of(candidates.len(), |i| weights[candidates[i]]);
     let mut odds = [0.0f64; 26];
-    let mut total = 0.0;
     for &c in &candidates {
         let weight = weights[c];
-        total += weight;
         let mut seen = [false; 26];
         for &letter in words.letters(c) {
             let slot = (letter - b'a') as usize;
@@ -1073,6 +1075,8 @@ fn find(body: &Value) -> Result<String, String> {
     // hoisted for the same reason the kernels hoist theirs -- fetching them per
     // candidate costs more than the scoring does.
     let mut measured: Vec<(usize, f64, usize)> = Vec::with_capacity(matches.len());
+    // the sweep below stands in for `kernels.ig_all`, so the mass is summed the
+    // way that kernel sums it -- left to right, not through `sum::pairwise`
     let total: f64 = weights.iter().sum();
     for &guess in &matches {
         let letters = words.letters(guess);

@@ -41,7 +41,7 @@ import numpy as np
 import estimator
 import kernels
 import wording
-from exact import DEFAULT_MAX_BRANCH
+from exact import DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH
 from priors import PriorConfig, regime_stats
 from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
                     DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED, MODES,
@@ -450,8 +450,9 @@ def letter_odds(pool, game):
         odds = (weights @ solver.data.letter_presence()[candidates]) / total
 
     absent = 1e-9   # this close to zero and no candidate holds the letter at all
+    # stable, so equal odds stay alphabetical, which is how api.rs lists them
     return [{"letter": chr(ord("a") + i), "chance": float(odds[i])}
-            for i in np.argsort(-odds) if odds[i] > absent]
+            for i in np.argsort(-odds, kind="stable") if odds[i] > absent]
 
 
 def game_hint(pool, game, settings):
@@ -827,6 +828,9 @@ def build_parser():
     parser.add_argument("--exact-branch", type=int, default=DEFAULT_MAX_BRANCH,
                         help="splits the exact search tries per position (default "
                              "%(default)s; 0 tries every one)")
+    parser.add_argument("--exact-root-branch", type=int, default=DEFAULT_ROOT_BRANCH,
+                        help="splits it tries at the position being ranked (default "
+                             "%(default)s)")
     parser.add_argument("--lookahead", type=int, default=0,
                         help="plies of branch-capped lookahead (default %(default)s, "
                              "off); 1 costs roughly 10x the wall clock per guess")
@@ -850,6 +854,7 @@ def solver_options(args):
         "exact_max": args.exact_max,
         "loss_penalty": args.loss_penalty,
         "exact_max_branch": None if args.exact_branch <= 0 else args.exact_branch,
+        "exact_root_branch": args.exact_root_branch,
         "lookahead": args.lookahead,
         "lookahead_max_branch": args.lookahead_branch,
     }

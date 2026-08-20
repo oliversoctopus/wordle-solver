@@ -15,6 +15,7 @@ use crate::exact::{BudgetExceeded, ExactEndgame, Solved, MAX_TURNS, SPLIT_TIE_TO
 use crate::kernels;
 use crate::memo::Memo;
 use crate::source::Source;
+use crate::sum::{pairwise, pairwise_of};
 
 pub const DEFAULT_EXACT_MAX: usize = 60;
 pub const DEFAULT_LOOKAHEAD_BRANCH: usize = 10;
@@ -221,7 +222,7 @@ impl<'a, S: Source> Solver<'a, S> {
         weights: &[f64],
         pool: Option<&[usize]>,
     ) -> Vec<f64> {
-        let total: f64 = weights.iter().sum();
+        let total = pairwise(weights);
         if total <= 0.0 {
             return scores;
         }
@@ -301,11 +302,11 @@ impl<'a, S: Source> Solver<'a, S> {
             // exact either way: guess the likelier one, and if wrong the other
             // is known
             let weights = self.slice_weights(candidates);
-            let total: f64 = weights.iter().sum();
+            let total = pairwise(&weights);
             let p: Vec<f64> = weights.iter().map(|w| w / total).collect();
             let first = if p[0] >= p[1] { 0 } else { 1 };
             if self.mode == Mode::Entropy {
-                let h: f64 = -p.iter().map(|&x| x * x.log2()).sum::<f64>();
+                let h = -pairwise_of(p.len(), |i| p[i] * p[i].log2());
                 return (candidates[first], h);
             }
             return (candidates[first], 2.0 - p[first]);
@@ -376,7 +377,7 @@ impl<'a, S: Source> Solver<'a, S> {
                 .filter(|(_, &p)| p == pattern)
                 .map(|(&c, _)| c)
                 .collect();
-            let mass: f64 = members.iter().map(|&c| self.weights[c]).sum();
+            let mass = pairwise_of(members.len(), |i| self.weights[members[i]]);
             out.push((mass, members));
         }
         out
@@ -436,7 +437,7 @@ impl<'a, S: Source> Solver<'a, S> {
                 .then(a.cmp(&b))
         });
         order.truncate(self.lookahead_branch);
-        let total: f64 = candidates.iter().map(|&c| self.weights[c]).sum();
+        let total = pairwise_of(candidates.len(), |i| self.weights[candidates[i]]);
 
         let mut best_guess = Self::row(pool, order[0]);
         let mut best_value = f64::INFINITY;
@@ -528,16 +529,16 @@ impl<'a, S: Source> Solver<'a, S> {
 
     /// The prior probability that `guess` is itself the answer, here.
     pub fn win_probability(&self, candidates: &[usize], guess: usize) -> f64 {
-        let total: f64 = candidates.iter().map(|&c| self.weights[c]).sum();
+        let total = pairwise_of(candidates.len(), |i| self.weights[candidates[i]]);
         if total <= 0.0 {
             return 0.0;
         }
-        candidates
+        let mine: Vec<f64> = candidates
             .iter()
             .filter(|&&c| c == guess)
             .map(|&c| self.weights[c])
-            .sum::<f64>()
-            / total
+            .collect();
+        pairwise(&mine) / total
     }
 
     /// Every other word that gives the same feedback as `guess` against every

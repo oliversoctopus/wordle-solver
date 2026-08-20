@@ -20,12 +20,17 @@
 use crate::kernels::{distinct_partitions, signature_keys, two_turn_scores, MAX_PACKED};
 use crate::memo::Memo;
 use crate::source::{Columns, Source};
+use crate::sum::pairwise_of;
 
 pub const MAX_TURNS: usize = 6;
 
 /// How many splits a node may try, best-bound first. Over 1,275 real positions
 /// a cap of 25 or 50 picks the uncapped-optimal guess every time.
 pub const DEFAULT_MAX_BRANCH: usize = 50;
+
+/// How many splits the node being *ranked* may try. Only that node ranks, and
+/// its runners-up sit near the cap in a way its winner does not.
+pub const DEFAULT_ROOT_BRANCH: usize = 150;
 pub const DEFAULT_MAX_NODES: usize = 2000;
 pub const DEFAULT_MEMO_LIMIT: usize = 500_000;
 
@@ -63,6 +68,7 @@ pub struct ExactEndgame<'a, S: Source> {
     pub bound_penalty: f64,
     pub max_nodes: usize,
     pub max_branch: Option<usize>,
+    pub root_branch: Option<usize>,
     pub hard: bool,
     memo: Memo<(Vec<usize>, usize), Solved>,
     pub nodes: usize,
@@ -78,6 +84,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             bound_penalty: loss_penalty.min(1.0),
             max_nodes: DEFAULT_MAX_NODES,
             max_branch: Some(DEFAULT_MAX_BRANCH),
+            root_branch: Some(DEFAULT_ROOT_BRANCH),
             hard: false,
             memo: Memo::new(DEFAULT_MEMO_LIMIT),
             nodes: 0,
@@ -85,8 +92,13 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         }
     }
 
+    /// `None` asks for the proof, at both caps: the ranked node must search
+    /// every split too, or its list is still the capped one.
     pub fn with_branch(mut self, max_branch: Option<usize>) -> Self {
         self.max_branch = max_branch;
+        if max_branch.is_none() {
+            self.root_branch = None;
+        }
         self
     }
 
@@ -141,7 +153,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     /// Mass, heaviest member's index within the slice, and that member's share.
     ///
     fn shape(&self, candidates: &[usize]) -> (f64, usize, f64) {
-        let total: f64 = candidates.iter().map(|&c| self.weights[c]).sum();
+        let total = pairwise_of(candidates.len(), |i| self.weights[candidates[i]]);
         // numpy's argmax takes the first maximum on ties
         let mut heaviest = 0;
         for (i, &c) in candidates.iter().enumerate() {
@@ -208,7 +220,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         }
 
         let (representatives, bounds) = self.bounded_splits(fb, candidates);
-        let order = self.branch_order(&bounds);
+        let order = self.branch_order(&bounds, self.max_branch);
 
         let mut best_value = f64::INFINITY;
         let mut best_guess: i64 = -1;
@@ -308,7 +320,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         }
 
         let (representatives, bounds) = self.bounded_splits(fb, candidates);
-        let order = self.branch_order(&bounds);
+        let order = self.branch_order(&bounds, self.root_branch);
 
         let mut best: Vec<(f64, usize)> = Vec::new(); // best first, never longer than k
         for j in order {
@@ -467,7 +479,12 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     }
 
     /// Guesses in the order the search should try them, capped.
-    fn branch_order(&self, bounds: &[f64]) -> Vec<usize> {
+    ///
+    /// The bounds tie in bulk -- a position can hold a thousand splits at one
+    /// value -- so which of them the cap keeps rests entirely on the tie-break,
+    /// and it has to be one `exact.py` can spell too. Word index is that:
+    /// `np.argsort(kind="stable")` on the far side.
+    fn branch_order(&self, bounds: &[f64], cap: Option<usize>) -> Vec<usize> {
         let mut order: Vec<usize> = (0..bounds.len()).collect();
         order.sort_by(|&a, &b| {
             bounds[a]
@@ -475,7 +492,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then(a.cmp(&b))
         });
-        if let Some(cap) = self.max_branch {
+        if let Some(cap) = cap {
             order.truncate(cap);
         }
         order

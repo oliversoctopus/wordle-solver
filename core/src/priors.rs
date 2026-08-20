@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::data::{load_table, parse_table, WordleData};
+use crate::sum::pairwise;
 
 pub const DEFAULT_REPEAT_PROB: f64 = 0.10;
 pub const DEFAULT_NONCURATED_PROB: f64 = 0.10;
@@ -300,7 +301,10 @@ fn curation_shape(
         .iter()
         .map(|w| tables.wordlebot.get(*w).copied().unwrap_or(0.0))
         .collect();
-    let inside_total: f64 = listed.iter().copied().filter(|&v| v > 0.0).sum();
+    // the Python sums `listed[inside]`, so the compacted vector is what is
+    // reduced and the order is the words' own
+    let inside: Vec<f64> = listed.iter().copied().filter(|&v| v > 0.0).collect();
+    let inside_total = pairwise(&inside);
     if inside_total <= 0.0 {
         return None;
     }
@@ -391,7 +395,8 @@ pub fn build_weights(
                 }
             }
             Some(rel) => {
-                let total: f64 = (0..n).filter(|&i| mask[i]).map(|i| rel[i]).sum();
+                let held: Vec<f64> = (0..n).filter(|&i| mask[i]).map(|i| rel[i]).collect();
+                let total = pairwise(&held);
                 for i in 0..n {
                     if mask[i] {
                         weights[i] = if total > 0.0 {
@@ -405,7 +410,7 @@ pub fn build_weights(
         }
     }
 
-    let total: f64 = weights.iter().sum();
+    let total = pairwise(&weights);
     if total <= 0.0 {
         return Err("prior has no mass; check the prior probabilities".into());
     }
