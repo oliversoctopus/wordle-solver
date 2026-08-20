@@ -6,7 +6,11 @@
 //! and the heuristic scorer -- so the arms below turn each of them on and the
 //! positions range from 1 candidate to the whole word list.
 //!
-//!     parity_solver <repo root> <sets file> <output directory>
+//!     parity_solver <repo root> <sets file> <output directory> [arm masks]
+//!
+//! The masks are one comma-separated bitmask per set, saying which arms visit
+//! it -- Python decides that and this obeys, so the rule lives in one place.
+//! Absent, every arm visits every set.
 
 use std::env;
 use std::fs;
@@ -48,7 +52,12 @@ fn arm_name(mode: Mode, hard: bool, use_exact: bool, lookahead: usize) -> String
     )
 }
 
-fn run(root: &str, sets_path: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn run(
+    root: &str,
+    sets_path: &str,
+    out_dir: &str,
+    masks: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(out_dir)?;
     let data = WordleData::load(root, 1)?;
     let config = PriorConfig::default();
@@ -57,12 +66,19 @@ fn run(root: &str, sets_path: &str, out_dir: &str) -> Result<(), Box<dyn std::er
     let (form, params) = load_fit(root, &config.slug())?;
     let table = Table::build(&data.words);
     let sets = read_sets(sets_path)?;
+    let masks: Vec<u32> = match masks {
+        Some(text) => text.split(',').filter_map(|m| m.parse().ok()).collect(),
+        None => vec![u32::MAX; sets.len()],
+    };
 
     let mut out = Sink::create(out_dir, "solver")?;
     let mut asked = 0usize;
 
-    for &(mode, hard, use_exact, lookahead) in ARMS.iter() {
-        for set in &sets {
+    for (arm, &(mode, hard, use_exact, lookahead)) in ARMS.iter().enumerate() {
+        for (set_index, set) in sets.iter().enumerate() {
+            if masks.get(set_index).copied().unwrap_or(u32::MAX) >> arm & 1 == 0 {
+                continue;
+            }
             let mut solver = Solver::new(&table, &weights, params.clone(), form.clone(), mode)
                 .with_hard(hard)
                 .with_use_exact(use_exact)
@@ -101,7 +117,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    match run(&root, &sets, &out_dir) {
+    match run(&root, &sets, &out_dir, args.next()) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             println!("  FAIL: {error}");

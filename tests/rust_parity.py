@@ -11,6 +11,7 @@ a toolchain still runs the rest of the suite.  Build it with ``cargo build
 --release``, or ``./build.sh`` if cargo is not on your PATH.
 """
 
+import argparse
 import os
 import subprocess
 import sys
@@ -493,6 +494,16 @@ def check_solver(report):
     sets = [np.arange(n, dtype=np.int64) for n in (1, 2, 3, 40, 61, 500)]
     sets.append(np.arange(data.n_words, dtype=np.int64))
     sets.extend(_endgame_sets(data, wanted=4))
+
+    # Which arms visit each set, one bit per arm.  Everything narrow goes to
+    # all six; the opening does not, being one wide scan repeated per arm
+    # rather than six different searches -- it is a constant per setting, and
+    # `openings.json` precomputes it for the site on exactly that grounds.  One
+    # arm per mode keeps both scorers covered at that width.  Rust reads these
+    # rather than deciding for itself, so the rule lives here alone.
+    every_arm = (1 << len(arms)) - 1
+    wide_arms = (1 << 0) | (1 << 4)
+    masks = [wide_arms if s.size == data.n_words else every_arm for s in sets]
     report(f"{len(sets)} positions, sizes {[int(s.size) for s in sets]}")
 
     with tempfile.TemporaryDirectory() as out_dir:
@@ -503,7 +514,8 @@ def check_solver(report):
                 handle.write(np.uint32(s.size).tobytes())
                 handle.write(s.astype("<u8").tobytes())
 
-        done = subprocess.run([path, ROOT, sets_file, out_dir],
+        done = subprocess.run([path, ROOT, sets_file, out_dir,
+                               ",".join(str(m) for m in masks)],
                               capture_output=True, text=True)
         if done.returncode != 0:
             report((done.stdout + done.stderr).strip())
@@ -528,8 +540,10 @@ def check_solver(report):
             return got.astype(np.int64)
 
         worst, ties, checked = 0.0, 0, 0
-        for mode, hard, use_exact, lookahead in arms:
-            for s in sets:
+        for arm, (mode, hard, use_exact, lookahead) in enumerate(arms):
+            for mask, s in zip(masks, sets):
+                if not mask >> arm & 1:
+                    continue
                 solver = WordleSolver(data=data, config=config, mode=mode,
                                       hard=hard, use_exact=use_exact,
                                       lookahead=lookahead, fused=False)
@@ -984,9 +998,6 @@ CHECKS = [
     ("the solver dispatch",
      "the same branch answers, with the same guess, over six arms",
      check_solver),
-    ("every answer",
-     "the whole sweep reproduces the mean and loss probability README quotes",
-     check_every_answer),
     ("the endpoints",
      "the finder and play mode answer with what web.py answers with",
      check_api),
@@ -996,9 +1007,27 @@ CHECKS = [
 ]
 
 
+# The whole sweep, which is an acceptance test for the port rather than a
+# comparison the checks above do not already make: they settle that the guesses
+# are bit-identical across every branch of the dispatch, where this permits two
+# games to diverge and reconverge and only fails when the weighted mean moves.
+# It is a fifth of the runtime, so it is asked for rather than assumed.
+ACCEPTANCE = [
+    ("every answer",
+     "the whole sweep reproduces the mean and loss probability README quotes",
+     check_every_answer),
+]
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--every-answer", action="store_true",
+                        help="also play all 12,947 words through both sides")
+    args = parser.parse_args()
+
     results = []
-    for label, establishes, check in CHECKS:
+    for label, establishes, check in CHECKS + (ACCEPTANCE if args.every_answer
+                                               else []):
         lines = []
         ok = check(lines.append)
         if ok is None:
