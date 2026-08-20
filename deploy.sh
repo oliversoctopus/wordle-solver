@@ -16,8 +16,8 @@ set -e
 cd "$(dirname "$0")"
 export PATH="$HOME/.cargo/bin:$PATH"
 
-# Pin this once you know a version that works: @latest re-fetches whatever is
-# newest on every deploy, which is a thing that can break overnight.
+# The CLI only uploads what build_site.sh already produced, so its version has
+# no bearing on what deploys.  VERCEL_CLI pins it if a release ever misbehaves.
 CLI="${VERCEL_CLI:-vercel@latest}"
 
 TARGET="--prod"
