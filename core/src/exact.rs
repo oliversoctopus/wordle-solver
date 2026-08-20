@@ -31,6 +31,28 @@ pub const DEFAULT_MAX_BRANCH: usize = 50;
 /// How many splits the node being *ranked* may try. Only that node ranks, and
 /// its runners-up sit near the cap in a way its winner does not.
 pub const DEFAULT_ROOT_BRANCH: usize = 150;
+
+/// That cap, or whatever `WORDLE_ROOT_BRANCH` narrows it to. `exact.py` reads
+/// the same variable, so an experiment that turns the wider ranking off gets
+/// both implementations at once and parity still holds. There is no environment
+/// under WASM, which is the one build that should never be narrowed anyway.
+pub fn root_branch_default() -> usize {
+    static CAP: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *CAP.get_or_init(|| match std::env::var("WORDLE_ROOT_BRANCH") {
+        Err(_) => DEFAULT_ROOT_BRANCH,
+        Ok(setting) => parse_root_branch(&setting).unwrap_or_else(|| {
+            eprintln!("WORDLE_ROOT_BRANCH={setting:?} is not a cap; using {DEFAULT_ROOT_BRANCH}");
+            DEFAULT_ROOT_BRANCH
+        }),
+    })
+}
+
+/// `None` for anything that is not a positive count. `exact.py` reads the same
+/// variable through `int`, which raises on the same input rather than warning.
+fn parse_root_branch(setting: &str) -> Option<usize> {
+    setting.trim().parse().ok().filter(|&n| n > 0)
+}
+
 pub const DEFAULT_MAX_NODES: usize = 2000;
 pub const DEFAULT_MEMO_LIMIT: usize = 500_000;
 
@@ -84,7 +106,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             bound_penalty: loss_penalty.min(1.0),
             max_nodes: DEFAULT_MAX_NODES,
             max_branch: Some(DEFAULT_MAX_BRANCH),
-            root_branch: Some(DEFAULT_ROOT_BRANCH),
+            root_branch: Some(root_branch_default()),
             hard: false,
             memo: Memo::new(DEFAULT_MEMO_LIMIT),
             nodes: 0,
@@ -532,4 +554,19 @@ fn argmin(values: &[f64]) -> usize {
         }
     }
     best
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_root_branch, DEFAULT_ROOT_BRANCH};
+
+    #[test]
+    fn the_root_cap_takes_a_count_and_nothing_else() {
+        assert_eq!(parse_root_branch("50"), Some(50));
+        assert_eq!(parse_root_branch(" 50\n"), Some(50));
+        for bad in ["", "0", "-1", "50 splits", "many"] {
+            assert_eq!(parse_root_branch(bad), None, "{bad:?} read as a cap");
+        }
+        assert_eq!(DEFAULT_ROOT_BRANCH, 150);
+    }
 }

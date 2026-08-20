@@ -59,7 +59,15 @@ for a large amount of time:
   uncapped one, while 80 is the smallest that measured clean.  The default of
   150 leaves the same margin as above, and costs only the node being ranked --
   everything under it needs its winner alone, so it keeps ``max_branch``.
+
+  It is a knob rather than a constant because it buys nothing an experiment
+  measures: the winner is already exact at 50, so only a ranking's tail moves,
+  and the wider search costs about 2x at the position it is asked about.  Set
+  ``WORDLE_ROOT_BRANCH=50`` to time the endgame the way it was timed before,
+  or pass ``root_branch`` outright.
 """
+
+import os
 
 import numpy as np
 
@@ -77,7 +85,9 @@ DEFAULT_MAX_BRANCH = 50
 
 # how many the node being *ranked* may try.  Only that node ranks, and its
 # runners-up sit near the cap in a way its winner does not; see the note above.
-DEFAULT_ROOT_BRANCH = 150
+# set WORDLE_ROOT_BRANCH to narrow it back for every solver in the process --
+# the Rust reads the same variable, so the two stay in step under it
+DEFAULT_ROOT_BRANCH = int(os.environ.get("WORDLE_ROOT_BRANCH") or 150)
 
 # two guesses that split the candidates identically score identically, so this
 # only decides when their feedback vectors are worth comparing; the comparison

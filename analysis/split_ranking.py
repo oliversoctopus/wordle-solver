@@ -16,8 +16,9 @@ Backs the *Alternatives* card under README *In a browser*, and the closing
 paragraph of README *The exact endgame*.  The timings are a probe rather
 than a measurement: they move with the machine, so read the ratio.
 
-    python analysis/split_ranking.py                 both, shipped prior
-    python analysis/split_ranking.py --all-priors    all four
+    python analysis/split_ranking.py                     both, shipped prior
+    python analysis/split_ranking.py --all-priors        all four
+    python analysis/split_ranking.py --exact-root-branch 50   the narrow cap
 """
 
 import argparse
@@ -26,6 +27,7 @@ import time
 import numpy as np
 
 import common
+from exact import DEFAULT_ROOT_BRANCH
 from priors import PriorConfig
 from solver import DEFAULT_EXACT_MAX, ENTROPY, EXPECTED, MAX_TURNS, WordleSolver, sample_answers
 from wordle_data import load_data
@@ -37,6 +39,9 @@ parser.add_argument("--positions", type=int, default=200,
                     help="positions kept per prior, per band")
 parser.add_argument("--top", type=int, default=5, help="length of the ranking")
 parser.add_argument("--exact-max", type=int, default=DEFAULT_EXACT_MAX)
+parser.add_argument("--exact-root-branch", type=int, default=DEFAULT_ROOT_BRANCH,
+                    help="splits the ranked node may try; what this section "
+                         "is timing, so 50 gives the pre-widening figures")
 parser.add_argument("--seed", type=int, default=4242)
 parser.add_argument("--all-priors", action="store_true")
 args = parser.parse_args()
@@ -105,7 +110,8 @@ for config in configs:
 # ------------------------------------------------- what the runners-up cost
 
 solver = WordleSolver(data=data, config=PriorConfig(), mode=EXPECTED,
-                      exact_max=args.exact_max)
+                      exact_max=args.exact_max,
+                      exact_root_branch=args.exact_root_branch)
 answers = sample_answers(solver.weights, args.games, seed=args.seed)
 deep, _ = common.collect_positions(
     solver, answers,
