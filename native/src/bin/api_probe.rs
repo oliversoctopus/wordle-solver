@@ -12,6 +12,7 @@
 use std::env;
 use std::fs;
 use std::process::ExitCode;
+use std::time::Instant;
 
 use wordle_core::api;
 use wordle_core::json::{write_string, Object};
@@ -78,10 +79,23 @@ fn main() -> ExitCode {
         };
         i += if next_is_body { 2 } else { 1 };
 
+        let started = Instant::now();
         let reply = api::handle(path, body);
+        eprintln!("  {path} took {:.0} ms", started.elapsed().as_secs_f64() * 1e3);
         println!("{path}\n{reply}\n");
         failed |= reply.contains("\"error\":\"");
     }
+    // empty unless built with --features wordle_core/profile
+    let totals = wordle_core::profile::totals();
+    if !totals.is_empty() {
+        eprintln!("  {:<24} {:>8} {:>10}", "entry point", "seconds", "calls");
+        for (name, (elapsed, calls)) in wordle_core::profile::NAMES.iter().zip(&totals) {
+            if *calls > 0 {
+                eprintln!("  {name:<24} {elapsed:>8.3} {calls:>10}");
+            }
+        }
+    }
+
     if failed {
         ExitCode::FAILURE
     } else {

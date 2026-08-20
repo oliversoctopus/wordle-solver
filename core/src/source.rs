@@ -95,3 +95,64 @@ impl Source for Table {
         self.n
     }
 }
+
+/// Every guess scored against one small candidate set, held for as long as a
+/// search runs.
+///
+/// The endgame rescans the whole pool at every node it visits -- 524 of them at
+/// a 34-candidate position -- and every candidate it ever sees belongs to the
+/// set it started from, since each bucket is a subset of the one above. So the
+/// same 12,947 by 34 pairs are scored hundreds of times over. Tabulating them
+/// once costs one scan and 440 KB, and turns the rest into a byte load.
+///
+/// This is the part of the 167 MB table a browser can afford: not the whole
+/// matrix, only the columns one position asks about.
+pub struct Columns {
+    /// Guess-major, so a kernel walking the pool reads its candidates from
+    /// consecutive bytes rather than striding.
+    rows: Vec<u8>,
+    /// Word index to column, `NOT_HELD` for a word the set left out.
+    slot: Vec<u16>,
+    held: usize,
+    n_guesses: usize,
+}
+
+const NOT_HELD: u16 = u16::MAX;
+
+impl Columns {
+    pub fn build<S: Source>(source: &S, candidates: &[usize]) -> Columns {
+        let n_guesses = source.n_guesses();
+        let held = candidates.len();
+        let mut rows = vec![0u8; n_guesses * held];
+        for guess in 0..n_guesses {
+            let row = &mut rows[guess * held..(guess + 1) * held];
+            for (cell, &candidate) in row.iter_mut().zip(candidates) {
+                *cell = source.score(guess, candidate);
+            }
+        }
+        let mut slot = vec![NOT_HELD; n_guesses];
+        for (column, &candidate) in candidates.iter().enumerate() {
+            slot[candidate] = column as u16;
+        }
+        Columns {
+            rows,
+            slot,
+            held,
+            n_guesses,
+        }
+    }
+}
+
+impl Source for Columns {
+    #[inline(always)]
+    fn score(&self, guess: usize, candidate: usize) -> u8 {
+        let column = self.slot[candidate] as usize;
+        debug_assert!(column != NOT_HELD as usize, "candidate outside the set");
+        self.rows[guess * self.held + column]
+    }
+
+    #[inline(always)]
+    fn n_guesses(&self) -> usize {
+        self.n_guesses
+    }
+}

@@ -6,7 +6,7 @@
 //! error comes back as `{"error": "..."}` with the same wording, which is what
 //! the page shows the user.
 
-use crate::feedback::{N_PATTERNS, WIN_PATTERN};
+use crate::feedback::{pattern_text, N_PATTERNS, WIN_PATTERN};
 use crate::json::{self, Object, Value};
 use crate::priors::{CurationShape, PriorConfig, RepeatShape};
 use crate::solver::{Mode, Solver};
@@ -234,19 +234,41 @@ fn settings_key(config: &PriorConfig, mode: Mode, hard: bool, form: &str) -> Str
     )
 }
 
-/// The opening ranking, if this is the opening and one was precomputed.
-fn precomputed_opening(
+/// The ranking for this position, if one was precomputed.
+///
+/// Two positions are. The opening, which a browser cannot afford at all --
+/// 12,947 guesses against 12,947 candidates -- and turn two behind the opening
+/// this setting recommends, which it can afford but visibly: most of the 194
+/// buckets are small enough to engage the exact endgame, and that is a second
+/// of a tab sitting still. Both are constants, so `build_site` works them out.
+///
+/// Turn two is precomputed for the switches the page opens with and no others.
+/// There are 180 settings and 194 patterns each; every session starts on the
+/// defaults, and turn three costs a sixth of what turn two does anyway.
+fn precomputed_ranking(
     loaded: &state::Loaded,
     settings: &Settings,
     rows: &[(usize, u8)],
 ) -> Option<Vec<(usize, f64)>> {
-    if !rows.is_empty() {
-        return None;
-    }
     let form = loaded
         .form_name(&settings.config, settings.form.as_deref())
         .ok()?;
-    let key = settings_key(&settings.config, settings.mode, settings.hard, &form);
+    let opening = settings_key(&settings.config, settings.mode, settings.hard, &form);
+
+    let key = match rows {
+        [] => opening,
+        // and only behind the word this setting actually opens with, since
+        // that is the board the rankings were worked out for
+        [(guess, pattern)] => {
+            let first = loaded.openings.get(&opening)?.as_array()?.first()?;
+            if loaded.data.words.index_of(first.get("word")?.as_str()?)? != *guess {
+                return None;
+            }
+            format!("{opening}|{}", pattern_text(*pattern))
+        }
+        _ => return None,
+    };
+
     let listed = loaded.openings.get(&key)?.as_array()?;
     let mut out = Vec::with_capacity(listed.len());
     for entry in listed.iter().take(settings.top.max(1)) {
@@ -348,7 +370,7 @@ fn build_state(
             }
             let mut row = Object::new(out);
             row.str("word", loaded.data.words.word(guess))
-                .str("pattern", &pattern_to_text(pattern));
+                .str("pattern", &pattern_text(pattern));
             row.end();
         }
         out.push(']');
@@ -378,11 +400,21 @@ fn build_state(
     }
 
     let guesses_left = MAX_GUESSES - rows.len();
+
+    // Lent for the length of this request and handed back at the end. Nothing
+    // below depends on the memo being empty or full; it only decides whether
+    // a position already seen is worked out again.
+    let held = settings_key(
+        &settings.config,
+        settings.mode,
+        settings.hard,
+        &loaded.form_name(&settings.config, settings.form.as_deref())?,
+    );
+    let mut memos = loaded.take_memos(&held);
+    solver.swap_memos(&mut memos);
     let exact = solver.solved_exactly(&candidates, Some(guesses_left));
-    // The opening is the one position a browser cannot afford: 12,947 guesses
-    // against 12,947 candidates. It is also a constant per setting, so
-    // `build_site` works it out once and it arrives with the data.
-    let top = precomputed_opening(loaded, settings, rows).unwrap_or_else(|| {
+    // Precomputed where it can be; see `precomputed_ranking`.
+    let top = precomputed_ranking(loaded, settings, rows).unwrap_or_else(|| {
         solver.top_guesses(&candidates, settings.top.max(1), Some(guesses_left))
     });
     let (pick, score) = top[0];
@@ -427,6 +459,9 @@ fn build_state(
         }
         out.push(']');
     });
+
+    solver.swap_memos(&mut memos);
+    loaded.keep_memos(held, memos);
 
     object.end();
     Ok(out)
@@ -620,20 +655,6 @@ fn describe_guess(
         );
 }
 
-fn pattern_to_text(pattern: u8) -> String {
-    let mut tiles = [b'N'; 5];
-    let mut left = pattern as usize;
-    for slot in tiles.iter_mut().rev() {
-        *slot = match left % 3 {
-            0 => b'N',
-            1 => b'Y',
-            _ => b'G',
-        };
-        left /= 3;
-    }
-    debug_assert!((pattern as usize) < N_PATTERNS);
-    String::from_utf8_lossy(&tiles).into_owned()
-}
 
 /// The tiles of a pattern, least significant last, as `num_to_feedback` gives
 /// them.
@@ -794,9 +815,21 @@ fn game_hint(body: &Value) -> Result<String, String> {
     }
 
     let guesses_left = MAX_GUESSES.saturating_sub(game.rows.len()).max(1);
+
+    // lent for this request and handed back below, as `build_state` does it:
+    // asking for a hint twice on one board should only think once
+    let held = settings_key(
+        &settings.config,
+        settings.mode,
+        settings.hard,
+        &loaded.form_name(&settings.config, settings.form.as_deref())?,
+    );
+    let mut memos = loaded.take_memos(&held);
+    solver.swap_memos(&mut memos);
+
     let exact = solver.solved_exactly(&candidates, Some(guesses_left));
-    // turn one is the opening, which no browser can afford to score live
-    let top = precomputed_opening(loaded, &settings, &game.rows).unwrap_or_else(|| {
+    // precomputed where it can be; see `precomputed_ranking`
+    let top = precomputed_ranking(loaded, &settings, &game.rows).unwrap_or_else(|| {
         solver.top_guesses(&candidates, settings.top.max(1), Some(guesses_left))
     });
     let (pick, score) = top[0];
@@ -838,6 +871,10 @@ fn game_hint(body: &Value) -> Result<String, String> {
             }
             out.push(']');
         });
+
+    solver.swap_memos(&mut memos);
+    loaded.keep_memos(held, memos);
+
     object.end();
     Ok(out)
 }
@@ -871,7 +908,7 @@ fn game_state(loaded: &state::Loaded, id: &str, game: &state::Game) -> Result<St
             }
             let mut row = Object::new(out);
             row.str("word", loaded.data.words.word(guess))
-                .str("pattern", &pattern_to_text(pattern));
+                .str("pattern", &pattern_text(pattern));
             row.end();
         }
         out.push(']');
@@ -1080,7 +1117,7 @@ fn find(body: &Value) -> Result<String, String> {
     let mut object = Object::new(&mut out);
     object
         .str("answer", words.word(answer))
-        .str("pattern", &pattern_to_text(pattern))
+        .str("pattern", &pattern_text(pattern))
         .str("sort", &sort)
         .int("total", matches.len() as i64)
         .int("shown", matches.len().min(MAX_LISTED_MATCHES) as i64)

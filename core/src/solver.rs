@@ -11,7 +11,7 @@
 //! feedback sources in `source` already cover the same ground for this port.
 
 use crate::estimator::{effective_size, Form};
-use crate::exact::{BudgetExceeded, ExactEndgame, MAX_TURNS, SPLIT_TIE_TOL};
+use crate::exact::{BudgetExceeded, ExactEndgame, Solved, MAX_TURNS, SPLIT_TIE_TOL};
 use crate::kernels;
 use crate::memo::Memo;
 use crate::source::Source;
@@ -29,6 +29,42 @@ pub enum Mode {
     Expected,
 }
 
+
+/// How many positions a browser may keep. The native sweeps keep far more --
+/// `DEFAULT_MEMO_LIMIT` -- but they are not sharing an address space with a
+/// page, and what a limit costs is only ever time. See `memo`.
+pub const BROWSER_MEMO_LIMIT: usize = 50_000;
+pub const BROWSER_EXACT_MEMO_LIMIT: usize = 100_000;
+
+/// The positions a solver has already worked out, held apart from the solver.
+///
+/// A `Solver` borrows its source and its weights, so it cannot outlive the
+/// request that built it. What it caches has no such trouble: a position's
+/// value is a pure function of the position, and stays true afterwards.
+/// Swapping these in and out is what lets the same board arrive twice -- which
+/// is the usual case, the page sending the whole board on every submit -- and
+/// be solved once.
+pub struct Memos {
+    best: Memo<(Vec<usize>, usize), (i64, f64)>,
+    lookahead: Memo<(Vec<usize>, usize, usize), (i64, f64)>,
+    exact: Memo<(Vec<usize>, usize), Solved>,
+}
+
+impl Memos {
+    pub fn new() -> Memos {
+        Memos {
+            best: Memo::new(BROWSER_MEMO_LIMIT),
+            lookahead: Memo::new(BROWSER_MEMO_LIMIT),
+            exact: Memo::new(BROWSER_EXACT_MEMO_LIMIT),
+        }
+    }
+}
+
+impl Default for Memos {
+    fn default() -> Memos {
+        Memos::new()
+    }
+}
 pub struct Solver<'a, S: Source> {
     source: &'a S,
     weights: &'a [f64],
@@ -78,6 +114,14 @@ impl<'a, S: Source> Solver<'a, S> {
             exact_hits: 0,
             exact_bailouts: 0,
         }
+    }
+
+    /// Exchanges the solver's caches for the ones given. Called twice around a
+    /// request: once to lend them, once to take back what the request added.
+    pub fn swap_memos(&mut self, memos: &mut Memos) {
+        std::mem::swap(&mut self.memo, &mut memos.best);
+        std::mem::swap(&mut self.lookahead_memo, &mut memos.lookahead);
+        self.exact.swap_memo(&mut memos.exact);
     }
 
     pub fn with_hard(mut self, hard: bool) -> Self {

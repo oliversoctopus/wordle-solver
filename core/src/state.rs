@@ -6,9 +6,11 @@
 //! they change anything else.
 //!
 //! A `Solver` borrows its source and weights, so one cannot be kept in a static
-//! without a self-referential struct. It is built per request instead, which
-//! costs an empty memo -- fine for a page that solves one position at a time,
-//! where the memo only ever pays inside a single request anyway.
+//! without a self-referential struct, and is built per request instead. What it
+//! caches is kept here and lent back to it, because the memo pays across
+//! requests and not only inside one: the page re-sends the whole board on every
+//! submit, so a board that has been solved once arrives again on the next
+//! keystroke, on the next tile recolored, and on every switch flipped.
 
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
@@ -16,6 +18,7 @@ use std::sync::{Mutex, OnceLock};
 use crate::estimator::{get_form, Form};
 use crate::json;
 use crate::priors::{build_weights, PriorConfig, ShapeTables};
+use crate::solver::Memos;
 use crate::source::Live;
 use crate::WordleData;
 
@@ -35,6 +38,8 @@ pub struct Loaded {
     /// browser cannot afford to score 12,947 guesses against 12,947 candidates.
     pub openings: HashMap<String, json::Value>,
     weights: Mutex<HashMap<String, Vec<f64>>>,
+    /// Positions already worked out, per settings key, least recent first.
+    memos: Mutex<Vec<(String, Memos)>>,
     games: Mutex<Games>,
 }
 
@@ -89,6 +94,29 @@ impl Loaded {
         }
     }
 
+    /// Lends this setting whatever it has already worked out. The caller
+    /// hands it back with `keep_memos`, which is also what bounds how many
+    /// settings are held at once.
+    pub fn take_memos(&self, key: &str) -> Memos {
+        let Ok(mut held) = self.memos.lock() else {
+            return Memos::new();
+        };
+        match held.iter().position(|(name, _)| name == key) {
+            Some(at) => held.remove(at).1,
+            None => Memos::new(),
+        }
+    }
+
+    pub fn keep_memos(&self, key: String, memos: Memos) {
+        if let Ok(mut held) = self.memos.lock() {
+            held.retain(|(name, _)| name != &key);
+            held.push((key, memos));
+            while held.len() > MAX_MEMO_SETS {
+                held.remove(0);
+            }
+        }
+    }
+
     pub fn source(&self) -> Live<'_> {
         Live::new(&self.data.words)
     }
@@ -125,6 +153,11 @@ pub struct Games {
 /// Beyond this many, the oldest goes. One tab plays one game at a time, so the
 /// cap is only there to stop a long sitting from growing without bound.
 const MAX_GAMES: usize = 32;
+
+/// How many settings keep their solved positions. Flipping a switch re-solves
+/// the board under the new setting, and flipping back should not re-solve it
+/// again; holding all 160 combinations would not fit in a tab.
+const MAX_MEMO_SETS: usize = 4;
 
 impl Games {
     pub fn create(&mut self, game: Game) -> String {
@@ -238,6 +271,7 @@ pub fn init(body: &json::Value) -> Result<(), String> {
         fits,
         openings,
         weights: Mutex::new(HashMap::new()),
+        memos: Mutex::new(Vec::new()),
         games: Mutex::new(Games::default()),
     });
     Ok(())

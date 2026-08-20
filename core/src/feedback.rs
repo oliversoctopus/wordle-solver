@@ -44,6 +44,23 @@ pub fn score_guess(guess: &[u8], answer: &[u8]) -> u8 {
     num
 }
 
+/// The same pattern as tiles, which is how it crosses the wire and how the
+/// precomputed rankings are keyed. The inverse of the encoding above.
+pub fn pattern_text(pattern: u8) -> String {
+    debug_assert!((pattern as usize) < N_PATTERNS);
+    let mut tiles = [b'N'; WORD_LEN];
+    let mut left = pattern as usize;
+    for slot in tiles.iter_mut().rev() {
+        *slot = match left % 3 {
+            0 => b'N',
+            1 => b'Y',
+            _ => b'G',
+        };
+        left /= 3;
+    }
+    String::from_utf8_lossy(&tiles).into_owned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -59,6 +76,13 @@ mod tests {
     #[test]
     fn a_word_against_itself_is_all_green() {
         assert_eq!(score_guess(b"crane", b"crane"), WIN_PATTERN);
+    }
+
+    #[test]
+    fn tiles_and_the_number_are_the_same_pattern() {
+        assert_eq!(pattern_text(score_guess(b"speed", b"abide")), "NNYNY");
+        assert_eq!(pattern_text(WIN_PATTERN), "GGGGG");
+        assert_eq!(pattern_text(0), "NNNNN");
     }
 
     #[test]
