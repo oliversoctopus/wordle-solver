@@ -17,9 +17,10 @@
 //! then spends nearly all its time proving nothing beats it, so the cap buys
 //! the answer and skips the proof. Ported from `exact.py`.
 
-use crate::kernels::{distinct_partitions, signature_keys, two_turn_scores, MAX_PACKED};
+use crate::fused;
+use crate::kernels::{distinct_partitions, signature_keys, MAX_PACKED};
 use crate::memo::Memo;
-use crate::source::{Columns, Source};
+use crate::source::{Columns, Source, Transposed};
 use crate::sum::pairwise_of;
 
 pub const MAX_TURNS: usize = 6;
@@ -84,6 +85,9 @@ pub type Solved = (i64, f64);
 pub struct ExactEndgame<'a, S: Source> {
     source: &'a S,
     weights: &'a [f64],
+    /// The answer-major table, where one is held. Lent to the scans that run
+    /// against `source`; a search off `Columns` has a smaller one already.
+    fused: Option<&'a Transposed>,
     pub loss_penalty: f64,
     /// Capping at 1 is what makes V non-decreasing in t: running out then costs
     /// exactly one guess, so no deeper value undercuts the two-turn one.
@@ -102,6 +106,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         ExactEndgame {
             source,
             weights,
+            fused: None,
             loss_penalty,
             bound_penalty: loss_penalty.min(1.0),
             max_nodes: DEFAULT_MAX_NODES,
@@ -129,6 +134,11 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         self
     }
 
+    pub fn with_fused(mut self, fused: Option<&'a Transposed>) -> Self {
+        self.fused = fused;
+        self
+    }
+
     /// `(guess, expected score)` under optimal play within the cap.
     pub fn solve(
         &mut self,
@@ -139,8 +149,8 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         self.nodes = 0;
         let turns = turns_left.min(MAX_TURNS);
         match self.columns(candidates, turns) {
-            Some(held) => self.solve_inner(&held, candidates, turns),
-            None => self.solve_inner(self.source, candidates, turns),
+            Some(held) => self.solve_inner(&held, None, candidates, turns),
+            None => self.solve_inner(self.source, self.fused, candidates, turns),
         }
     }
 
@@ -158,8 +168,8 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         let turns = turns_left.min(MAX_TURNS);
         let k = k.max(1);
         match self.columns(candidates, turns) {
-            Some(held) => self.top_inner(&held, candidates, turns, k),
-            None => self.top_inner(self.source, candidates, turns, k),
+            Some(held) => self.top_inner(&held, None, candidates, turns, k),
+            None => self.top_inner(self.source, self.fused, candidates, turns, k),
         }
     }
 
@@ -189,6 +199,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     fn solve_inner<F: Source>(
         &mut self,
         fb: &F,
+        tt: Option<&Transposed>,
         candidates: &[usize],
         turns: usize,
     ) -> Result<Solved, BudgetExceeded> {
@@ -226,7 +237,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             let weights = self.slice_weights(candidates);
             let pool = if self.hard { Some(candidates) } else { None };
             let scores =
-                two_turn_scores(fb, candidates, &weights, self.loss_penalty, pool);
+                fused::two_turn_scores(fb, tt, candidates, &weights, self.loss_penalty, pool);
             let best = argmin(&scores);
             let guess = if self.hard { candidates[best] } else { best };
             let result = (guess as i64, scores[best]);
@@ -241,7 +252,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             });
         }
 
-        let (representatives, bounds) = self.bounded_splits(fb, candidates);
+        let (representatives, bounds) = self.bounded_splits(fb, tt, candidates);
         let order = self.branch_order(&bounds, self.max_branch);
 
         let mut best_value = f64::INFINITY;
@@ -251,7 +262,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
                 break; // sorted, so nothing left can beat the incumbent
             }
             let guess = representatives[j];
-            let value = self.evaluate(fb, guess, candidates, total, turns, best_value)?;
+            let value = self.evaluate(fb, tt, guess, candidates, total, turns, best_value)?;
             if value < best_value {
                 best_value = value;
                 best_guess = guess as i64;
@@ -266,6 +277,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     fn top_inner<F: Source>(
         &mut self,
         fb: &F,
+        tt: Option<&Transposed>,
         candidates: &[usize],
         turns: usize,
         k: usize,
@@ -313,7 +325,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             let weights = self.slice_weights(candidates);
             let pool = if self.hard { Some(candidates) } else { None };
             let scores =
-                two_turn_scores(fb, candidates, &weights, self.loss_penalty, pool);
+                fused::two_turn_scores(fb, tt, candidates, &weights, self.loss_penalty, pool);
             let mut order: Vec<usize> = (0..scores.len()).collect();
             order.sort_by(|&a, &b| {
                 scores[a]
@@ -341,7 +353,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             });
         }
 
-        let (representatives, bounds) = self.bounded_splits(fb, candidates);
+        let (representatives, bounds) = self.bounded_splits(fb, tt, candidates);
         let order = self.branch_order(&bounds, self.root_branch);
 
         let mut best: Vec<(f64, usize)> = Vec::new(); // best first, never longer than k
@@ -355,7 +367,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
                 break;
             }
             let guess = representatives[j];
-            let value = self.evaluate(fb, guess, candidates, total, turns, cutoff)?;
+            let value = self.evaluate(fb, tt, guess, candidates, total, turns, cutoff)?;
             if value < cutoff {
                 best.push((value, guess));
                 best.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
@@ -394,6 +406,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     fn evaluate<F: Source>(
         &mut self,
         fb: &F,
+        tt: Option<&Transposed>,
         guess: usize,
         candidates: &[usize],
         total: f64,
@@ -446,7 +459,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         // biggest contributors first: they tighten the total fastest
         buckets.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
         for (share, bound, members) in buckets {
-            let (_, value) = self.solve_inner(fb, &members, turns - 1)?;
+            let (_, value) = self.solve_inner(fb, tt, &members, turns - 1)?;
             running += share * (value - bound);
             if running >= cutoff {
                 return Ok(f64::INFINITY);
@@ -460,6 +473,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     fn bounded_splits<F: Source>(
         &self,
         fb: &F,
+        tt: Option<&Transposed>,
         candidates: &[usize],
     ) -> (Vec<usize>, Vec<f64>) {
         let representatives = if self.hard {
@@ -470,8 +484,9 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             self.distinct_partitions(fb, candidates)
         };
         let weights = self.slice_weights(candidates);
-        let bounds = two_turn_scores(
+        let bounds = fused::two_turn_scores(
             fb,
+            tt,
             candidates,
             &weights,
             self.bound_penalty,

@@ -6,9 +6,10 @@
 use std::time::Instant;
 use wordle_core::estimator::load_fit;
 use wordle_core::feedback::score_guess;
+use wordle_core::fused;
 use wordle_core::kernels::expected_guesses_all;
 use wordle_core::priors::{build_weights, PriorConfig, ShapeTables};
-use wordle_core::source::{Live, Source, Table};
+use wordle_core::source::{Live, Source, Table, Transposed};
 use wordle_core::WordleData;
 
 fn time<S: Source>(
@@ -27,6 +28,40 @@ fn time<S: Source>(
     }
     let per = t0.elapsed().as_secs_f64() / n as f64;
     println!("    {label:<12} {:>7.1} ms", per * 1e3);
+}
+
+/// One position through both layouts, and what the answer-major one is worth.
+fn band(
+    table: &Table,
+    tt: &Transposed,
+    size: usize,
+    set: &[usize],
+    w: &[f64],
+    p: &[f64],
+    f: &wordle_core::estimator::Form,
+) {
+    let n = 20;
+    let mut per = [0.0; 2];
+    for (slot, tt) in [None, Some(tt)].into_iter().enumerate() {
+        fused::expected_guesses_all(table, tt, set, w, p, f, None);
+        let t0 = Instant::now();
+        for _ in 0..n {
+            fused::expected_guesses_all(table, tt, set, w, p, f, None);
+        }
+        per[slot] = t0.elapsed().as_secs_f64() / n as f64;
+    }
+    // outside the band both arms are the shipped kernel, so a ratio there
+    // would be reporting the noise floor as though it meant something
+    let verdict = if (fused::FUSED_MIN..=fused::FUSED_MAX).contains(&size) {
+        format!("{:.2}x", per[0] / per[1])
+    } else {
+        "out of band".to_string()
+    };
+    println!(
+        "    {size:>5} candidates  shipped {:>6.1} ms   fused {:>6.1} ms   {verdict}",
+        per[0] * 1e3,
+        per[1] * 1e3,
+    );
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -58,6 +93,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let w: Vec<f64> = set.iter().map(|&c| weights[c]).collect();
         time(&table, "table", &set, &w, &params, &form);
         time(&live, "live", &set, &w, &params, &form);
+    }
+
+    println!("  the fused band, one scan each:");
+    let tt = Transposed::build(&table);
+    for want in [20, 100, 200, 400, 600, 900] {
+        let (size, set) = by_size
+            .iter()
+            .min_by_key(|(n, _)| n.abs_diff(want))
+            .unwrap()
+            .clone();
+        let w: Vec<f64> = set.iter().map(|&c| weights[c]).collect();
+        band(&table, &tt, size, &set, &w, &params, &form);
     }
     Ok(())
 }

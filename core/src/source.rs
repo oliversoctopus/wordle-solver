@@ -85,6 +85,48 @@ impl Source for Table {
     }
 }
 
+/// The same table indexed the other way round, `tt[answer, guess]`.
+///
+/// A second 168 MB and no file, since transposing the one already held is
+/// cheaper than reading another. Only `fused` reads it, and only where a
+/// position is wide enough for the layout to pay; `README.md` § *Without a
+/// server* and SOLVER_EXPLAINED §8 have the band and why it ends where it does.
+pub struct Transposed {
+    data: Vec<u8>,
+    n: usize,
+}
+
+impl Transposed {
+    /// A blocked transpose: naively, one side of the copy strides 12,947 bytes
+    /// per element and every write lands on a line of its own.
+    pub fn build(table: &Table) -> Transposed {
+        const TILE: usize = 64;
+        let n = table.n;
+        let mut data = vec![0u8; n * n];
+        for guess0 in (0..n).step_by(TILE) {
+            let guess_end = (guess0 + TILE).min(n);
+            for answer0 in (0..n).step_by(TILE) {
+                let answer_end = (answer0 + TILE).min(n);
+                for guess in guess0..guess_end {
+                    for answer in answer0..answer_end {
+                        data[answer * n + guess] = table.data[guess * n + answer];
+                    }
+                }
+            }
+        }
+        Transposed { data, n }
+    }
+
+    #[inline(always)]
+    pub fn at(&self, answer: usize, guess: usize) -> u8 {
+        self.data[answer * self.n + guess]
+    }
+
+    pub fn n_guesses(&self) -> usize {
+        self.n
+    }
+}
+
 /// Every guess scored against one small candidate set, held for as long as a
 /// search runs.
 ///

@@ -6,15 +6,17 @@
 //! heuristic scorer. The heuristic is genuinely the fallback -- it runs only
 //! where the game is too wide to solve outright.
 //!
-//! Ported from `solver.py`. What is not here is the fused answer-major kernel
-//! dispatch: it is a speed knob that scores identically either way, and the two
-//! feedback sources in `source` already cover the same ground for this port.
+//! Ported from `solver.py`, the fused answer-major dispatch included: lend the
+//! solver a `Transposed` and mid-sized positions go to `fused` instead. It
+//! scores identically either way, so it is a speed knob and never a behavior
+//! one.
 
 use crate::estimator::{effective_size, Form};
 use crate::exact::{BudgetExceeded, ExactEndgame, Solved, MAX_TURNS, SPLIT_TIE_TOL};
+use crate::fused;
 use crate::kernels;
 use crate::memo::Memo;
-use crate::source::Source;
+use crate::source::{Source, Transposed};
 use crate::sum::{pairwise, pairwise_of};
 
 pub const DEFAULT_EXACT_MAX: usize = 60;
@@ -81,6 +83,9 @@ pub struct Solver<'a, S: Source> {
     /// Bits paid to a guess that could itself be the answer. Priced in bits, so
     /// it only means something against information gain.
     pub win_bonus: f64,
+    /// An answer-major copy of the table, or `None` to score the shipped
+    /// way. A speed knob and never a behavior one: the scores are identical.
+    fused: Option<&'a Transposed>,
     exact: ExactEndgame<'a, S>,
     memo: Memo<(Vec<usize>, usize), (i64, f64)>,
     lookahead_memo: Memo<(Vec<usize>, usize, usize), (i64, f64)>,
@@ -109,6 +114,7 @@ impl<'a, S: Source> Solver<'a, S> {
             lookahead_branch: DEFAULT_LOOKAHEAD_BRANCH,
             lookahead_exact_max: DEFAULT_EXACT_MAX,
             win_bonus: 0.0,
+            fused: None,
             exact: ExactEndgame::new(source, weights, DEFAULT_LOSS_PENALTY),
             memo: Memo::new(DEFAULT_MEMO_LIMIT),
             lookahead_memo: Memo::new(DEFAULT_MEMO_LIMIT),
@@ -123,6 +129,15 @@ impl<'a, S: Source> Solver<'a, S> {
         std::mem::swap(&mut self.memo, &mut memos.best);
         std::mem::swap(&mut self.lookahead_memo, &mut memos.lookahead);
         self.exact.swap_memo(&mut memos.exact);
+    }
+
+    /// Lends the solver an answer-major copy of the table, which `fused`
+    /// dispatches mid-sized positions to. Off unless asked for: it is a second
+    /// 168 MB, and it wins nothing at the widest positions or the smallest.
+    pub fn with_fused(mut self, fused: Option<&'a Transposed>) -> Self {
+        self.fused = fused;
+        self.exact = self.exact.with_fused(fused);
+        self
     }
 
     pub fn with_hard(mut self, hard: bool) -> Self {
@@ -196,15 +211,16 @@ impl<'a, S: Source> Solver<'a, S> {
         let weights = self.slice_weights(candidates);
         match self.mode {
             Mode::Entropy => {
-                let scores = kernels::ig_all(self.source, candidates, &weights, pool);
+                let scores = fused::ig_all(self.source, self.fused, candidates, &weights, pool);
                 if self.win_bonus != 0.0 {
                     self.priced_win(scores, candidates, &weights, pool)
                 } else {
                     scores
                 }
             }
-            Mode::Expected => kernels::expected_guesses_all(
+            Mode::Expected => fused::expected_guesses_all(
                 self.source,
+                self.fused,
                 candidates,
                 &weights,
                 &self.params,

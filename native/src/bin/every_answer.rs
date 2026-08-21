@@ -6,7 +6,7 @@
 //! is no sampling error to hide behind, and README's *Results* table is the
 //! number to hit.
 //!
-//!     every_answer <repo root> [--mode entropy|expected] [--hard]
+//!     every_answer <repo root> [--mode entropy|expected] [--hard] [--fused]
 //!                              [--no-exact] [--prior <slug>] [--json]
 //!                              [--dump <path>]
 
@@ -18,7 +18,7 @@ use wordle_core::estimator::load_fit;
 use wordle_core::game::{every_answer, exact_stats, MAX_GUESSES};
 use wordle_core::priors::{all_configs, build_weights, PriorConfig, ShapeTables};
 use wordle_core::solver::{Mode, Solver};
-use wordle_core::source::{Live, Table};
+use wordle_core::source::{Live, Table, Transposed};
 use wordle_core::WordleData;
 
 struct Options {
@@ -30,6 +30,7 @@ struct Options {
     json: bool,
     /// Score pairs on the spot instead of building the table, as WASM must.
     live: bool,
+    fused: bool,
     /// Where to write the per-answer guess counts, for Python to diff.
     dump: Option<String>,
 }
@@ -43,6 +44,7 @@ fn parse() -> Result<Options, String> {
         prior: None,
         json: false,
         live: false,
+        fused: wordle_core::fused::enabled_by_default(),
         dump: None,
     };
     let mut args = env::args().skip(1);
@@ -61,6 +63,7 @@ fn parse() -> Result<Options, String> {
             "--prior" => out.prior = args.next(),
             "--json" => out.json = true,
             "--live" => out.live = true,
+            "--fused" => out.fused = true,
             "--dump" => out.dump = args.next(),
             _ if positional == 0 => {
                 out.root = arg;
@@ -75,6 +78,7 @@ fn parse() -> Result<Options, String> {
 /// Plays every answer, whichever way feedback is coming from.
 fn sweep<S: wordle_core::source::Source>(
     source: &S,
+    fused: Option<&Transposed>,
     weights: &[f64],
     params: Vec<f64>,
     form: wordle_core::estimator::Form,
@@ -82,6 +86,7 @@ fn sweep<S: wordle_core::source::Source>(
     n_words: usize,
 ) -> (Vec<f64>, usize) {
     let mut solver = Solver::new(source, weights, params, form, options.mode)
+        .with_fused(fused)
         .with_hard(options.hard)
         .with_use_exact(options.use_exact);
     let lengths = every_answer(&mut solver, MAX_GUESSES);
@@ -111,11 +116,28 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
     };
     let build_secs = built.elapsed().as_secs_f64();
 
+    // the answer-major twin, only where it was asked for: another 168 MB
+    let turned = Instant::now();
+    let transposed = table
+        .as_ref()
+        .filter(|_| options.fused)
+        .map(Transposed::build);
+    let fused_secs = transposed.as_ref().map_or(0.0, |_| turned.elapsed().as_secs_f64());
+
     let started = Instant::now();
     let (lengths, opening_index) = match &table {
-        Some(table) => sweep(table, &weights, params, form, options, data.n_words()),
+        Some(table) => sweep(
+            table,
+            transposed.as_ref(),
+            &weights,
+            params,
+            form,
+            options,
+            data.n_words(),
+        ),
         None => sweep(
             &Live::new(&data.words),
+            None,
             &weights,
             params,
             form,
@@ -140,13 +162,14 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
     if options.json {
         println!(
             "{{\"slug\": \"{}\", \"mean\": {:.17}, \"loss_probability\": {:.17}, \
-             \"opening\": \"{}\", \"seconds\": {:.3}, \"table_seconds\": {:.3}}}",
+             \"opening\": \"{}\", \"seconds\": {:.3}, \"table_seconds\": {:.3}, \"fused_seconds\": {:.3}}}",
             config.slug(),
             mean,
             loss,
             opening_word,
             secs,
-            build_secs
+            build_secs,
+            fused_secs
         );
     } else {
         let totals = wordle_core::profile::totals();

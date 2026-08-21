@@ -13,6 +13,7 @@ pub mod data;
 pub mod estimator;
 pub mod exact;
 pub mod feedback;
+pub mod fused;
 pub mod game;
 pub mod json;
 pub mod kernels;

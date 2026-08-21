@@ -118,7 +118,7 @@ pub const RESCAN_MAX: usize = 128;
 /// 12,947 indices each time is pure waste -- `kernels.py` caches the same array
 /// in `_ALL_ROWS` for the same reason. The length check covers the one case a
 /// single process could hold two word lists; it has never happened here.
-fn all_rows(n: usize) -> std::borrow::Cow<'static, [usize]> {
+pub(crate) fn all_rows(n: usize) -> std::borrow::Cow<'static, [usize]> {
     static CACHE: std::sync::OnceLock<Vec<usize>> = std::sync::OnceLock::new();
     let cached = CACHE.get_or_init(|| (0..n).collect());
     if cached.len() == n {
@@ -190,7 +190,7 @@ pub fn ig_all(
 /// Guesses still needed from one bucket. One and two candidates are worth
 /// exactly 1 and `2 - p_max`, so the estimator is only consulted above that.
 #[inline]
-fn bucket_guesses(
+pub(crate) fn bucket_guesses(
     mass: f64,
     count: f64,
     wlw: f64,
@@ -243,13 +243,7 @@ pub fn expected_guesses_all(
         for (slot, &guess) in part.iter().enumerate() {
             for i in 0..m {
                 let r = source.score(guess, candidates[i]) as usize;
-                let w = weights[i];
-                buckets.mass[r] += w;
-                buckets.count[r] += 1.0;
-                buckets.wlw[r] += wlw[i];
-                if w > buckets.heaviest[r] {
-                    buckets.heaviest[r] = w;
-                }
+                buckets.add(r, weights[i], wlw[i]);
             }
 
             let mut expected = 1.0;
@@ -271,7 +265,7 @@ pub fn expected_guesses_all(
 /// The four 243-slot accumulators the expected-guess reduce needs: a bucket's
 /// running mass, its candidate count, its total of `w log2 w`, and its heaviest
 /// single weight.
-struct Buckets {
+pub(crate) struct Buckets {
     mass: [f64; N_PATTERNS],
     count: [f64; N_PATTERNS],
     wlw: [f64; N_PATTERNS],
@@ -279,7 +273,19 @@ struct Buckets {
 }
 
 impl Buckets {
-    fn new() -> Buckets {
+    /// One candidate's contribution to the bucket its pattern names. Shared
+    /// with `fused`, so both layouts accumulate in the same order.
+    #[inline]
+    pub(crate) fn add(&mut self, r: usize, w: f64, wlw: f64) {
+        self.mass[r] += w;
+        self.count[r] += 1.0;
+        self.wlw[r] += wlw;
+        if w > self.heaviest[r] {
+            self.heaviest[r] = w;
+        }
+    }
+
+    pub(crate) fn new() -> Buckets {
         Buckets {
             mass: [0.0; N_PATTERNS],
             count: [0.0; N_PATTERNS],
@@ -293,7 +299,7 @@ impl Buckets {
     /// cheap: it stops a bucket being counted twice when a later candidate
     /// lands in it.
     #[inline]
-    fn take(&mut self, r: usize, total: f64, params: &[f64], form: &Form) -> f64 {
+    pub(crate) fn take(&mut self, r: usize, total: f64, params: &[f64], form: &Form) -> f64 {
         if self.count[r] <= 0.0 {
             return 0.0;
         }
