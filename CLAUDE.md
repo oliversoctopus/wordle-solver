@@ -10,8 +10,6 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 ## Conventions
 
-**American English**, everywhere: prose, comments, identifiers, CSS custom properties, UI strings. `color`, `gray`, `favor`, `labeled`, `modeled`, `minimize`/`normalize`/`optimize`. The project was written in British English and converted wholesale on 2026-08-09, so a British spelling in existing code is a leftover to fix, not a convention to match.
-
 **Comments stay to a line or two.** No multi-paragraph blocks justifying a change, no measurement tables in source. The reasoning and the numbers go in `README.md`; the comment says what the line does. File headers explaining what a module is are the exception and are welcome.
 
 **Vary how sentences are built.** One shape should not carry a whole paragraph: a clause, a comma, and a tail. "X, so Y", "X, rather than Y", ", which …", an em-dash aside. Each of those is good English by itself, and the trouble is only the rate at which it recurs. Mix in sentences that open on a subordinate clause, sentences joining two full clauses, and sentences that state a thing and stop. Chopping the long ones into short ones is not the fix; it reads worse than what it replaced.
@@ -141,7 +139,7 @@ It previews `site/`, so what you are editing is what deploys, and it loads no wo
 
 **Every message exists twice**, once in `web.py` and once in the Rust the static build answers from. Both are listed and both have to be edited; carrying an edit across was tried and does not work, since the two write their placeholders differently and `{index + 1}` is not a name Rust can have. `tests/rust_parity.py`'s message check drives both with the same bad requests and fails when one of them was rewritten and the other was not.
 
-**`wording_history.json` is a record of the past.** Its `was:` fields quote what the code used to say. Do not sweep it with a project-wide rewrite — that makes it false. It was deliberately left British when everything else was converted.
+**`wording_history.json` is a record of the past.** Its `was:` fields quote what the code used to say. Do not sweep it with a project-wide rewrite — that makes it false. It is left exactly as written, even where the code it quotes has since been reworded.
 
 ## Numbers in the documents
 
