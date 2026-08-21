@@ -47,7 +47,11 @@ Now the key engineering move. The feedback for a (guess, answer) pair never chan
 feedback_table[guess_index, answer_index] = pattern number   # one uint8
 ```
 
-That's 12,947² ≈ 167 million bytes — the `feedback_table.npy` file. Building it takes a while; after that, "what would I see?" is a single array lookup instead of a string comparison. This is the same instinct as a prefix-sum table: pay O(n²) once so every query is O(1). Every inner loop in the project is a scan along one row of this table.
+That's 12,947² ≈ 167 million bytes — the `feedback_table.npy` file. Building it takes a while; after that, "what would I see?" is a single array lookup instead of a string comparison. This is the same instinct as a prefix-sum table: pay O(n²) once so every query is O(1). Almost every inner loop in the project is a scan along one row of this table.
+
+Almost, because the table is a speed choice rather than a necessity, and the choice is closer than 167 MB suggests. Scoring the rule afresh on every pair costs about 3.5× a lookup — 0.7 ms against 0.2 ms on a median turn-two position, and 18.5 ms against 5.3 ms on the worst of them. On a machine that can hold the file that ratio settles the matter, which is why the file exists. It settles the other way in a browser tab, running the same solver compiled to WebAssembly, where 167 MB can be neither downloaded nor rebuilt and 18.5 ms is a comfortable price for one turn.
+
+That build does not give up tabulating; it tabulates the sliver it needs. The endgame search of §12 visits hundreds of nodes for a single position and rescans the same thousands of guesses at every one of them, and every candidate it will ever see belongs to the set it started with — so scoring that block once, 440 KB rather than 167 MB, turns all the rest of the search back into lookups. Everything below assumes the full table, which is what every measurement in this document was taken on.
 
 ### What the program is actually holding
 
@@ -639,7 +643,7 @@ Modeling the editor beat improving the search, every time.
 
 One thread has run underneath all of the above without being named. Choosing a guess means scoring ~13k words against a candidate set, the training loop does that a few million times, and `analysis/` sweeps run it over every word in the list — none of which would terminate on the naive reading of any formula here. Five ideas do the work, and each shows up more than once.
 
-**Precompute whatever does not vary.** The feedback for a (guess, answer) pair is fixed forever, so it becomes a 167 MB table (§1). `w log w` depends on the candidate but not the guess, so it leaves the inner loop entirely (§7). `f` is always reached through an entropy, so it takes `x = log₂ n` rather than `n` and saves a round trip through exponentiation (§7). In each case the trick is noticing that a quantity inside a doubly-nested loop only depends on the outer index.
+**Precompute whatever does not vary.** The feedback for a (guess, answer) pair is fixed forever, so it becomes a 167 MB table — or, where that cannot be held, the 440 KB of it one search will ever read (§1). `w log w` depends on the candidate but not the guess, so it leaves the inner loop entirely (§7). `f` is always reached through an entropy, so it takes `x = log₂ n` rather than `n` and saves a round trip through exponentiation (§7). In each case the trick is noticing that a quantity inside a doubly-nested loop only depends on the outer index.
 
 **Cache whatever recurs.** Positions repeat constantly — at most 243 of them behind a fixed opening — so results are memoized on the candidate set, which is worth about 50× and is the difference between an overnight sweep and a coffee break (§13). The compiled kernels are cached to disk (§1), and the fitted `f` to `estimator_cache/` (§10), for the same reason at longer timescales.
 
@@ -660,6 +664,7 @@ In reading order:
 | where | what it establishes |
 | --- | --- |
 | `wordle_data.score_guess` | the feedback rule and the precomputed table (§1) |
+| `source::Columns` | the tab-sized table, where the full one cannot be held (§1) |
 | `priors.build_weights` | the weight vector over answers (§4) |
 | `priors._repeat_shape` | the repeat shape, binned by first appearance (§5.1) |
 | `priors._curation_shape` | the curation shapes, WordleBot and frequency (§5.2, §5.3) |
