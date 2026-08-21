@@ -7,7 +7,9 @@
 //! number to hit.
 //!
 //!     every_answer <repo root> [--mode entropy|expected] [--hard]
-//!                              [--fused] [--serial]
+//!                              [--fused] [--serial] [--form <name>]
+//!                              [--params a,b,c] [--win-bonus <x>]
+//!                              [--exact-max <n>] [--loss-penalty <x>]
 //!                              [--no-exact] [--prior <slug>] [--json]
 //!                              [--dump <path>]
 
@@ -15,10 +17,10 @@ use std::env;
 use std::process::ExitCode;
 use std::time::Instant;
 
-use wordle_core::estimator::load_fit;
+use wordle_core::estimator::{get_form, load_fit};
 use wordle_core::game::{every_answer, every_answer_across_cores, exact_stats, MAX_GUESSES};
 use wordle_core::priors::{all_configs, build_weights, PriorConfig, ShapeTables};
-use wordle_core::solver::{Mode, Solver};
+use wordle_core::solver::{Mode, Solver, DEFAULT_EXACT_MAX, DEFAULT_LOSS_PENALTY};
 use wordle_core::source::{Live, Table, Transposed};
 use wordle_core::WordleData;
 
@@ -33,8 +35,18 @@ struct Options {
     live: bool,
     fused: bool,
     serial: bool,
+    form: Option<String>,
+    params: Option<Vec<f64>>,
+    win_bonus: f64,
+    exact_max: Option<usize>,
+    loss_penalty: Option<f64>,
     /// Where to write the per-answer guess counts, for Python to diff.
     dump: Option<String>,
+}
+
+fn next_number<I: Iterator<Item = String>>(args: &mut I, flag: &str) -> Result<f64, String> {
+    let text = args.next().ok_or_else(|| format!("{flag} wants a number"))?;
+    text.parse().map_err(|_| format!("{flag} got {text:?}, which is not a number"))
 }
 
 fn parse() -> Result<Options, String> {
@@ -48,6 +60,11 @@ fn parse() -> Result<Options, String> {
         live: false,
         fused: wordle_core::fused::enabled_by_default(),
         serial: false,
+        form: None,
+        params: None,
+        win_bonus: 0.0,
+        exact_max: None,
+        loss_penalty: None,
         dump: None,
     };
     let mut args = env::args().skip(1);
@@ -68,6 +85,18 @@ fn parse() -> Result<Options, String> {
             "--live" => out.live = true,
             "--fused" => out.fused = true,
             "--serial" => out.serial = true,
+            "--form" => out.form = args.next(),
+            "--params" => {
+                let text = args.next().ok_or("--params wants a comma-separated list")?;
+                let mut values = Vec::new();
+                for field in text.split(',').filter(|f| !f.trim().is_empty()) {
+                    values.push(field.trim().parse().map_err(|_| format!("{field:?} is not a number"))?);
+                }
+                out.params = Some(values);
+            }
+            "--win-bonus" => out.win_bonus = next_number(&mut args, "--win-bonus")?,
+            "--exact-max" => out.exact_max = Some(next_number(&mut args, "--exact-max")? as usize),
+            "--loss-penalty" => out.loss_penalty = Some(next_number(&mut args, "--loss-penalty")?),
             "--dump" => out.dump = args.next(),
             _ if positional == 0 => {
                 out.root = arg;
@@ -94,6 +123,9 @@ fn sweep<S: wordle_core::source::Source>(
             .with_fused(fused)
             .with_hard(options.hard)
             .with_use_exact(options.use_exact)
+            .with_win_bonus(options.win_bonus)
+            .with_exact_max(options.exact_max.unwrap_or(DEFAULT_EXACT_MAX))
+            .with_loss_penalty(options.loss_penalty.unwrap_or(DEFAULT_LOSS_PENALTY))
     };
     let lengths = if options.serial {
         every_answer(&mut build(), MAX_GUESSES)
@@ -117,13 +149,25 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
 
     let tables = ShapeTables::load(&options.root)?;
     let weights = build_weights(&data, &config, &tables)?;
-    let (form, params) = load_fit(&options.root, &config.slug())?;
+    let (form, params) = match (&options.form, &options.params) {
+        // an archived fit being replayed, rather than the one in the cache
+        (Some(name), Some(values)) => (
+            get_form(name).ok_or_else(|| format!("no form named {name:?}"))?,
+            values.clone(),
+        ),
+        _ => load_fit(&options.root, &config.slug())?,
+    };
 
     let built = Instant::now();
     let table = if options.live {
         None
     } else {
-        Some(Table::build(&data.words))
+        // the shipped table where there is one; building it is two seconds a run
+        let path = format!("{}/data/derived/feedback_table.npy", options.root);
+        Some(match Table::load(&path, data.n_words()) {
+            Ok(table) => table,
+            Err(_) => Table::build(&data.words),
+        })
     };
     let build_secs = built.elapsed().as_secs_f64();
 

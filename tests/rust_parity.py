@@ -618,7 +618,14 @@ def check_every_answer(report):
         data = load_data()
         config = priors.PriorConfig()
         solver = WordleSolver(data=data, config=config, fused=False)
-        mine = every_answer(solver)
+        # the oracle has to be the Python loop: `common.every_answer` hands the
+        # sweep to this very binary where it can, and a check comparing it
+        # against itself would pass whatever either side did
+        os.environ["WORDLE_NO_RUST"] = "1"
+        try:
+            mine = every_answer(solver)
+        finally:
+            os.environ.pop("WORDLE_NO_RUST", None)
         got = np.fromfile(dump, dtype="<f8")
         if got.shape != mine.shape:
             report(f"{got.shape} against {mine.shape}")

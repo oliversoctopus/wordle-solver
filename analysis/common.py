@@ -1,7 +1,7 @@
 """Shared loading for the measurement scripts.
 
-Importing this puts the project root on ``sys.path``, so the scripts can be run
-from anywhere:
+Importing this puts the project root and this directory on ``sys.path``, so the
+scripts can be run from anywhere:
 
     python analysis/repeat_shapes.py
 """
@@ -12,9 +12,15 @@ import sys
 
 import numpy as np
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+# both, so the scripts import the same way whether they are run as
+# `python analysis/foo.py` or reached as `analysis.common` from tests/
+for path in (ROOT, HERE):
+    if path not in sys.path:
+        sys.path.insert(0, path)
+
+import rust  # noqa: E402  -- needs the path above
 
 DATA = os.path.join(ROOT, "data")
 
@@ -97,7 +103,15 @@ def every_answer(solver, max_guesses=MAX_GUESSES):
     The solver is deterministic, so a game's outcome is a pure function of the
     answer: this is the entire sample space, not a draw from it.  A loss counts
     as one guess over the limit, the convention every measured result here uses.
+
+    Answered by the Rust where it was built and can reproduce these settings,
+    which is most of a sweep-driven script's wall clock; ``WORDLE_NO_RUST=1``
+    forces the loop below.  The two return the same lengths and
+    ``tests/rust_parity.py --every-answer`` is what says so.
     """
+    lengths = rust.every_answer(solver, max_guesses)
+    if lengths is not None:
+        return lengths
     out = np.empty(len(solver.weights))
     for answer in range(len(out)):
         guesses, _ = solver.play(answer, max_guesses=max_guesses,

@@ -71,6 +71,35 @@ impl Table {
         assert_eq!(data.len(), n * n, "table is not n by n");
         Table { data, n }
     }
+
+    /// Reads `feedback_table.npy` where `feedback_table.py` has left one.
+    ///
+    /// Warm, that is 0.03 s against the two seconds `build` takes, which is
+    /// worth having whenever a process is short enough for the difference to
+    /// show -- an analysis script shelling out per sweep, above all. The
+    /// on-disk form is numpy's: a magic string, a header naming dtype and
+    /// shape, then the bytes in C order.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn load(path: &str, n: usize) -> Result<Table, Box<dyn std::error::Error>> {
+        let bytes = std::fs::read(path)?;
+        // the magic numpy stamps on every .npy, spelled out rather than
+        // escaped so the byte survives a pass through any tool
+        const MAGIC: [u8; 6] = [0x93, b'N', b'U', b'M', b'P', b'Y'];
+        if bytes.len() < 10 || bytes[..6] != MAGIC {
+            return Err(format!("{path} is not a .npy file").into());
+        }
+        let header_len = u16::from_le_bytes([bytes[8], bytes[9]]) as usize;
+        let start = 10 + header_len;
+        let header = std::str::from_utf8(&bytes[10..start])?;
+        if !header.contains("'|u1'") || header.contains("'fortran_order': True") {
+            return Err(format!("{path} is not C-order bytes: {header}").into());
+        }
+        let data = bytes[start..].to_vec();
+        if data.len() != n * n {
+            return Err(format!("{path} holds {} bytes, not {n} by {n}", data.len()).into());
+        }
+        Ok(Table { data, n })
+    }
 }
 
 impl Source for Table {
