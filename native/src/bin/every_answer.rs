@@ -6,7 +6,8 @@
 //! is no sampling error to hide behind, and README's *Results* table is the
 //! number to hit.
 //!
-//!     every_answer <repo root> [--mode entropy|expected] [--hard] [--fused]
+//!     every_answer <repo root> [--mode entropy|expected] [--hard]
+//!                              [--fused] [--serial]
 //!                              [--no-exact] [--prior <slug>] [--json]
 //!                              [--dump <path>]
 
@@ -15,7 +16,7 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 use wordle_core::estimator::load_fit;
-use wordle_core::game::{every_answer, exact_stats, MAX_GUESSES};
+use wordle_core::game::{every_answer, every_answer_across_cores, exact_stats, MAX_GUESSES};
 use wordle_core::priors::{all_configs, build_weights, PriorConfig, ShapeTables};
 use wordle_core::solver::{Mode, Solver};
 use wordle_core::source::{Live, Table, Transposed};
@@ -31,6 +32,7 @@ struct Options {
     /// Score pairs on the spot instead of building the table, as WASM must.
     live: bool,
     fused: bool,
+    serial: bool,
     /// Where to write the per-answer guess counts, for Python to diff.
     dump: Option<String>,
 }
@@ -45,6 +47,7 @@ fn parse() -> Result<Options, String> {
         json: false,
         live: false,
         fused: wordle_core::fused::enabled_by_default(),
+        serial: false,
         dump: None,
     };
     let mut args = env::args().skip(1);
@@ -64,6 +67,7 @@ fn parse() -> Result<Options, String> {
             "--json" => out.json = true,
             "--live" => out.live = true,
             "--fused" => out.fused = true,
+            "--serial" => out.serial = true,
             "--dump" => out.dump = args.next(),
             _ if positional == 0 => {
                 out.root = arg;
@@ -85,11 +89,18 @@ fn sweep<S: wordle_core::source::Source>(
     options: &Options,
     n_words: usize,
 ) -> (Vec<f64>, usize) {
-    let mut solver = Solver::new(source, weights, params, form, options.mode)
-        .with_fused(fused)
-        .with_hard(options.hard)
-        .with_use_exact(options.use_exact);
-    let lengths = every_answer(&mut solver, MAX_GUESSES);
+    let build = || {
+        Solver::new(source, weights, params.clone(), form.clone(), options.mode)
+            .with_fused(fused)
+            .with_hard(options.hard)
+            .with_use_exact(options.use_exact)
+    };
+    let lengths = if options.serial {
+        every_answer(&mut build(), MAX_GUESSES)
+    } else {
+        every_answer_across_cores(n_words, MAX_GUESSES, &build)
+    };
+    let mut solver = build();
     let opening = solver.best_guess(&(0..n_words).collect::<Vec<_>>(), Some(MAX_GUESSES));
     (lengths, opening.0)
 }
