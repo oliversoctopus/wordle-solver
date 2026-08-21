@@ -1,4 +1,4 @@
-﻿"""Numba kernels that score guesses against a candidate set.
+"""Numba kernels that score guesses against a candidate set.
 
 All three scorers share one shape: for each guessable word, bucket the current
 candidates by the feedback pattern they would produce, then reduce those
