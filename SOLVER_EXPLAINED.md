@@ -51,8 +51,6 @@ That's 12,947² ≈ 167 million bytes — the `feedback_table.npy` file. Buildin
 
 Almost, because the table is a speed choice rather than a necessity, and the choice is closer than 167 MB suggests. Scoring the rule afresh on every pair costs about 3.5× a lookup — 0.7 ms against 0.2 ms on a median turn-two position, and 18.5 ms against 5.3 ms on the worst of them. On a machine that can hold the file that ratio settles the matter, which is why the file exists. It settles the other way in a browser tab, running the same solver compiled to WebAssembly, where 167 MB can be neither downloaded nor rebuilt and 18.5 ms is a comfortable price for one turn.
 
-That build does not give up tabulating; it tabulates the sliver it needs. The endgame search of §12 visits hundreds of nodes for a single position and rescans the same thousands of guesses at every one of them, and every candidate it will ever see belongs to the set it started with — so scoring that block once, 440 KB rather than 167 MB, turns all the rest of the search back into lookups. Everything below assumes the full table, which is what every measurement in this document was taken on.
-
 ### What the program is actually holding
 
 Under all of that is a shape in memory, and three later arguments — the rearrangement in §7, the memory bill in §8, the packed keys in §12 — are arguments about that shape rather than about Wordle, so it is worth setting down before any of them.
@@ -324,7 +322,7 @@ split  : 2.3311575356382495     # agree to 1.3e-15
 
 ## 8. The scoring loop, and where the time actually goes
 
-Removing those logarithms exposed what was underneath, and it was not what the arithmetic suggested. This section is the rest of what `kernels.py` does, and it is worth its own space because the reasoning generalizes: the obvious cost model was wrong twice.
+Removing those logarithms exposed what was underneath, and it was not what the arithmetic suggested. This section is the rest of what the scoring loop does and what it costs — most of it `kernels.py` — and it is worth its own space because the reasoning generalizes: the obvious cost model was wrong twice.
 
 **First wrong assumption: that wide positions are the expensive ones.** They are the expensive *individual* calls, but small candidate sets are scored far more often — every node of the endgame search and every late turn of every training rollout scans a handful of candidates against all ~13k guesses. The aggregate cost lives in the small cases, so that is where to optimize.
 
@@ -355,11 +353,13 @@ How far apart the two cases can get is bounded, and the arithmetic is worth doin
 
 Indexing it `[answer, guess]` instead is the obvious alternative, and it does fix the reads: a kernel written for that layout takes the same time on scattered candidates as on adjacent ones, which the shipped one plainly does not. What it does not do is make the scatter go away. Fixing a guess and walking the candidates finishes one guess before starting the next, so a single set of 243 buckets serves a whole block of 64; fixing a candidate and walking the guesses leaves every guess in the block partway through at once, so each needs a set of its own. Those buckets are read and written on every (guess, candidate) pair — exactly as often as the table is — so the cost moves rather than disappearing, from the table to the accumulator.
 
-The trade can be dodged rather than taken. For a block of G guesses, read the G × m tile out of an answer-major copy — contiguous, G bytes per candidate — transposing it into a small buffer on the way in. Each guess's feedback vector is then a contiguous row of that tile, so the reduce is the one above, over one accumulator that stays in L1. That is what `fused_kernels` does, and against the candidate sets real play produces it is worth 1.40× between 200 and 400 candidates and 1.20× between 401 and 600, falling through parity by about 600 as the tile stops fitting in cache.
+The trade can be dodged rather than taken. For a block of G guesses, read the G × m tile out of an answer-major copy — contiguous, G bytes per candidate — transposing it into a small buffer on the way in, so that each guess's feedback vector is a contiguous row of that tile and the reduce is the one above, over an accumulator that stays in L1. That is what `fused_kernels` does, and against the candidate sets real play produces it is worth 1.40× between 200 and 400 candidates and 1.20× between 401 and 600, falling through parity by about 600 as the tile stops fitting in cache. Above that there is nothing left to recover, the shipped scan being already at a full cache line per fetch, so the two layouts are complementary rather than ranked: `fused_kernels` is a dispatch below 600 and not a replacement, worth 1.09× over whole games under expected guesses and 1.63× under entropy.
 
-Above that the shipped layout cannot be beaten, and the reason is structural rather than a matter of tuning. Reducing a guess needs that guess's whole feedback vector, which an answer-major table holds as a strided column, so the alternative is forced either to keep every guess in the block accumulating at once or to rebuild the vector by transposing — and at the widest positions the shipped scan is already reading the table a full cache line at a time, leaving nothing for either to recover. The opening scan is where that bites hardest, being the most expensive single call in the game.
+### When there is no table to read
 
-The two layouts are therefore complementary rather than ranked, which is why `fused_kernels` is a dispatch below 600 candidates and not a replacement, and why it is off unless asked for. Turned on it is worth 1.09× over whole games under expected guesses and 1.63× under entropy; the distance between those and the per-kernel figures is simply how much of a game is not scoring at all, the endgame search's own recursion above all. It costs 168 MB held in memory, built in about 0.3 s from the table already loaded, and there is no second file.
+All of that is a statement about the cost of *reading* the table, so it is worth asking what the bill looks like without one. §1 put the price of scoring a pair afresh at about 3.5× a lookup, which for choosing a guess is comfortable. The endgame search of §12 is where it stops being comfortable: that search visits hundreds of nodes for a single position and rescans the whole guess list at every one of them, so a set of 34 candidates has the coloring rule run over the same half-million pairs several hundred times. Two rescanning kernels come to 84% of that position, and the turn takes 5.6 s — long enough that a tab appears to have died.
+
+The fix is this section's own instinct applied at a smaller scope. Every candidate the search will ever see belongs to the set it began with, since each bucket is a subset of the one above it, so the pairs it can possibly ask about are known before it starts: score every guess against that starting set once, up front, and every node below reads a byte instead of coloring a word. That is 440 KB rather than 167 MB and one scan rather than hundreds, and it takes the same turn from 5.6 s to 1.1 s. It gives up no exactness doing it — nothing outside those columns is ever asked for.
 
 ### The optimization that had to be taken back out
 
@@ -643,7 +643,7 @@ Modeling the editor beat improving the search, every time.
 
 One thread has run underneath all of the above without being named. Choosing a guess means scoring ~13k words against a candidate set, the training loop does that a few million times, and `analysis/` sweeps run it over every word in the list — none of which would terminate on the naive reading of any formula here. Five ideas do the work, and each shows up more than once.
 
-**Precompute whatever does not vary.** The feedback for a (guess, answer) pair is fixed forever, so it becomes a 167 MB table — or, where that cannot be held, the 440 KB of it one search will ever read (§1). `w log w` depends on the candidate but not the guess, so it leaves the inner loop entirely (§7). `f` is always reached through an entropy, so it takes `x = log₂ n` rather than `n` and saves a round trip through exponentiation (§7). In each case the trick is noticing that a quantity inside a doubly-nested loop only depends on the outer index.
+**Precompute whatever does not vary.** The feedback for a (guess, answer) pair is fixed forever, so it becomes a 167 MB table (§1), or, where that cannot be held, the 440 KB of it one search will ever read (§8). `w log w` depends on the candidate but not the guess, so it leaves the inner loop entirely (§7). `f` is always reached through an entropy, so it takes `x = log₂ n` rather than `n` and saves a round trip through exponentiation (§7). In each case the trick is noticing that a quantity inside a doubly-nested loop only depends on the outer index.
 
 **Cache whatever recurs.** Positions repeat constantly — at most 243 of them behind a fixed opening — so results are memoized on the candidate set, which is worth about 50× and is the difference between an overnight sweep and a coffee break (§13). The compiled kernels are cached to disk (§1), and the fitted `f` to `estimator_cache/` (§10), for the same reason at longer timescales.
 
@@ -664,13 +664,13 @@ In reading order:
 | where | what it establishes |
 | --- | --- |
 | `wordle_data.score_guess` | the feedback rule and the precomputed table (§1) |
-| `source::Columns` | the tab-sized table, where the full one cannot be held (§1) |
 | `priors.build_weights` | the weight vector over answers (§4) |
 | `priors._repeat_shape` | the repeat shape, binned by first appearance (§5.1) |
 | `priors._curation_shape` | the curation shapes, WordleBot and frequency (§5.2, §5.3) |
 | `kernels._ig` | the entropy scorer (§3) |
 | `estimator.effective_size` | effective size, and the split-logarithm rearrangement (§7) |
 | `kernels._expected_guesses` | the expected-guesses scorer, and the scoring loop (§8, §9) |
+| `source::Columns` | the same scan with no table behind it (§8) |
 | `estimator.FORMS`, `estimator.fit` | `f`, its functional forms, and the monotonicity guard (§9, §10) |
 | `train.policy_iteration` | policy iteration (§10) |
 | `exact.ExactEndgame` | the endgame search, and the loss penalty (§11, §12) |
