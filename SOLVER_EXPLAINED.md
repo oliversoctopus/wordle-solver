@@ -136,7 +136,7 @@ Those two 0.10s look aggressive against Wordle's full history, and the reason th
 | curation only | 3.8455 | **3.4903** |
 | both | 3.7507 | **3.0770** |
 
-Read *down* a column, never across a row: each row's weights are its own prior's, so a concentrated prior makes the game genuinely easier and no two rows are comparable. What the columns show is the gap between the two objectives — 0.67 guesses with both priors on, 0.0505 with none, thirteen times less for exactly the same machinery. §9 shows why that collapse is an identity rather than a coincidence.
+Read *across* a row, never down a column: each row's weights are its own prior's, so a concentrated prior makes the game genuinely easier and no two rows are comparable. What a row does show is the gap between the two objectives — 0.67 guesses with both priors on, 0.0505 with none, thirteen times less for exactly the same machinery. §9 shows why that collapse is an identity rather than a coincidence.
 
 Three groups says how much mass each one gets, not how it spreads *within* one, and the obvious answer — flat — is wrong twice over. It says `cigar` (Wordle #1) and `sandy` (#1227) are equally likely to come round again, and that `squid` and `xylyl` are equally likely to be tomorrow's answer. The second is the expensive one: that group is 10,638 of the 12,947 words, so it dominates the candidate *count* at almost every position while holding only 9% of the mass. Call the within-group spread the group's **shape**; both were uniform in the original design and both are now sharpened, which is §5.
 
@@ -229,7 +229,7 @@ A shape can only be judged on answers that actually happened, never on answers s
 | `binned` + `frequency` | −0.286 ± 0.184 | −0.522 ± 0.145 | −0.002 ± 0.018 | **−0.074 ± 0.028** |
 | `binned` + `wordlebot` | +0.095 ± 0.228 | −0.826 ± 0.150 | −0.012 ± 0.018 | **−0.064 ± 0.032** |
 
-Unlike §4's table, **these columns are comparable across rows**: every row is scored against the same real answers, so the blend is a genuine paired comparison rather than each prior being asked how it fares in a world of its own devising. They are comparable to nothing outside it, though, the estimator having been refitted since. What `analysis/replay.py` measures now is the one contrast both surviving fits support: `frequency` against `wordlebot` head to head, at **−0.010 ± 0.025** blended.
+Unlike §4's table, **these columns are comparable between rows**: every row is scored against the same real answers, so the blend is a genuine paired comparison rather than each prior being asked how it fares in a world of its own devising. They are comparable to nothing outside it, though, the estimator having been refitted since. What `analysis/replay.py` measures now is the one contrast both surviving fits support: `frequency` against `wordlebot` head to head, at **−0.010 ± 0.025** blended.
 
 The repeat arm is the loosest term in every blend at ±0.17–0.23, leaving the bottom two rows well inside one standard error of each other. Choosing between them rests more on whether you want a vendored scrape in the repo than on the measurement.
 
@@ -241,11 +241,17 @@ There is a mechanism that predicts otherwise, and it is worth knowing about even
 
 ### 6.4 Do the two *priors* need each other?
 
-A shape only ever redistributes mass inside a group its prior has already carved out. The prior decides whether the group is there to spread anything over: switch curation off and there is no curated-versus-not split at all, just 12,947 words sharing the mass equally (§4), non-answers included. That is the larger question, and it has a much larger answer. `analysis/replay.py --all-priors` replays the same 190 regime puzzles under all four on/off combinations, every arm paired on the same answer, for means of **3.9421** with neither prior, **3.5368** with curation alone, **3.9000** with repeat alone, and **3.1789** with both.
+A shape only ever redistributes mass inside a group its prior has already carved out. The prior decides whether the group is there to spread anything over: switch curation off and there is no curated-versus-not split at all, just 12,947 words sharing the mass equally (§4), non-answers included. That is the larger question, and it has a much larger answer. `analysis/replay.py --all-priors` replays the same 190 regime puzzles under all four on/off combinations, every arm paired on the same answer:
 
-Those four numbers do not add up, and the way they fail to is the finding. Turning the repeat prior on is worth **+0.042 ± 0.042** when curation is off — nothing — and **+0.358 ± 0.059** when it is on. The gap between those two, the *interaction*, is **−0.316 ± 0.072**, and the three-arm blend of §6.2 agrees at −0.294 ± 0.046 — a wider view of the same data rather than a second opinion, its repeat arm being those same 21 events. The priors are strongly superadditive even though their shapes are not.
+| mean guesses | curation off | curation on | on − off |
+| --- | --- | --- | --- |
+| **repeat off** | 3.9421 | 3.5368 | −0.405 ± 0.055 |
+| **repeat on** | 3.9000 | 3.1789 | −0.721 ± 0.060 |
+| **on − off** | −0.042 ± 0.042 | −0.358 ± 0.059 | **−0.316 ± 0.072** |
 
-Read from the other side it is the same number, as an interaction always is: the curation prior is worth +0.405 ± 0.055 with the repeat prior off and +0.721 ± 0.060 with it on, and 0.721 − 0.405 is that 0.316 again. Neither prior is the one that "needs" the other. What they need is each other.
+Those four means do not add up, and the way they fail to is the finding. Each margin is a plain subtraction along its own row or column, so the corner can be reached two ways and comes out the same both times — the *interaction*, and it is larger than the whole of what the repeat prior buys where curation is off, which at one standard error is nothing at all. The three-arm blend of §6.2 agrees at −0.294 ± 0.046, a wider view of the same data rather than a second opinion, its repeat arm being those same 21 events. The priors are strongly superadditive even though their shapes are not.
+
+Neither prior is the one that "needs" the other. What they need is each other.
 
 The reason is calibration, and it shows plainest if you ask what rates each prior implies — against the two the regime really shows, an 11.1% repeat rate and 8.9% off-list among the answers that are not repeats (§4):
 

@@ -1,6 +1,6 @@
 # Wordle solver
 
-It runs in a browser at **[wordle-solver-lac.vercel.app](https://wordle-solver-lac.vercel.app/)** — the whole solver, in WASM, with no server behind it. That address is Vercel's own generated one and is not meant to be permanent, so treat it as where the thing currently is rather than where it lives; a rename or a custom domain would move it.
+It runs in a browser at **[wordleoracle.vercel.app](https://wordleoracle.vercel.app/)** — the whole solver, in WASM, with no server behind it. That is a chosen name rather than Vercel's generated one, though still a subdomain of theirs, so a custom domain would move it again. The generated address the site used to answer on, `wordle-solver-lac.vercel.app`, is still aliased to the same build.
 
 ```
 python wordle_solver.py play         # interactive solving
