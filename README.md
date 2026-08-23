@@ -232,9 +232,30 @@ Concentrating the off-list mass on ~850 words gives each about 1e-4 against a us
 
 The two shapes are **additive within noise**: −0.041 and −0.037 apart, −0.069 together, against a sum of −0.078. `frequency` (−0.079 ± 0.026) and `wordlebot` (−0.069 ± 0.023) sit well inside each other's intervals too, so the shipped default is not measurably the better of the two.
 
-**Do not read the blend as guesses saved.** Its fresh column is a census of the 497 words the editor has never picked, and the 154 fresh answers he did pick are a disjoint set that behaves differently: equally easy under uniform shapes, 2.955 against 2.952, but costing +0.123 ± 0.042 under the repeat shape where the census costs +0.004 ± 0.014. The curation shape does the same thing at a third the size, +0.039 ± 0.030 against +0.002 ± 0.012. Substitute the real 154 and the four blends become −0.011, +0.059, +0.013 and −0.011. The regime replay above, which uses no census, says the same thing directly. What the shapes have going for them is the modeling evidence, not this table.
+**Do not read the blend as guesses saved.** Its fresh column is a census of the 497 words the editor has never picked, and the 154 fresh answers he did pick are a disjoint set that behaves differently: +0.123 ± 0.042 under the repeat shape where the census costs +0.004 ± 0.014. Substitute the real 154 and the four blends become −0.011, +0.059, +0.013 and −0.011, which is what the regime replay above says directly without a census at all. What the shapes have going for them is the modeling evidence, not this table.
+
+That gap is the estimator's doing, not the words'. `analysis/fresh_arm.py` plays the census on the real answers' own days, where it still costs only +0.022 ± 0.015, and then forces both arms onto one `f`, which drops the cost on the 154 to +0.058 ± 0.026 or +0.020 ± 0.017 and shrinks the gap between the sets from 0.101 to 0.017. Policy iteration samples its training answers from the prior it is fitting, whose fresh-curated group is exactly those 497 words, so every `f` in the repo is tuned on the census and has never seen a word the editor chose.
 
 One thing this measurement still needs: the form of `f` must be refitted per shape, or `sqrt` flips the opening word to `raise`, which is worse by 0.034 ± 0.028 on its own.
+
+### The prior sits in a flat basin
+
+None of the prior's settings is worth tuning, and `analysis/prior_basin.py` is what says so. It sweeps both axes over the 190 real regime puzzles with `f` held fixed throughout, so a difference is the prior's doing rather than the fit's.
+
+Inside the groups there is nothing at all. Tempering a shape — raising its relative weights to a power, 0 leaving the group flat and 1 being what ships — buys none of what it was tried for. The repeat shape wants all of its sharpening: flattening it costs **+0.042 ± 0.026**, and the curve between runs monotonically under the fit made for the flat shapes. The curation shape's sharpness makes no difference whatever, every point from flat to shipped landing within 0.011 guesses of it despite being the shape with much the larger modeling gain.
+
+Between the groups, the mass moves by a factor of thirty before the total notices:
+
+| `repeat_prob` | 0.01–0.30 | 0.40 | 0.55 | 0.71 | 0.90 |
+| --- | --- | --- | --- | --- | --- |
+| all 190 | within ±0.02 | +0.063 | +0.074 | +0.190 | +0.521 |
+| the 154 fresh | within ±0.05 | +0.162 | +0.195 | +0.318 | +0.766 |
+
+`noncurated_prob` has the same shape, flat to 0.30 and then +0.042, +0.200, +0.353, +0.442. The subgroups underneath are not flat — the repeat arm runs from +0.238 at `repeat_prob` 0.01 to −0.286 at 0.30, and the fresh arm the other way — so the trade is real and it simply cancels across the basin.
+
+That is what reconciles this with *What each prior is worth on real answers*, where switching a prior off costs 0.3 to 0.7 guesses. Off is not a small probability but a wrong one: with curation still on and the repeat prior off, used and unused curated words share the mass equally, which implies a repeat rate of 71.3%. The settings that cost anything live out at 71% and 95%, and the basin covers everything from 1% to 30%. The shipped 0.10 and the regime's measured 0.111 are both well inside it, which is the useful thing to know — the prior has to be roughly right, and beyond that the details do not reach the board.
+
+The far ends read worse than they should, since a setting `f` was never fitted for carries a borrowed estimator on top of its own miscalibration. That inflates the edges and not the middle, so the basin is at least this wide.
 
 ## Choosing a guess
 
