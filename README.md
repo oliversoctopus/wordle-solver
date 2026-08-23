@@ -527,6 +527,33 @@ Every game shares one position, and `f` decides it alone — the candidate set i
 
 What makes that worth stating is how badly `f` orders the very same words. Across the top twelve its rank correlation with the truth is **+0.371**; across the top two hundred it is **+0.724**. It cannot separate near-ties and it separates a range perfectly well — coarse discrimination and fine ordering are different jobs, and picking an opening needs only the first.
 
+## Perfecting the second guess (tried, not shipped)
+
+With the opening optimal and the exact search owning every turn from the fourth, whatever the estimator still costs has to be in the second guess. That decision is small enough to price outright rather than sample. The opening never varies, so the entire turn-2 policy is one guess per feedback pattern — 193 reachable positions, of which the endgame search already solves 142 outright, leaving 51 where `f` decides alone. `analysis/turn2_regret.py` plays out the true value of the fifty best guesses at each of those (`common.guess_value`, one playout per candidate answer) and weights each position by its prior mass, which is exactly the probability play reaches it. The estimator gives up **0.00284 guesses**, at ten positions of the fifty-one.
+
+Substituting those ten decisions and sweeping every answer pays precisely that, 3.07700 → 3.07417 against a census that predicted 0.00284. Losses move the other way, 0.0240% → 0.0384%, since a playout carries no deadline and so prices a sixth guess as freely as a second.
+
+Then it meets a distribution it was not chosen under, and the sign does not hold:
+
+| distribution | shipped | turn-2 optimum | delta |
+| --- | --- | --- | --- |
+| shipped prior (what chose them) | 3.0770 | 3.0742 | **−0.0028** |
+| uniform over all 12,947 | 4.4746 | 4.4800 | +0.0054 |
+| uniform over the curated list | 3.7523 | 3.7657 | **+0.0134** |
+| uniform over the 497 still unused | 2.9498 | 2.9398 | −0.0100 |
+| the 190 real regime answers | 4.0421 | 4.0895 | +0.0474 ± 0.0272 |
+| all 1,879 real answers ever | 3.9723 | 3.9883 | +0.0160 ± 0.0097 |
+
+Read the two real-answer rows as differences and not as levels. Both arms replay those answers under *today's* prior, in which every one of them is a word already used and priced at repeat weight, where `analysis/replay.py` rebuilds the prior from strictly earlier puzzles each day and reports the 3.1684 that *What each prior is worth on real answers* carries. The levels near 4.0 are that handicap and not a regression; the paired difference is unaffected, both arms seeing the identical prior.
+
+Neither of those rows can resolve an effect this small — 1.7σ and 1.6σ — so what they establish is not that the substitution hurts but that nothing about it is visible where it would have to pay off. The enumerated rows are exact and they disagree among themselves, which is the finding. Optimizing the second guess against one weighting of the word list makes it worse under another.
+
+Two things say why. The gain is the residue of a reshuffle rather than an improvement: **1,635 of 12,947** answers change length, carrying 11.3% of the prior's mass, and −0.0028 is what survives of 5.85% of the mass improving against 5.44% worsening. Set beside the 1.29-guess standard deviation of the per-answer changes it rides on, the net is 0.0022 of it. And the sign turns on a nudge far smaller than the gap between any prior and the editor's real process — blend the shipped prior a fifth of the way toward uniform-over-curated and the substitution is already costing guesses rather than saving them.
+
+The per-override breakdown separates the two kinds. `mudir` on the all-grey bucket helps under every enumerated weighting, by −0.0007 to −0.0065; `indol` reads −0.0003 under the shipped prior and **+0.0113** under the curated one, a sign flip and thirty-seven times the magnitude. Five of the ten help under all four, and keeping only those is worth −0.00119 — but that rule is itself a fit to the distributions it was checked against, so what it really shows is how little of the 0.0028 was ever attributable to anything but the prior's particular weighting.
+
+So the recurring result stated under *Lookahead* above arrives here in its strongest form. The cases collected there each show a better valuation failing to buy guesses; this one gives the ceiling directly. **Playing the last position the estimator decides perfectly is worth less than the error in the prior it would be perfect for**, which bounds every valuation improvement that could ever be made there — no search depth, no extra ply and no better-fitted `f` reaches past 0.0028. What remains is a better model of the editor, and *The prior sits in a flat basin* is the measurement saying that lever has been pulled too.
+
 ## Playing it yourself
 
 ```
