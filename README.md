@@ -205,9 +205,9 @@ The window row is the point of the exercise. A window has a boundary, a boundary
 
 The obvious rival is an age-based shape, with weight rising by time since last use instead of binning by where in the answer order the word first appeared. It does not beat this. Refitting its rate prequentially scores −150.1, worse than binned and barely better than uniform; the rate is unstable on twenty-odd events. A rate fixed at 2/year reaches −131.6, but only when chosen with hindsight on the same events, and it wins by piling mass on the oldest words and then paying for it on `sandy` (−11.93 against binned's −8.43) and `smile`. The Laplace floor is what makes binned survive its outliers.
 
-On its own it changes nothing that matters. Replaying all 190 real puzzles of the current regime, rebuilding the prior from strictly earlier puzzles each day, the binned prior scores 3.2211 against uniform's 3.2474 — a paired **−0.0263 ± 0.0263**, with 19 games changing length, 11 better and 8 worse. The subgroups nearly cancel: −0.143 ± 0.173 on the 21 repeat answers against −0.012 ± 0.021 on the other 169, and repeats are only a ninth of games. (Measured when a fit for the uniform shapes was still on hand; `analysis/replay.py` replays the shapes that ship now, so it no longer produces this pair.)
+On its own it changes nothing that matters, and may cost a little. Replaying all 190 real puzzles of the current regime, rebuilding the prior from strictly earlier puzzles each day, the binned prior scores 3.2263 against uniform's 3.1684 — a paired **+0.0579 ± 0.0430**, with 55 games changing length, 21 better and 34 worse. The subgroups pull against each other rather than cancelling: −0.333 ± 0.144 on the 21 repeat answers against +0.107 ± 0.044 on the other 169, and repeats are only a ninth of games. `analysis/replay.py --shapes` produces this pair.
 
-The paired sd is 0.36 guesses, so resolving a 0.02-guess effect at 2σ needs ~1,300 regime games at one per day, which is why this sat unshipped.
+The paired sd is 0.59 guesses, so resolving a 0.02-guess effect at 2σ needs ~3,500 regime games at one per day, which is why this sat unshipped.
 
 Whether the source window is drifting forward is likewise unresolved, and the evidence has weakened. The drift rate is how far the source moves per puzzle, so **0 is a static window and 1.0 is a fixed replay lag** — one puzzle a day means a constant lag drags the source forward one position a day. Over the first 18 events it was +0.55 ± 1.56, an interval covering both; over all 21 it is −0.10 ± 1.15, which has collapsed onto the static reading while still excluding nothing. The rank correlation between repeat order and source index fell the same way, +0.46 (p = 0.04) to +0.30 (p = 0.18), because all three of the newest repeats came from early in the answer order. The replay lag averages 4.36 years with an sd of 0.83, and 18 of 21 events sit between 4.4 and 5.1 years.
 
@@ -215,24 +215,24 @@ Whether the source window is drifting forward is likewise unresolved, and the ev
 
 Weighting off-list words instead of flatly is a large modeling gain on its own. Scored prequentially over the off-list answers, uniform is −9.27 nats per event; an answer-like score fitted against the curated list as positives is −8.14 at the shipped `t` = 0.35; and WordleBot's published weights, validated against a 2023 snapshot that predates 42 of the 46 events, are −6.46, with the effective support falling from 10,638 words to 911.
 
-Between the two sharpened shapes there is little to choose. `analysis/replay.py` runs `frequency` against the shipped `wordlebot` head to head: **−0.010 ± 0.025** blended, and +0.005 ± 0.049 over the 190 regime puzzles — a wash either way. The two trade rather than one dominating, `frequency` taking −0.381 ± 0.161 on the repeat arm and giving back +0.304 ± 0.112 on the off-list arm. `wordlebot` ships because it scores better as a model, not because it measurably plays better, and `frequency` is there for anyone who would rather not vendor a scrape.
+Between the two sharpened shapes there is little to choose. `analysis/replay.py` runs `frequency` against the shipped `wordlebot` head to head: **−0.010 ± 0.024** blended, and +0.016 ± 0.049 over the 190 regime puzzles — a wash either way. The two trade rather than one dominating, `frequency` taking −0.381 ± 0.161 on the repeat arm and giving back +0.304 ± 0.112 on the off-list arm. `wordlebot` ships because it scores better as a model, not because it measurably plays better, and `frequency` is there for anyone who would rather not vendor a scrape.
 
 ### What the two shapes are worth together
 
-Neither shape converts its modeling gain straight into guesses. Measured on three arms — the 21 real repeats and 46 off-list answers with the prior rebuilt as of each puzzle, plus the 497 still-unused curated words — blended at the regime's own mixture of 11.1% / 7.9% / 81.1%:
+Neither shape converts its modeling gain straight into guesses. Measured on three arms — the 21 real repeats and 46 off-list answers with the prior rebuilt as of each puzzle, plus the 497 still-unused curated words — blended at the regime's own mixture of 11.1% / 7.9% / 81.1%, against a baseline with both priors on and uniform shapes inside them:
 
 | shapes | repeat | off-list | fresh | blended |
 | --- | --- | --- | --- | --- |
-| curation `wordlebot` alone | +0.143 ± 0.078 | −0.978 ± 0.105 | +0.022 ± 0.028 | −0.044 ± 0.025 |
-| repeat `binned` alone | −0.143 ± 0.173 | −0.022 ± 0.049 | −0.006 ± 0.016 | −0.022 ± 0.024 |
-| `binned` + `frequency` | −0.286 ± 0.184 | −0.522 ± 0.145 | −0.002 ± 0.018 | **−0.074 ± 0.028** |
-| `binned` + `wordlebot` | +0.095 ± 0.228 | −0.826 ± 0.150 | −0.012 ± 0.018 | **−0.064 ± 0.032** |
+| curation `wordlebot` alone | +0.190 ± 0.164 | −0.804 ± 0.110 | +0.002 ± 0.012 | −0.041 ± 0.022 |
+| repeat `binned` alone | −0.333 ± 0.144 | −0.043 ± 0.135 | +0.004 ± 0.014 | −0.037 ± 0.022 |
+| `binned` + `frequency` | −0.476 ± 0.178 | −0.435 ± 0.131 | +0.010 ± 0.017 | **−0.079 ± 0.026** |
+| `binned` + `wordlebot` | −0.095 ± 0.153 | −0.739 ± 0.114 | +0.000 ± 0.016 | **−0.069 ± 0.023** |
 
 Concentrating the off-list mass on ~850 words gives each about 1e-4 against a used word's 5.4e-5, so past answers stop competing for the solver's attention. That is where the residual penalty `wordlebot` alone carries on the repeat arm comes from.
 
-The two shapes are **additive within noise**: −0.044 and −0.022 apart, −0.064 together, against a sum of −0.066. Each earns its place on its own modeling evidence and the pair is the best row, but nothing measured here says they need each other. `frequency` (−0.074 ± 0.028) and `wordlebot` (−0.064 ± 0.032) sit well inside each other's intervals too, so the shipped default is not measurably the better of the two.
+The two shapes are **additive within noise**: −0.041 and −0.037 apart, −0.069 together, against a sum of −0.078. `frequency` (−0.079 ± 0.026) and `wordlebot` (−0.069 ± 0.023) sit well inside each other's intervals too, so the shipped default is not measurably the better of the two.
 
-**The first three rows cannot be recomputed.** They need fits for the uniform shapes, which the repo no longer carries, and a prior with no fit raises rather than playing an invented `f`. The whole table also predates a refit that moved every configuration's winning form, so it is not comparable like-for-like with anything measured since — the policy changed, not just the data. `analysis/replay.py` measures the one contrast both surviving fits support, which is the `frequency` against `wordlebot` head-to-head above.
+**Do not read the blend as guesses saved.** Its fresh column is a census of the 497 words the editor has never picked, and the 154 fresh answers he did pick are a disjoint set that behaves differently: equally easy under uniform shapes, 2.955 against 2.952, but costing +0.123 ± 0.042 under the repeat shape where the census costs +0.004 ± 0.014. The curation shape does the same thing at a third the size, +0.039 ± 0.030 against +0.002 ± 0.012. Substitute the real 154 and the four blends become −0.011, +0.059, +0.013 and −0.011. The regime replay above, which uses no census, says the same thing directly. What the shapes have going for them is the modeling evidence, not this table.
 
 One thing this measurement still needs: the form of `f` must be refitted per shape, or `sqrt` flips the opening word to `raise`, which is worse by 0.034 ± 0.028 on its own.
 

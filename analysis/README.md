@@ -22,6 +22,7 @@ python analysis/loss_penalty.py --search      what the search adds, by its reach
 python analysis/loss_penalty.py --cost        what reaching further costs in time
 python analysis/loss_penalty.py --bound       why the pruning bound caps the penalty
 python analysis/replay.py           what the shapes are worth in guesses (slow)
+python analysis/replay.py --shapes       the four shape combinations against uniform shapes
 python analysis/replay.py --all-priors   what each prior is worth, on real answers
 python analysis/form_default.py     which form to fit by default (slower)
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
@@ -32,7 +33,7 @@ python analysis/table_layout.py     both feedback-table layouts, kernel by kerne
 python analysis/fused_gain.py       what the answer-major dispatch is worth in games
 ```
 
-The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`, both arms over every word — cheap because the restriction it measures is also what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over the four priors and thirteen with `--decisions`, which plays out ten guesses at each position rather than one; `exact_decisions.py` is under a minute, since the positions it asks about are the small ones. `opening.py` is sixteen minutes for the two hundred openings it defaults to, about five seconds each, and `--every-word` holds that rate over all 12,947 — the best part of a day. `loss_penalty.py` is nine minutes for both sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and well under one for `--policies` and about half for `--search`; `--cost` is a timing probe rather than a measurement and takes about six, while `--bound` values a single ten-word family and is seconds. `replay.py` is 80 s over the regime's real games and three minutes for `--all-priors`, which plays four arms where the default plays two; `results_tables.py` is about two minutes, and `form_default.py` the slow one — it replays 45 fitted policies where the others replay one or two. Those two and `hard_mode.py` are the ones the native sweep carries; the figures here are with it, and about 1.7× longer without.
+The first four are seconds. `hard_mode.py` is two minutes for `--all-priors`, both arms over every word — cheap because the restriction it measures is also what makes a turn cheap to score. `lookahead_accuracy.py` is seven minutes over the four priors and thirteen with `--decisions`, which plays out ten guesses at each position rather than one; `exact_decisions.py` is under a minute, since the positions it asks about are the small ones. `opening.py` is sixteen minutes for the two hundred openings it defaults to, about five seconds each, and `--every-word` holds that rate over all 12,947 — the best part of a day. `loss_penalty.py` is nine minutes for both sweeps over the four priors, a minute with `--shipped-only --skip-reach`, and well under one for `--policies` and about half for `--search`; `--cost` is a timing probe rather than a measurement and takes about six, while `--bound` values a single ten-word family and is seconds. `replay.py` is 80 s over the regime's real games, three minutes for `--all-priors`, which plays four arms where the default plays two, and three and a half for `--shapes`, which plays five; `results_tables.py` is about two minutes, and `form_default.py` the slow one — it replays 45 fitted policies where the others replay one or two. Those two and `hard_mode.py` are the ones the native sweep carries; the figures here are with it, and about 1.7× longer without.
 
 `split_ranking.py` is under ten seconds, since the positions it looks at are the small ones and nothing is played out. `table_layout.py` is about four minutes and `fused_gain.py` under one. Those two are timing probes rather than measurements, as `loss_penalty.py --cost` and the second half of `split_ranking.py` are: they move with the machine and with what else is running on it, and not with the answer log, so a rerun after `solutions.py --write` is pointless. What they compare is two ways of arranging the same arithmetic, so read the ratios and not the milliseconds.
 
@@ -52,7 +53,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §16 |
 | `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §16 |
 | `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, its `--bound` the `-atch` values in SOLVER_EXPLAINED §12(c), SOLVER_EXPLAINED §12 and §14 |
-| `replay.py` | the head-to-head paragraph under README *The curation prior's shape*, not the table's uniform-baseline rows; its `--all-priors` the whole of README *What each prior is worth on real answers* |
+| `replay.py` | the head-to-head paragraph under README *The curation prior's shape*; its `--shapes` the whole of README *What the two shapes are worth together* and the regime replay under *The repeat prior's shape*; its `--all-priors` the whole of *What each prior is worth on real answers* |
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §9 |
 | `head_to_head.py` | README *Where the estimator's guesses come from* |
@@ -84,9 +85,11 @@ That is also what lets its arms be compared across *different* priors, which no 
 
 `lookahead_accuracy.py` and `exact_decisions.py` sit between the two. Every value they report is exact — a position played out once per candidate answer — but which positions they visit, and how heavily each counts, comes from a sample of games. Their means carry a sampling error that the enumerated ones do not. The machinery is shared: `common.collect_positions`, `common.guess_value` and their neighbors are the one implementation both read.
 
-## `replay.py` lost its uniform-shape arms
+## The three fits `--shapes` needs
 
-It used to compare the sharpened shapes against the uniform ones, which needed fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`. Those fits are no longer in the repo, and since 2026-08-10 a prior with no fit raises instead of playing an invented `f`. The arms were removed rather than retrained. What is left is the comparison both remaining fits support: curation `frequency` against the shipped `wordlebot`, over the regime and by arm.
+Comparing the sharpened shapes against the uniform ones needs fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`, and a prior with no fit raises rather than playing an invented `f`. All three are in `estimator_cache/` now, fitted the way the shipped five were: nine forms archived by `wordle_solver.py compare`, ranked exactly the way `form_default.py` ranks them, and the winner written as the active fit. They came out `spline`, `anchored` and `spline`, and all three open on `salet`.
+
+They were fitted after the shipped five and against the same answer record, which is what makes the run legitimate — every arm in a `--shapes` table has to carry a fit of the same history, or the table is comparing solvers rather than shapes.
 
 ## What is not reproduced here
 
@@ -95,7 +98,5 @@ It used to compare the sharpened shapes against the uniform ones, which needed f
 `hard_mode.py` is the one that survives a refit, and it is worth knowing why: its two arms play the *same* `f`, so a refit moves both columns together and mostly cancels in the paired difference. Read the difference across refits; read the two means only against each other. `lookahead.py` does *not* get that protection even though it also pairs two arms on one fit: what it measures is how much room the base policy leaves above itself, so a better-fitted `f` shrinks it directly.
 
 Two claims in README *Lookahead* have no script: that a branch cap of 25 measures no better, and that two plies costs 205 s for the opening position alone. Each needs a position sample as well as a method, and that sample was not kept.
-
-Three rows of the README *What the two shapes are worth together* table are history now, not output: `wordlebot` alone, `binned` alone, and the uniform baseline they are measured against. Reproducing them means fitting the three uniform-shape configurations again. That is a deliberate choice about what this repo ships, and not something a rerun should do behind your back.
 
 Two figures the documents used to carry could not be reproduced exactly. The window variants' *spread* was −124…−129; the best variant here matches, but the worst is far worse, so the original must have defined the band more robustly. Only the best of the sixteen is quoted now, which is the number the argument actually needs. The drift rate's standard error was ±0.39 against ±1.56 here; the slope agrees to two decimals, so the parameterization is right and the error model is not.

@@ -11,11 +11,11 @@ so this is the slow one -- a few minutes.
    its own homework, which is what makes this the one place arms under
    *different* priors can be put side by side.
 
-By default the arms are the two curation shapes that have a cached fit,
-`frequency` against the shipped `wordlebot`.  The uniform shapes were arms here
-until 2026-08-10 and are gone with their fits: an unfitted f is no longer
-allowed to play, and this is a measurement of shapes, not of who has been
-trained.  `--all-priors` switches to the four on/off combinations instead.
+By default the arms are the two curation shapes, `frequency` against the shipped
+`wordlebot`.  `--shapes` widens that to all four sharpened combinations against
+uniform shapes, both priors on throughout, so what moves is only how each prior
+spreads its mass.  `--all-priors` instead switches the priors themselves on and
+off, which is the larger question and has the larger answer.
 
 Every arm plays the same real answers and every mean is an unweighted average
 over them, so the arms are comparable to each other however much their priors
@@ -24,10 +24,12 @@ disagree.  A whole run is not comparable to an older run: each arm is a prior
 answer log does.
 
     python analysis/replay.py                the two curation shapes
+    python analysis/replay.py --shapes       the four shape combinations
     python analysis/replay.py --all-priors   the four prior combinations
 
-Backs the head-to-head paragraph under README *The curation prior's shape*, and
-with `--all-priors` the table under *What each prior is worth on real answers*.
+Backs the head-to-head paragraph under README *The curation prior's shape*, with
+`--shapes` the table under *What the two shapes are worth together*, and with
+`--all-priors` the one under *What each prior is worth on real answers*.
 """
 
 import argparse
@@ -43,9 +45,13 @@ from solver import WordleSolver
 from wordle_data import load_data
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--all-priors", action="store_true",
-                    help="the four prior combinations against the shipped one, "
-                         "rather than the two curation shapes")
+mode = parser.add_mutually_exclusive_group()
+mode.add_argument("--all-priors", action="store_true",
+                  help="the four prior combinations against the shipped one, "
+                       "rather than the two curation shapes")
+mode.add_argument("--shapes", action="store_true",
+                  help="the four sharpened shape combinations against uniform "
+                       "shapes, both priors on throughout")
 parser.add_argument("--dump", metavar="PATH",
                     help="write every arm's per-game guess counts here, so a "
                          "contrast nobody thought to print can be computed "
@@ -63,6 +69,12 @@ END = len(words)
 SHIPPED = PriorConfig(repeat_shape="binned", curation_shape="wordlebot")
 RIVAL = PriorConfig(repeat_shape="binned", curation_shape="frequency")
 
+# the three `--shapes` rows §6.3 puts side by side: each shape sharpened alone,
+# and the pair, so their blends can be checked for additivity
+CURATION_ALONE = "curation `wordlebot` alone"
+REPEAT_ALONE = "repeat `binned` alone"
+TOGETHER = "`binned` + `wordlebot`"
+
 if args.all_priors:
     # the reference is `both`, which is the shipped prior with the shipped shapes
     BASE = ("both", SHIPPED)
@@ -70,6 +82,17 @@ if args.all_priors:
             ("curation only", PriorConfig(repeat=False)),
             ("repeat only", PriorConfig(curation=False))]
     SUBTITLE = "the four prior combinations"
+elif args.shapes:
+    # both priors on in every arm; only the shapes inside them differ
+    BASE = ("uniform shapes", PriorConfig(repeat_shape="uniform",
+                                          curation_shape="uniform"))
+    ARMS = [(CURATION_ALONE, PriorConfig(repeat_shape="uniform",
+                                         curation_shape="wordlebot")),
+            (REPEAT_ALONE, PriorConfig(repeat_shape="binned",
+                                       curation_shape="uniform")),
+            ("`binned` + `frequency`", RIVAL),
+            (TOGETHER, SHIPPED)]
+    SUBTITLE = "the four shape combinations"
 else:
     BASE = ("wordlebot (shipped)", SHIPPED)
     ARMS = [("frequency", RIVAL)]
@@ -190,20 +213,60 @@ played = {label: three_arms(config) for label, config in EVERY}
 base = played[BASE[0]]
 
 
+def blend_of(cells):
+    """A row's blend at the regime mixture, and its standard error."""
+    blend = sum(m * c[0] for m, c in zip(mix, cells))
+    return blend, np.sqrt(sum((m * c[1]) ** 2 for m, c in zip(mix, cells)))
+
+
 def blended(cells):
     """A row's three paired cells, and their blend at the regime mixture."""
-    blend = sum(m * c[0] for m, c in zip(mix, cells))
-    blend_se = np.sqrt(sum((m * c[1]) ** 2 for m, c in zip(mix, cells)))
+    blend, blend_se = blend_of(cells)
     body = " ".join(f"{c[0]:+9.3f}+-{c[1]:.3f}" for c in cells)
     return f"{body} {blend:+9.3f}+-{blend_se:.3f}"
 
 
-print(f"  {'arm':{TWIDTH}s} {'repeat':>16s} {'off-list':>16s} {'fresh':>16s} "
-      f"{'blended':>16s}")
-print("  " + "-" * (TWIDTH + 68))
+def absolute(arms):
+    """One arm's own mean on each of the three, and their blend."""
+    cells = [(np.mean(a), np.std(a, ddof=1) / np.sqrt(len(a))) for a in arms]
+    blend, blend_se = blend_of(cells)
+    body = " ".join(f"{c[0]:9.3f}+-{c[1]:.3f}" for c in cells)
+    return f"{body} {blend:9.3f}+-{blend_se:.3f}"
+
+
+HEAD = (f"  {'arm':{TWIDTH}s} {'repeat':>16s} {'off-list':>16s} {'fresh':>16s} "
+        f"{'blended':>16s}\n  " + "-" * (TWIDTH + 68))
+
+# every arm's own mean guesses, before any of them is subtracted from another
+print("  guesses each arm takes\n")
+print(HEAD)
+for label, _ in EVERY:
+    print(f"  {label:{TWIDTH}s} {absolute(played[label])}")
+
+print(f"\n  against `{BASE[0]}`, paired on the same events\n")
+print(HEAD)
+rows = {}
 for label, _ in ARMS:
-    cells = [common.paired(g, b) for g, b in zip(played[label], base)]
-    print(f"  {label:{TWIDTH}s} {blended(cells)}")
+    rows[label] = [common.paired(g, b) for g, b in zip(played[label], base)]
+    print(f"  {label:{TWIDTH}s} {blended(rows[label])}")
+
+# The mixture is itself counted off the same 190 puzzles, and the blend above
+# treats it as exact.  Its error only matters where the arms disagree, so widen
+# each row by the multinomial term and see whether the row moves.
+n = END - START
+mix_var = [m * (1 - m) / n for m in mix]
+print(f"\n  with the mixture's own error ({n} puzzles: "
+      + ", ".join(f"{100 * m:.1f}+-{100 * v ** 0.5:.1f}%"
+                  for m, v in zip(mix, mix_var)) + ")\n")
+for label, _ in ARMS:
+    blend, blend_se = blend_of(rows[label])
+    # the blend is fresh + w_rep*(repeat - fresh) + w_off*(off-list - fresh), so
+    # what the rates multiply is each arm's gap to `fresh`
+    gaps = [rows[label][i][0] - rows[label][2][0] for i in (0, 1)]
+    slack = (mix_var[0] * gaps[0] ** 2 + mix_var[1] * gaps[1] ** 2
+             - 2 * mix[0] * mix[1] / n * gaps[0] * gaps[1])
+    print(f"  {label:{TWIDTH}s} {blend:+9.3f}+-"
+          f"{np.sqrt(blend_se ** 2 + slack):.3f}")
 
 if args.all_priors:
     print()
@@ -214,6 +277,11 @@ if args.all_priors:
              for a, b, c, d in zip(played["none"], played["repeat only"],
                                    played["curation only"], base)]
     print(f"  {'interaction':{TWIDTH}s} {blended(cells)}")
+
+if args.shapes:
+    apart = blend_of(rows[CURATION_ALONE])[0] + blend_of(rows[REPEAT_ALONE])[0]
+    print(f"\n  sharpened apart they sum to {apart:+.3f}, together "
+          f"{blend_of(rows[TOGETHER])[0]:+.3f}")
 
 print()
 print(f"  Against `{BASE[0]}`, on the same real answers.  The arms are")
