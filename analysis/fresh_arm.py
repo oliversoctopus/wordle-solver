@@ -1,11 +1,11 @@
 """Why the fresh arm and the real fresh answers disagree.
 
-The three-arm table's fresh column is a census of the 497 curated words still
-unused.  The regime also produced 154 fresh answers, and no word is in both --
-one leaves the unused pile the moment the editor uses it.  Sharpening the repeat
-shape costs nothing on the census and about an eighth of a guess on the 154,
-which is what makes the blend in `replay.py --shapes` disagree with the plain
-replay above it.  This script asks where that difference comes from.
+The three-arm table's fresh column WAS a census of the 497 curated words still
+unused; it is the regime's own 154 fresh answers now, and this script is why.
+No word is in both sets -- one leaves the unused pile the moment the editor uses
+it -- and sharpening the repeat shape cost nothing on the census against about
+an eighth of a guess on the 154, which is what made the old blend in
+`replay.py --shapes` disagree with the plain replay above it.
 
 Two candidates, and the script separates them:
 
@@ -19,9 +19,10 @@ Two candidates, and the script separates them:
    actually picked.  So run the same contrast with f forced to one value in both
    arms, at each of the two fits, and see how much of the gap is left.
 
-The second is the one that carries it, which makes the fresh arm a quiet case of
-the thing SOLVER_EXPLAINED 6.2 opens by warning against: answers sampled from
-the prior, smuggled back in through the estimator rather than through the arm.
+The second is the one that carries it, which made the census a quiet case of the
+thing SOLVER_EXPLAINED 6.2 opens by warning against: answers sampled from the
+prior, smuggled back in through the estimator rather than through the arm.  It
+was training on the test set, and that is why the arm was replaced.
 Note that this locates the effect rather than proving the mechanism -- the
 confirming run is an f fitted on a distribution that includes the editor's
 picks, which is a policy iteration this does not do.
@@ -93,7 +94,7 @@ def length(solver, word):
     return len(out[0] if isinstance(out, tuple) else out)
 
 
-common.header("the census played as if today, which is what the table does")
+common.header("the census played as if today, which is what the table used to do")
 built = {cfg.slug: WordleSolver(data=data, config=cfg, params=p, form=f)
          for cfg, (p, f) in ((FLAT, FLAT_FIT), (SHARP, SHARP_FIT))}
 at_end = np.array([length(built[SHARP.slug], w) - length(built[FLAT.slug], w)

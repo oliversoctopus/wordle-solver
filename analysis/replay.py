@@ -5,11 +5,18 @@ so this is the slow one -- a few minutes.
 
 1. The regime replay: every real puzzle since the regime began, with the prior
    rebuilt from strictly earlier puzzles each day.
-2. The three-arm table: repeats / off-list / still-unused, blended at the
+2. The three-arm table: repeats / off-list / fresh curated, blended at the
    regime's own mixture.  A prior can only be judged on answers that actually
    happened; scoring it against answers sampled from its own belief is grading
    its own homework, which is what makes this the one place arms under
-   *different* priors can be put side by side.
+   *different* priors can be put side by side.  The fresh arm used to be the
+   497 curated words still unused, played as if today, and that broke the rule
+   one level down: `train.policy_iteration` draws its practice answers from the
+   prior it is fitting, whose fresh group is exactly those 497 words, so every
+   arm was being scored on what it had trained on.  `analysis/fresh_arm.py` has
+   what that was worth.  It is the regime's own 154 fresh answers now, which
+   costs precision on that arm and buys back the only thing the table has over
+   the replay above it: the off-list arm's 46 events against the window's 15.
 
 By default the arms are the two curation shapes, `frequency` against the shipped
 `wordlebot`.  `--shapes` widens that to all four sharpened combinations against
@@ -189,24 +196,22 @@ if args.all_priors:
 common.header("2. three arms, blended at the regime mixture")
 reps = [(t, w) for t, w, _ in common.repeat_events(words)]
 offs = common.offlist_events(words, curated)
-fresh = sorted(curated - set(words))
+fresh = common.fresh_events(words, curated, START)
 rep_rate = sum(1 for t, _ in reps if t >= START) / (END - START)
 off_rate = sum(1 for t, _ in offs if t >= START) / (END - START)
 mix = (rep_rate, off_rate, 1 - rep_rate - off_rate)
-print(f"arms: {len(reps)} repeats, {len(offs)} off-list, {len(fresh)} still unused")
+print(f"arms: {len(reps)} repeats, {len(offs)} off-list, {len(fresh)} fresh, "
+      f"every one an answer that really happened")
 print(f"mixture: {100*mix[0]:.1f}% / {100*mix[1]:.1f}% / {100*mix[2]:.1f}%")
 print()
 
 
-def arm(config, events, at_end=False):
-    return [guesses(config, END if at_end else t, w) for t, w in events]
-
-
-fresh_events = [(END, w) for w in fresh]
+def arm(config, events):
+    return [guesses(config, t, w) for t, w in events]
 
 
 def three_arms(config):
-    return (arm(config, reps), arm(config, offs), arm(config, fresh_events, True))
+    return (arm(config, reps), arm(config, offs), arm(config, fresh))
 
 
 played = {label: three_arms(config) for label, config in EVERY}
@@ -300,7 +305,7 @@ if args.dump:
             "mixture": list(mix),
             "events": {"repeat": [w for _, w in reps],
                        "offlist": [w for _, w in offs],
-                       "fresh": fresh},
+                       "fresh": [w for _, w in fresh]},
             "guesses": {label: [[int(g) for g in a] for a in played[label]]
                         for label, _ in EVERY},
         },

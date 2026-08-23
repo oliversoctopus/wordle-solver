@@ -173,18 +173,18 @@ Everything above argues the two priors *from* the answer record; this measures t
 
 | priors | mean | vs. both | on the 21 repeats | on the 15 off-list | on the other 154 |
 | --- | --- | --- | --- | --- | --- |
-| none | 3.9421 | +0.763 ± 0.060 | −0.095 ± 0.181 | +0.200 ± 0.200 | +0.935 ± 0.059 |
-| curation only | 3.5368 | +0.358 ± 0.059 | −0.571 ± 0.213 | +0.200 ± 0.145 | +0.500 ± 0.058 |
-| repeat only | 3.9000 | +0.721 ± 0.060 | −0.143 ± 0.232 | +0.067 ± 0.182 | +0.903 ± 0.056 |
-| **both** | **3.1789** | — | — | — | — |
+| none | 4.0105 | +0.842 ± 0.061 | +0.095 ± 0.194 | +0.200 ± 0.200 | +1.006 ± 0.060 |
+| curation only | 3.5263 | +0.358 ± 0.058 | −0.476 ± 0.214 | +0.200 ± 0.145 | +0.487 ± 0.058 |
+| repeat only | 3.9579 | +0.790 ± 0.060 | −0.143 ± 0.232 | +0.133 ± 0.192 | +0.981 ± 0.054 |
+| **both** | **3.1684** | — | — | — | — |
 
-Read that first column against `priors.build_weights` rather than against intuition. Switching the curation prior off does not leave a uniform prior over the curated list; it leaves a uniform prior over all 12,947 words, non-answers included. The 0.405 ± 0.055 the column charges for the curation prior is therefore two things bundled — telling the solver the answer is probably a curated word at all, and the `wordlebot` shape concentrating the off-list remainder onto ~911 words — and nothing measured here separates them.
+Read that first column against `priors.build_weights` rather than against intuition. Switching the curation prior off does not leave a uniform prior over the curated list; it leaves a uniform prior over all 12,947 words, non-answers included. The 0.484 ± 0.056 the column charges for the curation prior is therefore two things bundled — telling the solver the answer is probably a curated word at all, and the `wordlebot` shape concentrating the off-list remainder onto ~911 words — and nothing measured here separates them.
 
-**The two priors are strongly superadditive**, which the shapes below turn out not to be. Adding the repeat prior to a solver with no curation prior buys +0.042 ± 0.042 — nothing at all. Adding the same prior on top of the curation prior buys +0.358 ± 0.059. The interaction is **−0.316 ± 0.072**, and the three-arm blend agrees at −0.294 ± 0.046 — a wider view of the same data rather than an independent check, since its repeat arm is those same 21 events.
+**The two priors are strongly superadditive**, which the shapes below turn out not to be. Adding the repeat prior to a solver with no curation prior buys +0.053 ± 0.041 — nothing at all. Adding the same prior on top of the curation prior buys +0.358 ± 0.058. The interaction is **−0.305 ± 0.070**, and the three-arm blend agrees at −0.307 ± 0.064 — a wider view of the same data rather than an independent check, since its repeat arm is those same 21 events.
 
 The mechanism is calibration. Ask what rates each prior implies, against the 11.1% repeat rate and the 8.9% off-list rate the regime really shows: uniform implies 14.4% and 95.5%, curation alone 71.3% and 32.4%, repeat alone 10.0% and 95.5%, and both 10.0% and 10.0% (`analysis/regime.py`). Every prior but the last is wildly wrong about the rate the *other* one governs. Uniform lands near enough on repeats by accident — 1,858 used words in 12,947 is 14.4% — so the repeat prior corrects a column that was barely wrong and leaves the 95.5% untouched, which is why it buys nothing. Curation alone pulls that second column to 32.4% and creates the repeat error doing it, a 2,309-word list with 1,812 spent amounting to a prediction that the editor repeats himself two times in three. Only with both on is either rate right, and that is the whole of the interaction.
 
-That also prices the repeat arm, where `curation only` beats `both` by 0.571 ± 0.213 on the 21 answers that really were repeats. This is the ordinary cost of a calibrated prior, not a defect: a repeat averages 5.4e-5 under `--repeat-prob 0.10` against the 3.8e-4 it would hold as an ordinary curated word, and any prior that moves a class from 71.3% to 10.0% pays on the occasions the class turns up. What it buys is the fresh curated word rising from 3.9e-4 to 1.6e-3, worth +0.519 ± 0.032 across the 81.1% of the regime that is neither a repeat nor off-list.
+That also prices the repeat arm, where `curation only` beats `both` by 0.476 ± 0.214 on the 21 answers that really were repeats. This is the ordinary cost of a calibrated prior, not a defect: a repeat averages 5.4e-5 under `--repeat-prob 0.10` against the 3.8e-4 it would hold as an ordinary curated word, and any prior that moves a class from 71.3% to 10.0% pays on the occasions the class turns up. What it buys is the fresh curated word rising from 3.9e-4 to 1.6e-3, worth +0.487 ± 0.058 across the 81.1% of the regime that is neither a repeat nor off-list.
 
 ### The repeat prior's shape
 
@@ -215,26 +215,26 @@ Whether the source window is drifting forward is likewise unresolved, and the ev
 
 Weighting off-list words instead of flatly is a large modeling gain on its own. Scored prequentially over the off-list answers, uniform is −9.27 nats per event; an answer-like score fitted against the curated list as positives is −8.14 at the shipped `t` = 0.35; and WordleBot's published weights, validated against a 2023 snapshot that predates 42 of the 46 events, are −6.46, with the effective support falling from 10,638 words to 911.
 
-Between the two sharpened shapes there is little to choose. `analysis/replay.py` runs `frequency` against the shipped `wordlebot` head to head: **−0.010 ± 0.024** blended, and +0.016 ± 0.049 over the 190 regime puzzles — a wash either way. The two trade rather than one dominating, `frequency` taking −0.381 ± 0.161 on the repeat arm and giving back +0.304 ± 0.112 on the off-list arm. `wordlebot` ships because it scores better as a model, not because it measurably plays better, and `frequency` is there for anyone who would rather not vendor a scrape.
+Between the two sharpened shapes there is little to choose. `analysis/replay.py` runs `frequency` against the shipped `wordlebot` head to head: **+0.024 ± 0.044** blended, and +0.016 ± 0.049 over the 190 regime puzzles — a wash either way. The two trade rather than one dominating, `frequency` taking −0.381 ± 0.161 on the repeat arm and giving back +0.304 ± 0.112 on the off-list arm. `wordlebot` ships because it scores better as a model, not because it measurably plays better, and `frequency` is there for anyone who would rather not vendor a scrape.
 
 ### What the two shapes are worth together
 
-Neither shape converts its modeling gain straight into guesses. Measured on three arms — the 21 real repeats and 46 off-list answers with the prior rebuilt as of each puzzle, plus the 497 still-unused curated words — blended at the regime's own mixture of 11.1% / 7.9% / 81.1%, against a baseline with both priors on and uniform shapes inside them:
+Neither shape converts its modeling gain straight into guesses. Measured on three arms — the 21 real repeats and 46 off-list answers with the prior rebuilt as of each puzzle, plus the regime's 154 fresh curated answers — blended at its own mixture of 11.1% / 7.9% / 81.1%, against a baseline with both priors on and uniform shapes inside them:
 
 | shapes | repeat | off-list | fresh | blended |
 | --- | --- | --- | --- | --- |
-| curation `wordlebot` alone | +0.190 ± 0.164 | −0.804 ± 0.110 | +0.002 ± 0.012 | −0.041 ± 0.022 |
-| repeat `binned` alone | −0.333 ± 0.144 | −0.043 ± 0.135 | +0.004 ± 0.014 | −0.037 ± 0.022 |
-| `binned` + `frequency` | −0.476 ± 0.178 | −0.435 ± 0.131 | +0.010 ± 0.017 | **−0.079 ± 0.026** |
-| `binned` + `wordlebot` | −0.095 ± 0.153 | −0.739 ± 0.114 | +0.000 ± 0.016 | **−0.069 ± 0.023** |
+| curation `wordlebot` alone | +0.190 ± 0.164 | −0.804 ± 0.110 | +0.039 ± 0.030 | −0.011 ± 0.032 |
+| repeat `binned` alone | −0.333 ± 0.144 | −0.043 ± 0.135 | +0.123 ± 0.042 | +0.060 ± 0.039 |
+| `binned` + `frequency` | −0.476 ± 0.178 | −0.435 ± 0.131 | +0.123 ± 0.050 | +0.013 ± 0.046 |
+| `binned` + `wordlebot` | −0.095 ± 0.153 | −0.739 ± 0.114 | +0.071 ± 0.032 | −0.011 ± 0.032 |
 
 Concentrating the off-list mass on ~850 words gives each about 1e-4 against a used word's 5.4e-5, so past answers stop competing for the solver's attention. That is where the residual penalty `wordlebot` alone carries on the repeat arm comes from.
 
-The two shapes are **additive within noise**: −0.041 and −0.037 apart, −0.069 together, against a sum of −0.078. `frequency` (−0.079 ± 0.026) and `wordlebot` (−0.069 ± 0.023) sit well inside each other's intervals too, so the shipped default is not measurably the better of the two.
+Every blend is inside its own error of zero, so this table cannot say whether the shapes need each other either: −0.011 and +0.060 apart against −0.011 together. `frequency` (+0.013 ± 0.046) and `wordlebot` (−0.011 ± 0.032) sit well inside each other's intervals, so the shipped default is not measurably the better of the two.
 
-**Do not read the blend as guesses saved.** Its fresh column is a census of the 497 words the editor has never picked, and the 154 fresh answers he did pick are a disjoint set that behaves differently: +0.123 ± 0.042 under the repeat shape where the census costs +0.004 ± 0.014. Substitute the real 154 and the four blends become −0.011, +0.059, +0.013 and −0.011, which is what the regime replay above says directly without a census at all. What the shapes have going for them is the modeling evidence, not this table.
+**The fresh arm used to be a census of the 497 curated words still unused, and that was training on the test set.** Policy iteration draws its practice answers from the prior it is fitting, whose fresh-curated group is exactly those 497 words, so four-fifths of the table's weight sat on material every arm had trained against. It flattered nobody in particular — both solvers reach their own tuned best there and tie — which is precisely the problem, because a tie on 81% of the grade hands the verdict to the small arms. `analysis/fresh_arm.py` prices it: +0.004 ± 0.014 on the census against +0.123 ± 0.042 on the answers that really happened, still only +0.022 ± 0.015 when the census is played on those same days, and the gap between the two word sets falling from 0.101 to 0.017 once both arms share one `f`.
 
-That gap is the estimator's doing, not the words'. `analysis/fresh_arm.py` plays the census on the real answers' own days, where it still costs only +0.022 ± 0.015, and then forces both arms onto one `f`, which drops the cost on the 154 to +0.058 ± 0.026 or +0.020 ± 0.017 and shrinks the gap between the sets from 0.101 to 0.017. Policy iteration samples its training answers from the prior it is fitting, whose fresh-curated group is exactly those 497 words, so every `f` in the repo is tuned on the census and has never seen a word the editor chose.
+The arm is 154 real answers now, which costs precision where the variance lives and keeps the only edge this table has over the regime replay above: the off-list arm's 46 events against the window's 15. That is worth about a tenth — ±0.039 here against ±0.043 there, on the same contrast — and the two now agree, both saying the shapes buy nothing. What the shapes have going for them is the modeling evidence, not this table.
 
 One thing this measurement still needs: the form of `f` must be refitted per shape, or `sqrt` flips the opening word to `raise`, which is worse by 0.034 ± 0.028 on its own.
 

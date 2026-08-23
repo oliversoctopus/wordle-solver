@@ -65,6 +65,24 @@ def repeat_events(words=None):
     return events
 
 
+def fresh_events(words=None, curated=None, start=None):
+    """(when, word) for every first use of a curated word, from `start` on.
+
+    Cut to the regime where the other two arms are not, because a fresh curated
+    answer is most of every era and the pre-regime ones would be scored under a
+    prior with no repeat events in it at all.
+    """
+    words = words if words is not None else answers()
+    curated = curated if curated is not None else set(load("wordles.json"))
+    start = regime_start() if start is None else start
+    seen, events = set(words[:start]), []
+    for i in range(start, len(words)):
+        if words[i] not in seen and words[i] in curated:
+            events.append((i, words[i]))
+        seen.add(words[i])
+    return events
+
+
 def offlist_events(words=None, curated=None):
     """(when, word) for every first use of a word off the curated list."""
     words = words if words is not None else answers()
