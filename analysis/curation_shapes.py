@@ -5,10 +5,12 @@ fitted at.  Backs SOLVER_EXPLAINED *The off-list group* and the
 opening of README *The curation prior's shape*.
 """
 
+import os
+
 import numpy as np
 
 import common
-from priors import FREQ_TEMPERATURE, OFFLIST_HEDGE
+from priors import FREQ_TEMPERATURE, OFFLIST_HEDGE, WORDLEBOT_SNAPSHOT_PATH
 
 sol = common.solutions()
 words = [r["solution"] for r in sol]
@@ -16,9 +18,12 @@ curated = set(common.load("wordles.json"))
 noncurated = common.load("nonwordles.json")
 answer_like = common.load("answer_like.json")
 wordlebot = common.load("wordlebot_weights.json")
+snapshot = common.load(os.path.basename(WORDLEBOT_SNAPSHOT_PATH))
 
 events = common.offlist_events(words, curated)
 post = [(i, w) for i, w in events if sol[i]["print_date"] > common.SNAPSHOT_DATE]
+# the words the frozen list never had, which are the only ones the hedge covers
+missed = [w for _, w in post if w not in snapshot]
 
 
 def w_uniform(pool):
@@ -75,6 +80,24 @@ print()
 print("  Restricting to post-snapshot events barely moves WordleBot, so it is")
 print("  not winning by having quietly absorbed the events it is scored on.")
 
+common.header(f"does the {common.SNAPSHOT_DATE} list predict what came after it?")
+print("  A list that absorbed answers after they were used would look just as")
+print("  good scored against them. Only an old copy predicting later answers")
+print("  separates the two, which is what the frozen scrape is for.\n")
+added = sorted(set(wordlebot) - set(snapshot))
+ever = [w for w in added if w in set(words)]
+print(f"  off-list answers used after it   {len(post):5d}")
+print(f"    already in the snapshot        {len(post) - len(missed):5d}"
+      f"   ({(len(post) - len(missed)) / len(post):.0%})")
+print(f"    the misses                           {', '.join(missed) or 'none'}")
+print(f"  words added to the list since    {len(added):5d}")
+print(f"    of those, ever an answer       {len(ever):5d}"
+      f"   {', '.join(ever) or ''}")
+print()
+print("  It predicts forward at the rate above, and what it has gained since is")
+print("  not backfill: of everything added, only the words it missed at the time")
+print("  have ever come up as answers.")
+
 common.header("why the hedge is spread flat")
 unlisted = [w for w in noncurated if wordlebot.get(w, 0.0) <= 0.0]
 absent = [w for _, w in events if wordlebot.get(w, 0.0) <= 0.0]
@@ -101,13 +124,14 @@ print(f"  all {len(mult)} off-list answers, scored as if the hedge had had to co
 print("  But those are words WordleBot *does* list. The hedge only ever fires on a")
 print("  word the list is missing, and a missing word is missing because it is odd:")
 print()
-for word in ("loris", "kefir"):   # the two the 2023 snapshot missed
+for word in missed:
     m = multiple(word)
     pct = (score < answer_like.get(word, -50.0)).mean() * 100
     print(f"    {word}  {m:5.2f}x flat  ({np.log(m):+.2f} nats)   "
           f"answer-likeness percentile {pct:.0f}")
-pair = np.log([multiple(w) for w in ("loris", "kefir")]).mean()
-print(f"\n  Over the only two events that ever needed it: {pair:+.2f} nats/event.")
+pair = np.log([multiple(w) for w in missed]).mean()
+print(f"\n  Over the only {len(missed)} events that ever needed it: "
+      f"{pair:+.2f} nats/event.")
 print("  Flat is what 'no idea which word' should look like, so flat it stays.")
 
 common.header("sensitivity to the two shipped constants")

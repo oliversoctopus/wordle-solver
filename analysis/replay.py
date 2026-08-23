@@ -255,7 +255,7 @@ for label, _ in ARMS:
     rows[label] = [common.paired(g, b) for g, b in zip(played[label], base)]
     print(f"  {label:{TWIDTH}s} {blended(rows[label])}")
 
-# The mixture is itself counted off the same 190 puzzles, and the blend above
+# The mixture is itself counted off those same puzzles, and the blend above
 # treats it as exact.  Its error only matters where the arms disagree, so widen
 # each row by the multinomial term and see whether the row moves.
 n = END - START

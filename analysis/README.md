@@ -49,7 +49,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `regime.py` | README *The regime the defaults describe*, SOLVER_EXPLAINED §4; its last block the implied-rate table in §6.4, which is why the two priors need each other |
 | `repeat_shapes.py` | README *The repeat prior's shape* table, SOLVER_EXPLAINED §5.1 |
 | `drift.py` | the closing paragraph of README *The repeat prior's shape* |
-| `curation_shapes.py` | SOLVER_EXPLAINED §5.2 including why the hedge is flat, the opening of README *The curation prior's shape* |
+| `curation_shapes.py` | SOLVER_EXPLAINED §5.2 — the shape table, the snapshot's forward-prediction table, and why the hedge is flat; the opening of README *The curation prior's shape* |
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §16 |
@@ -73,7 +73,7 @@ Rerun after `solutions.py --write`. Every one of these numbers moves with the an
 
 `replay.py --dump PATH` writes every arm's per-game guess counts out as JSON — 190 regime games plus the three arms' 21, 46 and 154 events, one row per arm. Take one whenever you run the thing, and a contrast nobody thought to print becomes arithmetic over that file rather than another replay: a pair the tables skip, a subgroup split some other way. None is kept here at present. A dump is true only of the fit and the answer log it was made against, and nothing would catch a checked-in one drifting out of step with either — worth weighing against the two minutes `--all-priors` takes to make a fresh one.
 
-**Check the method before believing a changed number.** `repeat_shapes.py --events 18` scores only the first 18 repeats and should print the figures the README carried before the 2026-08-10 update — uniform −134.5, binned −116.1 at +18.4, α = 1.0 at −118.4, and +1.024 ± 0.235 nats/event at 4.4σ winning 14 of 18. If those still come out, a number that moved moved because the data did. `regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s uniform baseline (−9.27) are fixed points for the same reason.
+**Check the method before believing a changed number.** `repeat_shapes.py --events 18` scores only the first 18 repeats, so its answer is frozen whatever the answer log does — uniform −134.5, binned −116.1 at +18.4, α = 1.0 at −118.4, and +1.024 ± 0.235 nats/event at 4.4σ winning 14 of 18. If those still come out, a number that moved moved because the data did. `regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s uniform baseline (−9.27) are fixed points for the same reason.
 
 ## Enumerating instead of sampling
 
@@ -95,14 +95,14 @@ That is also what lets its arms be compared across *different* priors, which no 
 
 Comparing the sharpened shapes against the uniform ones needs fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`, and a prior with no fit raises rather than playing an invented `f`. All three are in `estimator_cache/` now, fitted the way the shipped five were: nine forms archived by `wordle_solver.py compare`, ranked exactly the way `form_default.py` ranks them, and the winner written as the active fit. They came out `spline`, `anchored` and `spline`, and all three open on `salet`.
 
-They were fitted after the shipped five and against the same answer record, which is what makes the run legitimate — every arm in a `--shapes` table has to carry a fit of the same history, or the table is comparing solvers rather than shapes.
+All eight are refitted together against one answer record, which is what makes the run legitimate — every arm in a `--shapes` table has to carry a fit of the same history, or the table is comparing solvers rather than shapes.
 
 ## What is not reproduced here
 
-`replay.py`'s arms are comparable to each other, but a run is not comparable to an older run. Its numbers depend on the fitted estimator as much as on the data, and every configuration's winning form moved in the 2026-08-10 refit, so its output cannot be diffed against a run from before that. The same holds for `form_default.py`: it scores the fits in `estimator_cache/forms/`, so a refit moves every row.
+`replay.py`'s arms are comparable to each other, but a run is not comparable to an older run. Its numbers depend on the fitted estimator as much as on the data, and a refit can move a configuration's winning form, so its output cannot be diffed across one. Four of the eight moved in the 2026-08-23 refit and all five had moved in the one before it. The same holds for `form_default.py`: it scores the fits in `estimator_cache/forms/`, so a refit moves every row.
 
-`hard_mode.py` is the one that survives a refit, and it is worth knowing why: its two arms play the *same* `f`, so a refit moves both columns together and mostly cancels in the paired difference. Read the difference across refits; read the two means only against each other. `lookahead.py` does *not* get that protection even though it also pairs two arms on one fit: what it measures is how much room the base policy leaves above itself, so a better-fitted `f` shrinks it directly.
+`hard_mode.py` is the one that survives a refit, and it is worth knowing why: its two arms play the *same* `f`, so a refit moves both columns together and mostly cancels in the paired difference. Read the difference across refits; read the two means only against each other. `lookahead.py` does *not* get that protection even though it also pairs two arms on one fit: what it measures is how much room the base policy leaves above itself, so a better-fitted `f` should shrink it. Expect that as a direction and not as a prediction — the effect is a few thousandths of a guess against a standard error of about half that, and the 2026-08-23 refit improved every arm's base policy while leaving lookahead worth marginally more.
 
-Two claims in README *Lookahead* have no script: that a branch cap of 25 measures no better, and that two plies costs 205 s for the opening position alone. Each needs a position sample as well as a method, and that sample was not kept.
+Several claims about the endgame search have no script, and all of them rest on position samples that were not kept: that a branch cap of 25 measures no better and that two plies costs 205 s for the opening position alone (README *Lookahead*); the 1,275-position comparison of capped against uncapped search, and the memo's 373-repeat position and its ~30% share of the search's time (README *The exact endgame*, SOLVER_EXPLAINED §12(d) and §13). They are timing and tie-break facts rather than answer-log ones, so they do not move with `solutions.json` — but nothing here would catch them going stale either.
 
 Two figures the documents used to carry could not be reproduced exactly. The window variants' *spread* was −124…−129; the best variant here matches, but the worst is far worse, so the original must have defined the band more robustly. Only the best of the sixteen is quoted now, which is the number the argument actually needs. The drift rate's standard error was ±0.39 against ±1.56 here; the slope agrees to two decimals, so the parameterization is right and the error model is not.

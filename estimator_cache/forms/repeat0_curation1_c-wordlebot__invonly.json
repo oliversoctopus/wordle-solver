@@ -15,87 +15,101 @@
         "1-1/n"
     ],
     "params": [
-        0.6950733273794765,
-        1.8017884403468032
+        1.5591828755115167,
+        1.2111688896957586
     ],
-    "fitted_at": "2026-08-10 18:44:13",
+    "fitted_at": "2026-08-23 12:44:44",
     "n_games": 2000,
     "seed": 0,
-    "iterations": 4,
+    "iterations": 5,
     "converged": true,
     "terms_used": 2,
-    "entropy_baseline_mean_guesses": 3.7945,
-    "best_train_mean_guesses": 3.4805,
-    "mean_guesses_last_eval": 3.4805,
-    "fit_rmse": 0.544691747884201,
+    "entropy_baseline_mean_guesses": 3.858,
+    "best_train_mean_guesses": 3.4865,
+    "mean_guesses_last_eval": 3.492,
+    "fit_rmse": 0.7058845987480998,
     "holdout": {
         "games": 2000,
-        "mean_guesses_solved": 3.4975,
-        "mean_guesses_penalized": 3.4975,
+        "mean_guesses_solved": 3.5115,
+        "mean_guesses_penalized": 3.5115,
         "solve_rate": 1.0,
         "distribution": {
-            "2": 58,
-            "3": 996,
-            "4": 845,
-            "5": 95,
-            "6": 6
+            "2": 54,
+            "3": 972,
+            "4": 876,
+            "5": 93,
+            "6": 5
         }
     },
     "opening_word": "trace",
-    "opening_expected_guesses": 3.402041123438206,
+    "opening_expected_guesses": 3.6994482474919494,
     "history": [
         {
             "label": "entropy seed",
-            "mean_guesses": 3.7945,
+            "mean_guesses": 3.858,
             "policy_params": null,
             "fitted_params": [
-                1.3233062284015475,
-                1.4091598352201866
+                1.5591828755115167,
+                1.2111688896957586
             ],
             "terms_used": 2,
-            "seconds": 0.9820135000627488
+            "seconds": 0.9090920000016922
         },
         {
             "label": "iter 1",
-            "mean_guesses": 3.4885,
+            "mean_guesses": 3.4865,
             "policy_params": [
-                1.3233062284015475,
-                1.4091598352201866
+                1.5591828755115167,
+                1.2111688896957586
             ],
             "fitted_params": [
-                0.6950733273794765,
-                1.8017884403468032
+                0.7035937617099035,
+                1.7941566897908083
             ],
             "terms_used": 2,
-            "seconds": 4.670297699980438
+            "seconds": 3.7913082000013674
         },
         {
             "label": "iter 2",
-            "mean_guesses": 3.4805,
+            "mean_guesses": 3.4895,
             "policy_params": [
-                0.6950733273794765,
-                1.8017884403468032
+                0.7035937617099035,
+                1.7941566897908083
             ],
             "fitted_params": [
-                0.7119473053166673,
-                1.7705934020670868
+                0.7240201745649744,
+                1.7678344557878907
             ],
             "terms_used": 2,
-            "seconds": 1.5854678000323474
+            "seconds": 3.1724676999874646
         },
         {
             "label": "iter 3",
-            "mean_guesses": 3.4805,
+            "mean_guesses": 3.492,
             "policy_params": [
-                0.7119473053166673,
-                1.7705934020670868
+                0.7240201745649744,
+                1.7678344557878907
             ],
             "fitted_params": [
-                0.7119473053166673,
-                1.7705934020670868
+                0.7226651121746218,
+                1.7720284196951928
             ],
             "terms_used": 2,
-            "seconds": 0.6584224000107497
+            "seconds": 0.6205958999926224
+        },
+        {
+            "label": "iter 4",
+            "mean_guesses": 3.492,
+            "policy_params": [
+                0.7226651121746218,
+                1.7720284196951928
+            ],
+            "fitted_params": [
+                0.7226651121746218,
+                1.7720284196951928
+            ],
+            "terms_used": 2,
+            "seconds": 0.6317810000036843
         }
     ]
 }

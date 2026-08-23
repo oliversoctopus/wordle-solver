@@ -123,20 +123,20 @@ That is the baseline, and the rest of this document is about beating it. There a
 
 `--mode entropy` implicitly assumes any of the 12,947 words is equally likely. That's badly wrong, and fixing it turns out to be worth more than *any* search improvement in the project.
 
-`priors.build_weights` models the editor as a two-step process: with probability **0.10** reuse a word that has already been an answer (among the ~1,858 used ones), otherwise pick an unused word, which is **off** the curated list with probability **0.10**. That gives three groups — used, unused-and-curated, unused-and-non-curated — each word keeping strictly positive weight, so nothing is ever ruled out. Note the conditioning: the off-list probability is *conditional on not being a repeat*, the model being sequential, so computing it against all puzzles rather than non-repeat ones understates it.
+`priors.build_weights` models the editor as a two-step process: with probability **0.10** reuse a word that has already been an answer (among the ~1,870 used ones), otherwise pick an unused word, which is **off** the curated list with probability **0.10**. That gives three groups — used, unused-and-curated, unused-and-non-curated — each word keeping strictly positive weight, so nothing is ever ruled out. Note the conditioning: the off-list probability is *conditional on not being a repeat*, the model being sequential, so computing it against all puzzles rather than non-repeat ones understates it.
 
-Those two 0.10s look aggressive against Wordle's full history, and the reason they aren't is a regime change. Over the **current editorial regime (Wordle #1690 onward, from 2026-02-02)** the repeat rate is 11.1% and the off-list rate 8.9%; over all 1,879 puzzles they'd be 1.1% and 2.5%, roughly 10× and 4× lower. What drives it is mechanical: 1,812 of 2,309 curated words are used up and ~334 are consumed a year, so the pool empties in about 1.5 years, and both rates are the editor's response to that.
+Those two 0.10s look aggressive against Wordle's full history, and the reason they aren't is a regime change. Over the **current editorial regime (Wordle #1690 onward, from 2026-02-02)** the repeat rate is 10.8% and the off-list rate 9.4%; over all 1,892 puzzles they'd be 1.2% and 2.6%, roughly 9× and 4× lower. What drives it is mechanical: 1,822 of 2,309 curated words are used up and ~333 are consumed a year, so the pool empties in about 1.5 years, and both rates are the editor's response to that.
 
 **The prior is where the wins are.** Every word as the answer, weighted by that row's own prior, each row playing the form of `f` fitted for it:
 
 | priors on | entropy | expected-guess mode |
 | --- | --- | --- |
-| none | 4.1223 | 4.0718 |
-| repeat only | 4.1033 | 4.0111 |
-| curation only | 3.8455 | **3.4903** |
-| both | 3.7507 | **3.0770** |
+| none | 4.1223 | 4.0699 |
+| repeat only | 4.1021 | 4.0083 |
+| curation only | 3.8455 | **3.4946** |
+| both | 3.7490 | **3.0717** |
 
-Read *across* a row, never down a column: each row's weights are its own prior's, so a concentrated prior makes the game genuinely easier and no two rows are comparable. None of them is a score against answers that really happened, either: §6.4 replays these same four configurations over the 190 the NYT set, where `both` comes to 3.1789 rather than 3.0770. What a row does show is the gap between the two objectives — 0.67 guesses with both priors on, 0.0505 with none, thirteen times less for exactly the same machinery. §9 shows why that collapse is an identity rather than a coincidence.
+Read *across* a row, never down a column: each row's weights are its own prior's, so a concentrated prior makes the game genuinely easier and no two rows are comparable. None of them is a score against answers that really happened, either: §6.4 replays these same four configurations over the 203 the NYT set, where `both` comes to 3.1626 rather than 3.0717. What a row does show is the gap between the two objectives — 0.68 guesses with both priors on, 0.0524 with none, thirteen times less for exactly the same machinery. §9 shows why that collapse is an identity rather than a coincidence.
 
 Three groups says how much mass each one gets, not how it spreads *within* one, and the obvious answer — flat — is wrong twice over. It says `cigar` (Wordle #1) and `sandy` (#1227) are equally likely to come round again, and that `squid` and `xylyl` are equally likely to be tomorrow's answer. The second is the expensive one: that group is 10,638 of the 12,947 words, so it dominates the candidate *count* at almost every position while holding only 9% of the mass. Call the within-group spread the group's **shape**; both were uniform in the original design and both are now sharpened, which is §5.
 
@@ -144,51 +144,51 @@ Three groups says how much mass each one gets, not how it spreads *within* one, 
 
 ### 5.1 The repeat group: a smoothed histogram
 
-There are 21 repeats in Wordle's history, and they are not drawn from the used pool evenly. Nineteen come from Wordle #1–#297 (median #116); only `sandy` (#1227) and `smile` (#831) sit outside that window. The editor appears to be replaying the *beginning* of the run.
+There are 22 repeats in Wordle's history, and they are not drawn from the used pool evenly. Twenty come from Wordle #1–#297 (median #120); only `sandy` (#1227) and `smile` (#831) sit outside that window. The editor appears to be replaying the *beginning* of the run.
 
-An 11% outlier rate is too high to just zero out everything past #297, so the shape is a **Laplace-smoothed histogram**. Bin the used words by the puzzle number where they first appeared, 200 wide, and give bin *b* the weight
+A 9% outlier rate is too high to just zero out everything past #297, so the shape is a **Laplace-smoothed histogram**. Bin the used words by the puzzle number where they first appeared, 200 wide, and give bin *b* the weight
 
 $$w_b = \frac{r_b + \alpha}{n_b}, \qquad \alpha = 0.5$$
 
 where `r_b` is how many repeats came out of that bin and `n_b` how many used words live in it; then spread each bin's share evenly over its members. The `α` keeps a bin that has never produced a repeat from being written off entirely — the "maybe next time" term, and the reason no word's weight reaches zero. `cigar` ends up with about **6×** the flat repeat weight, and late words fall below it.
 
-Fixed bins rather than a sliding window is deliberate, and the reason is a small lesson in overfitting: a window needs a boundary, a boundary is a parameter, and that parameter has to be tuned on the same 21 events you are trying to predict. Scored prequentially — each repeat predicted from the ones before it only, so no parameter ever sees the event it is scored on — flat gives a log-likelihood of **−157.1** against the histogram's **−133.1**, about **+1.14 ± 0.21 nats per event**. That `±` is a standard error: how far the estimate itself would wander if the same 21 events were drawn again, so a gap several times its own `±` is one to believe and a smaller one is not. Here it is five times. The best of sixteen tuned windows reaches only −143.6 and an age-based shape refit as events arrive lands at −150.1: twenty-odd events cannot pin a rate down, and the histogram has nothing to pin.
+Fixed bins rather than a sliding window is deliberate, and the reason is a small lesson in overfitting: a window needs a boundary, a boundary is a parameter, and that parameter has to be tuned on the same 22 events you are trying to predict. Scored prequentially — each repeat predicted from the ones before it only, so no parameter ever sees the event it is scored on — flat gives a log-likelihood of **−164.6** against the histogram's **−138.8**, about **+1.18 ± 0.20 nats per event**. That `±` is a standard error: how far the estimate itself would wander if the same 22 events were drawn again, so a gap several times its own `±` is one to believe and a smaller one is not. Here it is nearly six times. The best of sixteen tuned windows reaches only −149.6 and an age-based shape refit as events arrive lands at −156.3: twenty-odd events cannot pin a rate down, and the histogram has nothing to pin.
 
 ### 5.2 The off-list group: WordleBot's own weights
 
 This is the interesting group, because "which words could be off-list answers" turns out to be *knowable* rather than guessable.
 
-The first clue is in `solutions.json` itself. Its `id` field is not an opaque key — it is the **1-based index into `wordles.json`**. Every off-list answer has an id past the curated list's 2,309, and 44 of the 46 land in **2310–2397**. Sorted by id they come out in alphabetical runs: twelve consecutive at 2318–2331 (`beaut laser mommy muggy nervy pious primp shred spate taupe tinge tizzy`), seven more at 2343–2352. A run of twelve in order by chance is 1/12! ≈ 2×10⁻⁹. So the NYT appended words to the same internal list in alphabetically-sorted batches, and off-list answers are drawn from a block of roughly ninety — not from 10,638.
+The first clue is in `solutions.json` itself. Its `id` field is not an opaque key — it is the **1-based index into `wordles.json`**. Every off-list answer has an id past the curated list's 2,309, and 44 of the 48 land in **2310–2397**. Read that as evidence about the block rather than as a test: the id has been reshuffled since, so a large one no longer means a word is off the list, and `trace` came back on 2026-08-21 carrying id 4413 while sitting squarely inside the curated 2,309. What marks a word off-list here is list membership and nothing else. Sorted by id they come out in alphabetical runs: twelve consecutive at 2318–2331 (`beaut laser mommy muggy nervy pious primp shred spate taupe tinge tizzy`), seven more at 2343–2352. A run of twelve in order by chance is 1/12! ≈ 2×10⁻⁹. So the NYT appended words to the same internal list in alphabetically-sorted batches, and off-list answers are drawn from a block of roughly ninety — not from 10,638.
 
-Knowing the block is small does not name its members, but somebody has already published a list that does. **WordleBot**, the NYT's own solver, carries a per-word weight, scraped and published at `wordletools.azurewebsites.net/weightedbottles`: 3,209 words with weights from 0.226% to 58%, of which 3,194 are guessable here — 2,302 curated, **892 not**, and all 46 off-list answers to date among them. That last fact proves nothing on its own, since a list that absorbed answers after they were used would look identical. The test that matters is whether an *old* copy predicts *later* answers, and the Wayback Machine has a snapshot from **2023-10-12**, frozen almost three years ago:
+Knowing the block is small does not name its members, but somebody has already published a list that does. **WordleBot**, the NYT's own solver, carries a per-word weight, scraped and published at `wordletools.azurewebsites.net/weightedbottles`: 3,209 words with weights from 0.226% to 58%, of which 3,194 are guessable here — 2,302 curated, **892 not**, and all 48 off-list answers to date among them. That last fact proves nothing on its own, since a list that absorbed answers after they were used would look identical. The test that matters is whether an *old* copy predicts *later* answers, and the Wayback Machine has a snapshot from **2023-10-12**, frozen almost three years ago. That copy is vendored beside the live one — `wordlebot.py` fetches both and `analysis/curation_shapes.py` scores them — so the table below is recomputed rather than remembered:
 
 | snapshot 2023-10-12 | |
 | --- | --- |
-| off-list answers used after it | 41 |
-| ...already in the snapshot | **39** |
+| off-list answers used after it | 44 |
+| ...already in the snapshot | **42** |
 | the misses | `loris`, `kefir` |
-| words added to the list since | 84 |
+| words added to the list since | 83 |
 | ...of those, ever an answer | **2** (the same two) |
 
-So it predicts forward at about 95%, and its growth is not backfilling.
+So it predicts forward at about 95%, and its growth is not backfilling. The two most recent off-list answers, `geode` and `aspic`, were both in the 2023 copy already.
 
 The shape follows directly: **95%** of the off-list mass goes to the listed words in proportion to their published weight, and the remaining **5%** spreads over everything else — a hedge set at the measured miss rate, and what stops a `loris` from being a blindside.
 
-Scored prequentially on the 42 post-snapshot events, each shape at the constant that actually ships:
+Scored prequentially on the 44 post-snapshot events, each shape at the constant that actually ships:
 
 | shape | nats per event | effective support |
 | --- | --- | --- |
 | uniform | −9.27 | 10,638 |
-| answer-like frequency (§5.3), `t` = 0.35 | −8.13 | 4,857 |
+| answer-like frequency (§5.3), `t` = 0.35 | −8.15 | 4,857 |
 | **WordleBot, 5% hedge** | **−6.46** | **911** |
 
-"Effective support" is `2^H` from §7 applied to the prior itself: how many equally likely words the shape is really spreading over. WordleBot scores −6.46 over all 46 events too, so it is not winning by having quietly absorbed the early ones. Score each shape at its *fitted* constant instead and the lower two rows both improve, which is why the table specifies: a shape has to be scored as it will actually run.
+"Effective support" is `2^H` from §7 applied to the prior itself: how many equally likely words the shape is really spreading over. WordleBot scores −6.46 over all 48 events too, so it is not winning by having quietly absorbed the early ones. Score each shape at its *fitted* constant instead and the lower two rows both improve, which is why the table specifies: a shape has to be scored as it will actually run.
 
 **The 5% hedge stays flat, and that is deliberate.** Weighting it by answer-likeness is the obvious refinement and it fails on the population that matters, because the hedge only fires on a word the list is *missing*, and a word is missing because it is odd. `loris` sits at the 53rd percentile of answer-likeness and would get **0.32×** the flat share. Over the only two events that have ever needed the hedge, shaping it is worth −0.13 nats — flat being the honest expression of not knowing which word the list is short of.
 
 ### 5.3 The fallback that needs no scrape
 
-Depending on somebody else's site is a fine thing to vendor and a bad thing to *need*, so there is an alternative shape built only from what the repo already has. The curated list is 2,309 labeled examples of "a word an editor considered answerable", independent of the 46 off-list events, so `answer_like.py` fits a logistic regression with those as positives and the non-curated words as negatives, then scores the unused words by its log-odds. Four of its thirteen weights carry the model, and those four are legible:
+Depending on somebody else's site is a fine thing to vendor and a bad thing to *need*, so there is an alternative shape built only from what the repo already has. The curated list is 2,309 labeled examples of "a word an editor considered answerable", independent of the 48 off-list events, so `answer_like.py` fits a logistic regression with those as positives and the non-curated words as negatives, then scores the unused words by its log-odds. Four of its thirteen weights carry the model, and those four are legible:
 
 | feature | weight | reading |
 | --- | --- | --- |
@@ -206,7 +206,7 @@ The other nine still matter: a fit keeping only these four correlates at r ≈ 0
 | `aloha` | 4.0× | `xylyl` | 0.10× |
 | `kazoo` | 2.4× | `faffy` | 0.096× |
 
-Every word on the left is a real off-list answer, every one on the right behind a recorded loss in §14. The shape scores −8.13 against WordleBot's −6.46 above: worse, and the price of owing nobody a scrape.
+Every word on the left is a real off-list answer; every one on the right is the kind of never-curated oddity §14's losses collect on, and `karks` and `faffy` are two of them as it stands. The shape scores −8.16 against WordleBot's −6.46 above: worse, and the price of owing nobody a scrape.
 
 ## 6. Measuring a prior without fooling yourself
 
@@ -214,68 +214,70 @@ Two traps, then a question the data cannot settle.
 
 ### 6.1 The form of `f` has to be refitted per shape
 
-`f` (§10) is queried at its largest arguments exactly once per game — at the opening, where the bucket is the whole word list, which is the extrapolated tail of the fit. Sharpening the prior shifts every effective size into that tail, and the ranking of opening words flips: under `sqrt`, the form chosen for the *uniform* shapes, a sharpened prior picks `raise` over `salet`. `raise` is genuinely worse — forcing it under the unchanged uniform prior costs **+0.034 ± 0.028** — so this is estimator error, not a real preference. The three best-fitting forms under the sharpened prior all pick `salet` (`invonly`, `saturating` and `spline`), and so does one-ply lookahead — playing each guess, then scoring the positions it could lead to, one *ply* being one turn of search. This is why the shape is part of the cache key.
+`f` (§10) is queried at its largest arguments exactly once per game — at the opening, where the bucket is the whole word list, which is the extrapolated tail of the fit. Change the shapes and every effective size moves in that tail, so a form fitted for one pair of shapes can rank opening words wrongly under another. `spline` is the case to look at, because it is the form that ships. It wins under the sharpened shapes and it wins again under two flat ones, opening `salet` both times; pair a *sharpened* repeat shape with a *flat* curation shape and the same family opens `raise` and finishes last of the nine. Nothing about the board changed — only which curve was fitted to which weights — so this is estimator error rather than a real preference, and it is why the shape is part of the cache key.
 
-Fit quality is not the criterion, though. Rank the forms by **RMSE** — the root-mean-square of the residuals, the typical distance between the fitted curve and the points it was fitted to, so smaller is closer — and the ranking does not predict the opening at all: `anchored2` has the worst RMSE of any form at 0.70 and picks `salet` anyway, while `anchored` fits a hair *better* than `sqrt` (0.5041 against 0.5047) and still picks `raise`. What decides the opening word is concavity in `x` (§9), not how closely the curve tracks its own fitting data.
+The error has a direction worth naming. `raise` is what greedy entropy opens with, and §9 shows why: a straight-line `f` reduces exactly to entropy plus the possible-answer bonus. A curve that extrapolates badly in the tail flattens there, and a flattened curve is a straight one, so the failure mode of a mis-fitted `f` at the opening is to collapse into the policy it was supposed to improve on.
+
+Fit quality is not the criterion, and the tempting reading of the table is the wrong one. Rank the forms by **RMSE** — the root-mean-square of the residuals, the typical distance between the fitted curve and the points it was fitted to, so smaller is closer — and under the shipped shapes the two forms that open `raise` are also the two that fit worst, at 0.543 against everything else's 0.48–0.49. That looks like fit quality deciding the opening and is not: both facts are the monotonicity guard cutting those two back to a straight line, which fits worse *and* collapses by §9's identity. Where the two come apart is across shapes. `spline` fits best of all nine under the shipped shapes at 0.480, and under a sharpened repeat shape with a flat curation one the same family fits mid-pack and opens `raise`, while `sqrt` — which fits no better anywhere — opens `salet` under all four combinations. What decides the opening word is concavity in `x` (§9), not how closely the curve tracks its own fitting data.
 
 ### 6.2 The evaluation needs three arms, one of them repeats
 
-A shape can only be judged on answers that actually happened, never on answers sampled from its own belief — a prior scored against its own prior is grading its own homework, and that swing is larger than the effect being measured. The arms are the **21 real repeats**, the **46 off-list answers** and the regime's **154 fresh curated answers**, every one of them replayed with the prior rebuilt from strictly earlier puzzles, blended at the regime's own 11.1% / 7.9% / 81.1%. Every row has both priors switched on, against a baseline that also has both switched on with uniform shapes inside them, so the only thing moving is how each spreads its mass:
+A shape can only be judged on answers that actually happened, never on answers sampled from its own belief — a prior scored against its own prior is grading its own homework, and that swing is larger than the effect being measured. The arms are the **22 real repeats**, the **48 off-list answers** and the regime's **164 fresh curated answers**, every one of them replayed with the prior rebuilt from strictly earlier puzzles, blended at the regime's own 10.8% / 8.4% / 80.8%. Every row has both priors switched on, against a baseline that also has both switched on with uniform shapes inside them, so the only thing moving is how each spreads its mass:
 
-| shapes | repeat (21) | off-list (46) | fresh (154) | blended |
+| shapes | repeat (22) | off-list (48) | fresh (164) | blended |
 | --- | --- | --- | --- | --- |
-| curation `wordlebot` alone | +0.190 ± 0.164 | −0.804 ± 0.110 | +0.039 ± 0.030 | −0.011 ± 0.032 |
-| repeat `binned` alone | −0.333 ± 0.144 | −0.043 ± 0.135 | +0.123 ± 0.042 | +0.060 ± 0.039 |
-| `binned` + `frequency` | −0.476 ± 0.178 | −0.435 ± 0.131 | +0.123 ± 0.050 | +0.013 ± 0.046 |
-| `binned` + `wordlebot` | −0.095 ± 0.153 | −0.739 ± 0.114 | +0.071 ± 0.032 | −0.011 ± 0.032 |
+| curation `wordlebot` alone | +0.318 ± 0.179 | −0.833 ± 0.113 | +0.012 ± 0.035 | −0.025 ± 0.040 |
+| repeat `binned` alone | −0.273 ± 0.164 | +0.000 ± 0.111 | +0.110 ± 0.039 | +0.059 ± 0.038 |
+| `binned` + `frequency` | −0.318 ± 0.166 | −0.354 ± 0.135 | +0.085 ± 0.039 | +0.005 ± 0.040 |
+| `binned` + `wordlebot` | −0.045 ± 0.213 | −0.833 ± 0.120 | +0.030 ± 0.036 | −0.050 ± 0.042 |
 
-Every blend is inside its own error of zero. Each shape does move the arm it was built for — `binned` saves a third of a guess when the answer really is a repeat, `wordlebot` three quarters of one when it is off-list — and each pays a smaller amount back across the 81% of answers that are neither. The two roughly cancel, which is the whole finding.
+Every blend is inside its own error of zero. Each shape does move the arm it was built for — `binned` saves a quarter of a guess when the answer really is a repeat, `wordlebot` five sixths of one when it is off-list — and each pays a smaller amount back across the 81% of answers that are neither. The two roughly cancel, which is the whole finding.
 
 Unlike §4's table, **these columns are comparable between rows**: every row is scored against the same real answers, so the blend is a genuine paired comparison rather than each prior being asked how it fares in a world of its own devising. They are comparable to nothing outside it, though. Each row carries the `f` fitted for its own shapes, as §6.1 says it must, so a refit moves the whole table and the five arms have to be refitted together or not at all.
 
-The repeat arm is the loosest term in every blend at ±0.14–0.18, leaving the bottom two rows well inside one standard error of each other. Choosing between them rests more on whether you want a vendored scrape in the repo than on the measurement.
+The repeat arm is the loosest term in every blend at ±0.16–0.21, leaving the bottom two rows well inside one standard error of each other. Choosing between them rests more on whether you want a vendored scrape in the repo than on the measurement.
 
-The mixture is itself counted off those same 190 puzzles, and the blend above treats it as exact when the repeat rate carries ±2.3 points and the off-list rate ±2.0. Folding that in widens the rows to ±0.036–0.049 and moves none of them, which is the easy half of the question. The harder half is that a plain unweighted mean over the 190 regime answers *is* a blend at 21/190 and 15/190, so the arms are not a second opinion about the mixture — they buy precision inside each class, and nothing else.
+The mixture is itself counted off those same 203 puzzles, and the blend above treats it as exact when the repeat rate carries ±2.2 points and the off-list rate ±1.9. Folding that in widens the rows to ±0.038–0.042 and moves none of them, which is the easy half of the question. The harder half is that a plain unweighted mean over the 203 regime answers *is* a blend at 22/203 and 17/203, so the arms are not a second opinion about the mixture — they buy precision inside each class, and nothing else.
 
-The fresh arm used to be the 497 curated words still unused, played as if today, and it is worth knowing why it no longer is. `train.policy_iteration` draws its practice answers from the prior it is fitting, and that prior's fresh-curated group is, at fitting time, exactly those 497 words — so every arm of the table was being scored on four-fifths of the material it had trained on. That flatters nobody in particular, which is what makes it dangerous: both solvers reach their own tuned best there and come out level, so the arm carrying 81% of the weight reports a tie and leaves the small arms to decide. `analysis/fresh_arm.py` prices it. Sharpening the repeat shape cost **+0.004 ± 0.014** on the census against **+0.123 ± 0.042** on the 154 answers that really happened; the census played on those same days still costs only +0.022 ± 0.015, so it is not a question of when; and forcing both arms onto one `f` drops the real answers' figure to +0.058 ± 0.026 or +0.020 ± 0.017 and the gap between the two word sets from 0.101 to 0.017, which is how you can tell it was the fit and not the words.
+The fresh arm used to be the curated words still unused, played as if today, and it is worth knowing why it no longer is. `train.policy_iteration` draws its practice answers from the prior it is fitting, and that prior's fresh-curated group is, at fitting time, exactly those 487 words — so every arm of the table was being scored on four-fifths of the material it had trained on. That flatters nobody in particular, which is what makes it dangerous: both solvers reach their own tuned best there and come out level, so the arm carrying 81% of the weight reports a tie and leaves the small arms to decide. `analysis/fresh_arm.py` prices it. Sharpening the repeat shape cost **+0.002 ± 0.016** on the census against **+0.110 ± 0.039** on the 164 answers that really happened; the census played on those same days still costs only +0.015 ± 0.013, so it is not a question of when; and forcing both arms onto one `f` drops the real answers' figure to +0.037 ± 0.019 or +0.031 ± 0.022 and the gap between the two word sets from 0.095 to about 0.03, which is how you can tell it was the fit and not the words.
 
-So the arm is 154 real answers now, and the table above is the honest version. It costs precision on the arm that dominates the variance — ±0.039 against a census's ±0.022 — and what it keeps is the only thing this table has over the plain replay above it, the off-list arm's 46 events against the 15 that fall inside the regime. That is worth about a tenth: ±0.039 here against the replay's ±0.043 on the same contrast. The two now agree, as they should, both saying the shapes buy nothing.
+So the arm is 164 real answers now, and the table above is the honest version. It costs precision on the arm that dominates the variance — ±0.036 against a census's ±0.016 — and what it keeps is the only thing this table has over the plain replay above it, the off-list arm's 48 events against the 17 that fall inside the regime. That is worth about a tenth: ±0.036 here against the replay's ±0.039 on the same contrast. The two now agree, as they should, both saying the shapes buy nothing.
 
 ### 6.3 Do the two shapes need each other?
 
-The guesses cannot say. The three configurations blend to −0.011, +0.060 and −0.011 against a sum of +0.049, so the pair does better than the two apart would predict — but by 0.060 against an error of about the same size, and every one of the three is inside its own error of zero besides. Adding up numbers that are individually indistinguishable from nothing settles nothing. What each shape does have is a margin the prequential scoring *can* resolve at its own job: +1.14 ± 0.21 nats per event for `binned` (§5.1), −6.46 against −9.27 for `wordlebot` (§5.2). Both ship on that modeling evidence; neither can point to guesses saved, together or apart.
+The guesses cannot say. The three configurations blend to −0.025, +0.059 and −0.050 against a sum of +0.034, so the pair does better than the two apart would predict — but by 0.084 against an error of about half that, and every one of the three is inside its own error of zero besides. Adding up numbers that are individually indistinguishable from nothing settles nothing. What each shape does have is a margin the prequential scoring *can* resolve at its own job: +1.18 ± 0.20 nats per event for `binned` (§5.1), −6.46 against −9.27 for `wordlebot` (§5.2). Both ship on that modeling evidence; neither can point to guesses saved, together or apart.
 
-There is a mechanism that predicts otherwise, and it is worth knowing about even though these events cannot see it. Sharpening one side makes the other's flatness the larger error in the weights: concentrating the off-list mass onto its ~870 effective words gives each about **1.0×10⁻⁴** where a used word under flat repeat mass has **5.4×10⁻⁵**, so curation alone promotes every off-list word above every past answer, and when the answer is a `cigar` that costs. Whether the repeat shape buys it back is not a question 21 events can answer — that arm carries ±0.14–0.18 however it is analyzed, and resolving a 0.1-guess effect on it needs some 340 repeats, eight years of Wordle. So the mechanism is unmeasured here rather than absent. That interference of this general kind is real gets settled one level up: §6.4 finds the two *priors* these shapes sit inside strongly entangled, though by a different route — each miscalibrating the rate the other governs, rather than one group outranking another.
+There is a mechanism that predicts otherwise, and it is worth knowing about even though these events cannot see it. Sharpening one side makes the other's flatness the larger error in the weights: concentrating the off-list mass onto its ~850 effective words gives each about **1.1×10⁻⁴** where a used word under flat repeat mass has **5.4×10⁻⁵**, so curation alone promotes every off-list word above every past answer, and when the answer is a `cigar` that costs. Whether the repeat shape buys it back is not a question 22 events can answer — that arm carries ±0.16–0.21 however it is analyzed, and resolving a 0.1-guess effect on it needs some 340 repeats, eight years of Wordle. So the mechanism is unmeasured here rather than absent. That interference of this general kind is real gets settled one level up: §6.4 finds the two *priors* these shapes sit inside strongly entangled, though by a different route — each miscalibrating the rate the other governs, rather than one group outranking another.
 
 ### 6.4 Do the two *priors* need each other?
 
-A shape only ever redistributes mass inside a group its prior has already carved out. The prior decides whether the group is there to spread anything over: switch curation off and there is no curated-versus-not split at all, just 12,947 words sharing the mass equally (§4), non-answers included. That is the larger question, and it has a much larger answer. `analysis/replay.py --all-priors` replays the same 190 regime puzzles under all four on/off combinations, every arm paired on the same answer:
+A shape only ever redistributes mass inside a group its prior has already carved out. The prior decides whether the group is there to spread anything over: switch curation off and there is no curated-versus-not split at all, just 12,947 words sharing the mass equally (§4), non-answers included. That is the larger question, and it has a much larger answer. `analysis/replay.py --all-priors` replays the same 203 regime puzzles under all four on/off combinations, every arm paired on the same answer:
 
 | mean guesses | curation off | curation on | on − off |
 | --- | --- | --- | --- |
-| **repeat off** | 4.0105 | 3.5263 | −0.484 ± 0.056 |
-| **repeat on** | 3.9579 | 3.1684 | −0.790 ± 0.060 |
-| **on − off** | −0.053 ± 0.041 | −0.358 ± 0.058 | **−0.305 ± 0.070** |
+| **repeat off** | 4.0394 | 3.5320 | −0.507 ± 0.056 |
+| **repeat on** | 3.9409 | 3.1626 | −0.778 ± 0.057 |
+| **on − off** | −0.099 ± 0.041 | −0.370 ± 0.058 | **−0.271 ± 0.069** |
 
-Those four means do not add up, and the way they fail to is the finding. Each margin is a plain subtraction along its own row or column, so the corner can be reached two ways and comes out the same both times — the *interaction*, and it is larger than the whole of what the repeat prior buys where curation is off, which at one standard error is nothing at all. The three-arm blend of §6.2 agrees at −0.307 ± 0.064, a wider view of the same data rather than a second opinion, its repeat arm being those same 21 events. The priors are strongly superadditive even though their shapes are not.
+Those four means do not add up, and the way they fail to is the finding. Each margin is a plain subtraction along its own row or column, so the corner can be reached two ways and comes out the same both times — the *interaction*, and it is larger than the whole of what the repeat prior buys where curation is off, which at one standard error is nothing at all. The three-arm blend of §6.2 agrees at −0.277 ± 0.065, a wider view of the same data rather than a second opinion, its repeat arm being those same 22 events. The priors are strongly superadditive even though their shapes are not.
 
 Neither prior is the one that "needs" the other. What they need is each other.
 
-The reason is calibration, and it shows plainest if you ask what rates each prior implies — against the two the regime really shows, an 11.1% repeat rate and 8.9% off-list among the answers that are not repeats (§4):
+The reason is calibration, and it shows plainest if you ask what rates each prior implies — against the two the regime really shows, a 10.8% repeat rate and 9.4% off-list among the answers that are not repeats (§4):
 
 | prior | implied repeat | implied off-list \| not a repeat |
 | --- | --- | --- |
-| none | 14.4% | 95.5% |
-| curation only | 71.3% | 32.4% |
-| repeat only | 10.0% | 95.5% |
+| none | 14.4% | 95.6% |
+| curation only | 71.7% | 32.8% |
+| repeat only | 10.0% | 95.6% |
 | both | 10.0% | 10.0% |
-| *observed* | *11.1%* | *8.9%* |
+| *observed* | *10.8%* | *9.4%* |
 
-Every prior but the last is wildly wrong about the rate the *other* one governs, and that is the whole of the interaction. Uniform lands near enough on repeats by pure accident — 1,858 used words out of 12,947 is 14.4% — so adding the repeat prior to it corrects a column that was not much wrong while leaving the 95.5% exactly where it was, which is why it buys nothing. Curation alone pulls that second column down to 32.4% and *creates* the repeat error in the act: confining the field to a 2,309-word list of which 1,812 are spent is implicitly a claim that the editor repeats himself two times in three. Only with both switched on is either rate right.
+Every prior but the last is wildly wrong about the rate the *other* one governs, and that is the whole of the interaction. Uniform lands near enough on repeats by pure accident — 1,870 used words out of 12,947 is 14.4% — so adding the repeat prior to it corrects a column that was not much wrong while leaving the 95.6% exactly where it was, which is why it buys almost nothing. Curation alone pulls that second column down to 32.8% and *creates* the repeat error in the act: confining the field to a 2,309-word list of which 1,822 are spent is implicitly a claim that the editor repeats himself seven times in ten. Only with both switched on is either rate right.
 
-Per word, that correction reads as a used word falling from **3.8×10⁻⁴** to **5.4×10⁻⁵** while a fresh curated word climbs from **3.9×10⁻⁴** to **1.6×10⁻³** — the 497 words the editor can still reach without repeating himself or leaving the list.
+Per word, that correction reads as a used word falling from **3.8×10⁻⁴** to **5.4×10⁻⁵** while a fresh curated word climbs from **3.9×10⁻⁴** to **1.6×10⁻³** — the 487 words the editor can still reach without repeating himself or leaving the list.
 
-It also prices the repeat arm, where curation alone beats the pair by **0.476 ± 0.214** on the 21 answers that really were repeats. That is what a calibrated prior costs rather than a fault in it: move a class from 71.3% down to 10.0% and you pay on the occasions it turns up, in exchange for the fresh arm's **+0.487 ± 0.058** across 81.1% of the regime. Any honest prior makes that trade.
+It also prices the repeat arm, where curation alone beats the pair by **0.364 ± 0.242** on the 22 answers that really were repeats. That is what a calibrated prior costs rather than a fault in it: move a class from 71.7% down to 10.0% and you pay on the occasions it turns up, in exchange for the fresh arm's **+0.488 ± 0.056** across 80.8% of the regime. Any honest prior makes that trade.
 
 One caveat rides along with all four numbers. Each arm carries the `f` fitted for its own prior, as §6.1 says it must, so what is being compared is four *solvers* rather than four beliefs held by one solver. That is the honest comparison — a prior the estimator has not been fitted to is not a configuration anyone would ship — but it does mean a refit moves every row, and the four have to be refitted together or not at all.
 
@@ -414,7 +416,7 @@ $$E(g,S) = 1 + a(1 - p_{\text{win}}) + b\big(H(S) - \mathrm{IG}(g)\big)$$
 
 `H(S)` doesn't depend on `g`, so minimizing `E` is *identical* to maximizing `b·IG(g) + a·p_win` — greedy entropy, plus the possible-answer bonus. **A linear `f` buys you nothing but the bonus.** All the remaining gain comes from `f` being *concave* in `x`.
 
-That identity is testable, because `loglinear` is a form of `f` that *is* linear in `x`, so by the argument above it should score exactly "entropy plus the bonus" — and it does. Under the shipped shapes greedy entropy scores 3.7507, `loglinear` 3.1179, and the best form 3.0770. So the gap splits:
+That identity is testable, because `loglinear` is a form of `f` that *is* linear in `x`, so by the argument above it should score exactly "entropy plus the bonus" — and it does. Under the shipped shapes greedy entropy scores 3.7490, `loglinear` 3.1115, and the best form 3.0717. So the gap splits:
 
 | | worth |
 | --- | --- |
@@ -428,14 +430,14 @@ Nearly all of the improvement over a standard entropy solver is the free discoun
 
 | priors on | entropy | linear `f` | best `f` | bonus | curvature |
 | --- | --- | --- | --- | --- | --- |
-| none | 4.1223 | 4.0718 | 4.0718 | +0.051 | −0.000 |
-| repeat only | 4.1033 | 4.0111 | 4.0111 | +0.092 | +0.000 |
-| curation only | 3.8455 | 3.5347 | 3.4903 | +0.311 | +0.044 |
-| both | 3.7507 | 3.1179 | 3.0770 | +0.633 | +0.041 |
+| none | 4.1223 | 4.0713 | 4.0699 | +0.051 | +0.001 |
+| repeat only | 4.1021 | 4.0118 | 4.0083 | +0.090 | +0.004 |
+| curation only | 3.8455 | 3.5337 | 3.4946 | +0.312 | +0.039 |
+| both | 3.7490 | 3.1115 | 3.0717 | +0.638 | +0.040 |
 
 The bonus grows with how sharp the prior is, which is what §16 is about. Curvature is not a constant ~0.04 either: it is worth that much when the **curation** prior is on and nothing at all when it is off, where the best form of `f` is a straight line and the fitted curve has no shape left to exploit — under `repeat only` policy iteration picks `loglinear` outright. A bent `f` pays only where the prior has made the candidate sets uneven enough to bend it for.
 
-Wordle's own **hard mode** is the cleanest test of the identity, because it isolates the bonus from everything else. Hard mode requires every guess to be a word that could still be the answer, so restricting greedy entropy to it forces `p_win` up without touching entropy's scoring rule at all. It gains **0.2505 guesses** (3.7507 → 3.5002, `analysis/hard_mode.py`) — two fifths of what the objective gets by *pricing* the same bonus rather than imposing it. The objective does better because it takes the bonus **and** keeps the probes: it plays a non-candidate whenever the split is worth more than the win chance given up, which is exactly the trade hard mode forbids.
+Wordle's own **hard mode** is the cleanest test of the identity, because it isolates the bonus from everything else. Hard mode requires every guess to be a word that could still be the answer, so restricting greedy entropy to it forces `p_win` up without touching entropy's scoring rule at all. It gains **0.2420 guesses** (3.7490 → 3.5070, `analysis/hard_mode.py`) — two fifths of what the objective gets by *pricing* the same bonus rather than imposing it. The objective does better because it takes the bonus **and** keeps the probes: it plays a non-candidate whenever the split is worth more than the win chance given up, which is exactly the trade hard mode forbids.
 
 So `f` needs to be concave in `x`, and the fitted curve for the default prior is a piecewise-linear spline that obliges:
 
@@ -476,9 +478,10 @@ You can watch it converge in `estimator_cache/params_repeat1_curation1_r-binned_
 
 | round | mean guesses |
 | --- | --- |
-| entropy seed | 3.654 |
-| iter 1 | 3.150 |
-| iter 2–4 | 3.100 |
+| entropy seed | 3.766 |
+| iter 1 | 3.160 |
+| iter 2 | 3.073 |
+| iter 3–5 | 3.078 |
 
 Essentially all the gain arrives in one iteration; the rest is a small limit cycle, so the loop caches the parameters whose *measured play* was best rather than the last fit (a greedy policy can oscillate). Those cached parameters are themselves an optimization worth naming — fitting takes seconds and there is no reason to repeat it per run, so the fit for each prior combination is written to `estimator_cache/` and loaded thereafter.
 
@@ -542,7 +545,7 @@ which splits into two steps, and both of them need that 1.
 
 Chain the two and the two-turn value at penalty 1 sits under every deeper value at the penalty actually in force, which is what makes it safe to prune with.
 
-**The cap is not a safety margin — without it the bound is simply false.** At a penalty of 5 the second step reverses outright, because that exit now costs five guesses rather than one and a position near the deadline would much rather have the turns. Take the ten words ending in `-atch`, a real position and a familiar trap. Under the shipped penalty it is worth 1.474 guesses with four turns in hand and 1.556 with three — low numbers, because the prior puts 78% of the family's mass on `hatch` alone. With only two turns it is worth **1.986**, since the last turn is a guess at whatever the first one failed to resolve and every miss is charged at 5. A search that pruned the three-turn position because that 1.986 already beat its incumbent would be discarding a subtree whose true value is 1.556. Recompute the same three numbers with the penalty at 1 and they come out 1.371, 1.459 and 1.462 — rising with `t`, which is the order the bound requires. Hence `ExactEndgame.bound_penalty`, which is `min(loss_penalty, 1)`, and hence its use in the bound and nowhere else; `analysis/loss_penalty.py --bound` prints both rows.
+**The cap is not a safety margin — without it the bound is simply false.** At a penalty of 5 the second step reverses outright, because that exit now costs five guesses rather than one and a position near the deadline would much rather have the turns. Take the ten words ending in `-atch`, a real position and a familiar trap. Under the shipped penalty it is worth 1.456 guesses with four turns in hand and 1.534 with three — low numbers, because the prior puts 79% of the family's mass on `hatch` alone. With only two turns it is worth **1.947**, since the last turn is a guess at whatever the first one failed to resolve and every miss is charged at 5. A search that pruned the three-turn position because that 1.947 already beat its incumbent would be discarding a subtree whose true value is 1.534. Recompute the same three numbers with the penalty at 1 and they come out 1.356, 1.440 and 1.444 — rising with `t`, which is the order the bound requires. Hence `ExactEndgame.bound_penalty`, which is `min(loss_penalty, 1)`, and hence its use in the bound and nowhere else; `analysis/loss_penalty.py --bound` prints both rows.
 
 The search then does the standard thing with it. Guesses are ordered by their bound and walked in that order, holding on to the best complete value found so far — the **incumbent**. Within a guess, the total starts as the sum of its buckets' bounds and each bucket is replaced by its exact value one at a time, so the running total only ever rises; the moment it passes the incumbent, the guess is abandoned unevaluated. Biggest-mass buckets go first, since they move the total fastest. All of it is sound because the bound is **admissible** — it never overestimates, so nothing it prunes could have turned out to be the best.
 
@@ -585,15 +588,15 @@ Risk neutrality (`penalty = 1`) is the principled default, so it takes evidence 
 
 | penalty | loss probability | mean (loss = 7) |
 | --- | --- | --- |
-| 1 | 0.1168% | 3.6621 |
-| **5** | **0.0458%** | **3.6626** |
-| 30 | 0.0357% | 3.6635 |
+| 1 | 0.1185% | 3.6607 |
+| **5** | **0.0513%** | **3.6611** |
+| 30 | 0.0417% | 3.6620 |
 
-Three fifths of the loss probability vanishes for **+0.0005 guesses**. Widening `--exact-max` from 24 to 60 adds the rest, and the two together — risk-neutral play at the narrow reach against the shipped pair — run **0.1198% → 0.0458%, a 62% reduction, with the mean improving by 0.0019** on the way, because reaching deeper replaces an estimate with a true value instead of trading one good for another.
+Well over half the loss probability vanishes for **+0.0004 guesses**. Widening `--exact-max` from 24 to 60 adds the rest, and the two together — risk-neutral play at the narrow reach against the shipped pair — run **0.1303% → 0.0513%, a 61% reduction, with the mean improving by 0.0028** on the way, because reaching deeper replaces an estimate with a true value instead of trading one good for another.
 
-That last column can't pick the penalty, though, and the reason is instructive. Scoring a loss at 7 is precisely the objective `penalty = 1` optimizes, so ranking settings by it can only ever favor risk neutrality — the comparison is circular. Name the price of a loss instead, `L` guesses, and every setting becomes a line in `L`: penalty 1 wins below `L` = 7.1, **5 from 9.0 to 13.7**, and 30 above 22.1. So 5 is right if a lost game costs between nine and fourteen guesses, and little rides on it, since across that whole range the best setting beats the next by under 0.0002 guesses.
+That last column can't pick the penalty, though, and the reason is instructive. Scoring a loss at 7 is precisely the objective `penalty = 1` optimizes, so ranking settings by it can only ever favor risk neutrality — the comparison is circular. Name the price of a loss instead, `L` guesses, and every setting becomes a line in `L`: penalty 1 wins below `L` = 7.1, **5 from 8.9 to 12.9**, and 30 above 22.8. So 5 is right if a lost game costs between nine and thirteen guesses, and little rides on it, since across that whole range the best setting beats the next by under 0.0002 guesses.
 
-Losses collect on the never-curated words — 290 of the 300 the shipped prior can lose on. Wordle is provably solvable in five guesses, but that theorem is about a solver that knows the answer is one of the 2,309 curated words, and this one spreads 9% of its mass over the other 10,638. Swept uniformly over the curated list it loses 10 of 2,309, every one of them a word that has already been an answer — which is §5.1's repeat prior calling them unlikely, by construction.
+Losses collect on the never-curated words — 295 of the 306 the default prior can lose on. Wordle is provably solvable in five guesses, but that theorem is about a solver that knows the answer is one of the 2,309 curated words, and this one spreads 9% of its mass over the other 10,638. Swept uniformly over the curated list it loses 11 of 2,309, every one of them a word that has already been an answer — which is §5.1's repeat prior calling them unlikely, by construction.
 
 Every piece of the guess rule is now on the table; §15 puts them in the order the solver applies them.
 
@@ -617,31 +620,31 @@ Every line that says 12,947 is the free choice of guess, and hard mode is the on
 
 Under that dispatch sits most of this document. The lookup that reads the feedback is §1's table; the `argmin` line is §7's rearranged entropy inside §8's blocked, parallel, twice-scanned loop; `exact.solve` is §12's four ideas; and every branch consults §13's memo before doing any of it.
 
-The heuristic `E(g,S)` is genuinely a **fallback**: it only runs where the game is too wide to solve outright. With both priors on and the shapes that ship, over every word the answer could be, the whole thing averages **3.0770 guesses** and opens with `salet`. Against the 190 answers the NYT actually set it reads **3.1789** (§6.4).
+The heuristic `E(g,S)` is genuinely a **fallback**: it only runs where the game is too wide to solve outright. With both priors on and the shapes that ship, over every word the answer could be, the whole thing averages **3.0717 guesses** and opens with `salet`. Against the 203 answers the NYT actually set it reads **3.1626** (§6.4).
 
-That 3.0770 is what every part above adds up to, and it says nothing about which of them earned it. Splitting it is §16's job, and the split does not fall where the work went.
+That 3.0717 is what every part above adds up to, and it says nothing about which of them earned it. Splitting it is §16's job, and the split does not fall where the work went.
 
 ## 16. The result worth framing
 
 This is the thread running through the whole project, and it's the most interesting thing in it:
 
-> **A better map, but no better score.**
+> **A better map, and next to no better score.**
 
-One-ply lookahead values positions **ten times more accurately** than `min_g E(g,S)` — RMSE 0.0111 vs 0.1122, measured against ground truth computed by playing positions out exactly. The accuracy is real and it does reach the decisions: lookahead disagrees about the guess in **half** of all games, and it is right to disagree, since its picks give up 0.0013 guesses against the estimator's 0.0115. Then the games are played out and none of it arrives. The outcome moves in a quarter of them, **2,644 better against 2,597 worse**, for a net of −0.0034 ± 0.0041 guesses at ~10× the wall clock. That is 0.9σ: the difference measured is smaller than the error bar on it, so nothing here is distinguishable from zero.
+One-ply lookahead values positions **thirteen times more accurately** than `min_g E(g,S)` — RMSE 0.0125 vs 0.1609, measured against ground truth computed by playing positions out exactly. The accuracy is real and it does reach the decisions: lookahead disagrees about the guess in **two games in five**, and it is right to disagree, since its picks give up 0.0009 guesses against the estimator's 0.0110. Then the games are played out and almost none of it arrives. The outcome moves in a fifth of them, **2,258 better against 2,114 worse**, for a net of −0.0080 ± 0.0036 guesses at ~10× the wall clock. Twenty thousand games are what it takes to see that at all, and under the prior that actually ships it is −0.0018 ± 0.0036 — half a standard error, indistinguishable from nothing. A valuation thirteen times more accurate returns about a six-hundredth of a guess.
 
-The tempting explanation is that you're taking an `argmin`, so the estimator's errors are **common-mode** across the guesses at one position and cancel in the comparison, leaving the ranking intact. They don't. The estimator ranks the ten guesses lookahead re-ranks at a **rank correlation** of **+0.54** with their true values, and picks the best of them just over half the time. (Rank correlation asks whether two orderings agree, not whether two quantities lie on a line, so it is not the `r` of a least-squares fit: it is computed from positions in the sorted order, and +1 means identical rankings, 0 none at all. It is the right question here because the solver only ever uses `f` to *sort* guesses.) A valuation whose errors canceled would not be overruled half the time by an accurate one.
+The tempting explanation is that you're taking an `argmin`, so the estimator's errors are **common-mode** across the guesses at one position and cancel in the comparison, leaving the ranking intact. They don't. The estimator ranks the ten guesses lookahead re-ranks at a **rank correlation** of **+0.56** with their true values, and picks the best of them a little over half the time. (Rank correlation asks whether two orderings agree, not whether two quantities lie on a line, so it is not the `r` of a least-squares fit: it is computed from positions in the sorted order, and +1 means identical rankings, 0 none at all. It is the right question here because the solver only ever uses `f` to *sort* guesses.) A valuation whose errors canceled would not be overruled two games in five by an accurate one.
 
-What is true instead is that the top of the ranking is a **plateau**. Those ten guesses spread 0.0941 guesses between best and worst, and the estimator's pick gives up 0.0115 of that, an eighth of the range, while ordering the middle of it almost at random. It finds the plateau reliably and can't tell one spot on it from another, which costs a hundredth of a guess because there's little there to tell apart. `analysis/lookahead_accuracy.py --decisions` is where those come from.
+What is true instead is that the top of the ranking is a **plateau**. Those ten guesses spread 0.1007 guesses between best and worst, and the estimator's pick gives up 0.0110 of that, a ninth of the range, while ordering the middle of it almost at random. It finds the plateau reliably and can't tell one spot on it from another, which costs a hundredth of a guess because there's little there to tell apart. `analysis/lookahead_accuracy.py --decisions` is where those come from.
 
-The endgame search makes the same point from the other end and makes it more sharply, because where the search reaches, its value is not a better estimate but the truth: a disagreement there is the estimator being wrong, full stop. Over the positions it takes over, the estimator picks a different guess **38.8%** of the time and gives up **0.0053 guesses** doing it. At three and four candidates every single disagreement is a tie: a different word of equal value, nothing to improve on. The ties thin as the set grows, and by 11–60 candidates most disagreements are real, which is the whole of that 0.0053. The same plateau, found from the other side.
+The endgame search makes the same point from the other end and makes it more sharply, because where the search reaches, its value is not a better estimate but the truth: a disagreement there is the estimator being wrong, full stop. Over the positions it takes over, the estimator picks a different guess **33.9%** of the time and gives up **0.0066 guesses** doing it. At three and four candidates every single disagreement is a tie: a different word of equal value, nothing to improve on. The ties thin as the set grows, and by 11–60 candidates most disagreements are real, which is the whole of that 0.0066. The same plateau, found from the other side.
 
-The opening is the third case and the starkest, because `f` decides that one alone — no search reaches a position of 12,947 candidates. Played out, `salet` is the best of the two hundred openings `f` likes best, at **zero regret**, where regret is what a choice costs against the best available: the true value of the pick minus the true value of the best option, so zero means nothing on the shortlist would have been better. Yet `f`'s ranking of the twelve leaders correlates with the truth at only **+0.371**, against +0.724 across the full two hundred. That is the shape of the whole result. `f` sorts the field coarsely and then cannot sort the top of it, and every decision it gets right is a decision where coarse was enough.
+The opening is the third case and the starkest, because `f` decides that one alone — no search reaches a position of 12,947 candidates. Played out, `salet` is the best of the two hundred openings `f` likes best, at **zero regret**, where regret is what a choice costs against the best available: the true value of the pick minus the true value of the best option, so zero means nothing on the shortlist would have been better. Yet `f`'s ranking of the twelve leaders correlates with the truth at only **+0.350**, against +0.736 across the full two hundred. That is the shape of the whole result. `f` sorts the field coarsely and then cannot sort the top of it, and every decision it gets right is a decision where coarse was enough.
 
-Turn-conditioned `f` is the fourth case, and it never stood a chance. A curve conditioned on turns remaining differs from the flat one only where the deadline binds, and `f` is consulted **once in 11,338** positions with three or fewer turns left — the search has taken every other one. The +0.0005 ± 0.0007 it measured is a fact about an implementation since removed; the reason it could not have come out otherwise is structural, and still holds.
+Turn-conditioned `f` is the fourth case, and it never stood a chance. A curve conditioned on turns remaining differs from the flat one only where the deadline binds, and `f` is consulted in **none** of the 1,117 positions with three or fewer turns left — the search has taken every one of them. The +0.0005 ± 0.0007 it measured is a fact about an implementation since removed; the reason it could not have come out otherwise is structural, and still holds.
 
-The second guess is the fifth case, and it is the one that puts a number on the ceiling. Behind a fixed opening the whole of turn 2 is one decision per feedback pattern — 193 positions, 142 of which the endgame search solves outright, leaving 51 that `f` decides alone. Play out the true value of the fifty best guesses at each of those and the estimator gives up **0.00284 guesses**, which is not an estimate: substituting the ten decisions it gets wrong and sweeping every answer moves the mean 3.07700 → 3.07417, paying the census back to the last digit. Since turn 1 is already optimal and the search owns everything from turn 4, that 0.0028 is not one more example of the plateau — it is the *whole* of what any valuation improvement could ever be worth, anywhere in the game.
+The second guess is the fifth case, and it is the one that puts a number on the ceiling. Behind a fixed opening the whole of turn 2 is one decision per feedback pattern — 193 positions, 142 of which the endgame search solves outright, leaving 51 that `f` decides alone. Play out the true value of the fifty best guesses at each of those and the estimator gives up **0.00222 guesses**, which is not an estimate: substituting the ten decisions it gets wrong and sweeping every answer moves the mean 3.07175 → 3.06951, paying the census back to the last digit. Since turn 1 is already optimal and the search owns everything from turn 4, that 0.0022 is not one more example of the plateau — it is the *whole* of what any valuation improvement could ever be worth, anywhere in the game.
 
-Then the number is asked to hold up somewhere else, and it does not. Score those same ten substitutions under a flat weighting of the curated list rather than the shipped prior and they **cost +0.0134** where they saved 0.0028; under a flat weighting of all 12,947 they cost +0.0054, and over the 497 curated words still unused they save 0.0100. Blending the shipped prior a fifth of the way toward the flat one is enough to turn the sign. The reason is that the gain was never an improvement so much as the residue of a reshuffle: 1,635 answers change length, 5.85% of the prior's mass improves against 5.44% worsening, and what is left is 0.0022 of the standard deviation of the changes it rides on. Which side wins is decided by weights that are a *model* of the editor rather than the editor.
+Then the number is asked to hold up somewhere else, and it does not. Score those same ten substitutions under a flat weighting of the curated list rather than the default prior and they **cost +0.0204** where they saved 0.0022; under a flat weighting of all 12,947 they cost +0.0064, and over the 487 curated words still unused they save 0.0061. Blending the default prior a *tenth* of the way toward the flat one is enough to turn the sign. The reason is that the gain was never an improvement so much as the residue of a reshuffle: 1,414 answers change length, 3.21% of the prior's mass improves against 2.95% worsening, and what is left is 0.0017 of the standard deviation of the changes it rides on. Which side wins is decided by weights that are a *model* of the editor rather than the editor.
 
 That is the sharpest form of the whole result, and it is sharper than the four above because it does not depend on any valuation being imperfect. Playing perfectly the last position where the estimator decides anything is worth less than the error in the prior it would be playing perfectly *for*. There is no depth of search, no further ply and no better-fitted `f` on the other side of it.
 
@@ -649,13 +652,13 @@ What the solver has been short of is **somewhere better to go**, not a better ma
 
 The exceptions are what sharpen the rule, and they have a common shape: every one of them changes *what the solver is choosing between* rather than how well it scores the choices.
 
-The shapes of §5 are the first. Together they are worth −0.064 ± 0.032, small in itself and still more than deeper search and better lookahead managed between them. A prior changes the quantity being optimized — which words are plausible answers at all — so it is a decision-side change wearing valuation-side clothes.
+The shapes of §5 are the first. Together they are worth −0.050 ± 0.042, small in itself and still more than deeper search and better lookahead managed between them. A prior changes the quantity being optimized — which words are plausible answers at all — so it is a decision-side change wearing valuation-side clothes.
 
-The sharpened repeat prior taken alone (−0.022 ± 0.024, despite being 5.4σ better as a prior) belongs here rather than above, and the reason is worth being precise about. Changing the weights changes what a position is *worth*, so the two arms have no common ground truth and no scale on which one guess is better than the other. A better model of the editor is not a better estimate of a fixed quantity; it is a different quantity.
+The sharpened repeat prior taken alone belongs here rather than above, and being precise about why matters more than its sign does. On real answers it reads +0.059 ± 0.038 — a cost, not a saving, and this despite being 5.8σ better as a *model* of the editor. The two figures are not in competition, because changing the weights changes what a position is *worth*: the two arms have no common ground truth and no scale on which one guess is better than the other. A better model of the editor is not a better estimate of a fixed quantity; it is a different quantity, and §6.2 is where that is taken apart.
 
-Hard mode is the same thing in its bluntest form, and it makes the distinction hard to argue with. It improves no valuation whatsoever; it deletes words from the choice set. Under greedy entropy that is worth **−0.2505** guesses, against the nothing at all that one-ply lookahead buys by valuing positions ten times better. Take a choice away from a policy that was pricing it wrong and you gain more than by pricing everything else right. Under the expected-guesses objective, which already prices it correctly, the identical restriction *costs* +0.0269 — same intervention, opposite sign, entirely because of what the objective was already getting right.
+Hard mode is the same thing in its bluntest form, and it makes the distinction hard to argue with. It improves no valuation whatsoever; it deletes words from the choice set. Under greedy entropy that is worth **−0.2420** guesses, against the nothing at all that one-ply lookahead buys by valuing positions thirteen times better. Take a choice away from a policy that was pricing it wrong and you gain more than by pricing everything else right. Under the expected-guesses objective, which already prices it correctly, the identical restriction *costs* +0.0267 — same intervention, opposite sign, entirely because of what the objective was already getting right.
 
-That is the honest reading of the headline number too. The 0.67-guess gain over greedy entropy is 0.63 from the possible-answer bonus and 0.04 from curvature in `f`. And the bonus is the *prior* showing up inside the objective — `p_win` is nothing but the mass the prior puts on the word being guessed, which is why the split moves with how sharp the prior is. So is the curvature, which §9's table shows falling to nothing wherever the curation prior is off. The search proper is barely in that 0.67 at all: switching the whole of `exact.py` off costs 0.0003 guesses on the mean, since what it moves is the loss probability instead (§12).
+That is the honest reading of the headline number too. The 0.68-guess gain over greedy entropy is 0.64 from the possible-answer bonus and 0.04 from curvature in `f`. And the bonus is the *prior* showing up inside the objective — `p_win` is nothing but the mass the prior puts on the word being guessed, which is why the split moves with how sharp the prior is. So is the curvature, which §9's table shows falling to nothing wherever the curation prior is off. The search proper is barely in that 0.68 at all: switching the whole of `exact.py` off costs 0.0003 guesses on the mean, since what it moves is the loss probability instead (§12).
 
 Modeling the editor beat improving the search, every time.
 

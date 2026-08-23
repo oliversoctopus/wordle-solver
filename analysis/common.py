@@ -21,13 +21,15 @@ for path in (ROOT, HERE):
         sys.path.insert(0, path)
 
 import rust  # noqa: E402  -- needs the path above
+from priors import WORDLEBOT_SNAPSHOT_DATE  # noqa: E402  -- likewise
 
 DATA = os.path.join(ROOT, "data")
 
 # the first repeat in Wordle's history, and the start of the current regime
 REGIME_DATE = "2026-02-02"
-# the Wayback snapshot the WordleBot list is validated against
-SNAPSHOT_DATE = "2023-10-12"
+# the Wayback snapshot the WordleBot list is validated against; `wordlebot.py`
+# fetches it and names the file, so the date is not written down twice
+SNAPSHOT_DATE = WORDLEBOT_SNAPSHOT_DATE
 
 
 def load(name):

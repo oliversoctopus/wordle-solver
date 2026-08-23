@@ -15,101 +15,87 @@
         "1-1/n"
     ],
     "params": [
-        0.1167235371704564,
-        1.1803152008831836
+        0.11487282636541714,
+        1.2570887121804515
     ],
-    "fitted_at": "2026-08-10 18:40:04",
+    "fitted_at": "2026-08-23 12:43:48",
     "n_games": 2000,
     "seed": 0,
-    "iterations": 5,
+    "iterations": 4,
     "converged": true,
     "terms_used": 2,
-    "entropy_baseline_mean_guesses": 3.7945,
-    "best_train_mean_guesses": 3.499,
-    "mean_guesses_last_eval": 3.5495,
-    "fit_rmse": 0.5718737057718872,
+    "entropy_baseline_mean_guesses": 3.858,
+    "best_train_mean_guesses": 3.498,
+    "mean_guesses_last_eval": 3.56,
+    "fit_rmse": 0.5964409399541746,
     "holdout": {
         "games": 2000,
-        "mean_guesses_solved": 3.4995,
-        "mean_guesses_penalized": 3.4995,
+        "mean_guesses_solved": 3.507,
+        "mean_guesses_penalized": 3.507,
         "solve_rate": 1.0,
         "distribution": {
             "2": 47,
-            "3": 997,
-            "4": 868,
-            "5": 86,
+            "3": 984,
+            "4": 879,
+            "5": 88,
             "6": 2
         }
     },
     "opening_word": "reast",
-    "opening_expected_guesses": 3.779528065196143,
+    "opening_expected_guesses": 3.8417917021810903,
     "history": [
         {
             "label": "entropy seed",
-            "mean_guesses": 3.7945,
+            "mean_guesses": 3.858,
             "policy_params": null,
             "fitted_params": [
-                0.1167235371704564,
-                1.1803152008831836
+                0.11487282636541714,
+                1.2570887121804515
             ],
             "terms_used": 2,
-            "seconds": 0.9998962001409382
+            "seconds": 1.0172024999919813
         },
         {
             "label": "iter 1",
-            "mean_guesses": 3.499,
+            "mean_guesses": 3.498,
             "policy_params": [
-                0.1167235371704564,
-                1.1803152008831836
+                0.11487282636541714,
+                1.2570887121804515
             ],
             "fitted_params": [
-                0.14788957295792254,
-                0.6943557811199953
+                0.14686200260994012,
+                0.6967737685781493
             ],
             "terms_used": 2,
-            "seconds": 14.936418000143021
+            "seconds": 11.98635499998636
         },
         {
             "label": "iter 2",
-            "mean_guesses": 3.548,
+            "mean_guesses": 3.56,
             "policy_params": [
-                0.14788957295792254,
-                0.6943557811199953
+                0.14686200260994012,
+                0.6967737685781493
             ],
             "fitted_params": [
-                0.15588923386879838,
-                0.6972664228103079
+                0.1523768740697089,
+                0.7320050738784327
             ],
             "terms_used": 2,
-            "seconds": 4.9209914999082685
+            "seconds": 4.968964400002733
         },
         {
             "label": "iter 3",
-            "mean_guesses": 3.5495,
+            "mean_guesses": 3.56,
             "policy_params": [
-                0.15588923386879838,
-                0.6972664228103079
+                0.1523768740697089,
+                0.7320050738784327
             ],
             "fitted_params": [
-                0.15550262625879668,
-                0.700948764236012
+                0.1523768740697089,
+                0.7320050738784327
             ],
             "terms_used": 2,
-            "seconds": 0.7284703000914305
-        },
-        {
-            "label": "iter 4",
-            "mean_guesses": 3.5495,
-            "policy_params": [
-                0.15550262625879668,
-                0.700948764236012
-            ],
-            "fitted_params": [
-                0.15550262625879668,
-                0.700948764236012
-            ],
-            "terms_used": 2,
-            "seconds": 0.6664426999632269
+            "seconds": 0.6623052000068128
         }
     ]
 }

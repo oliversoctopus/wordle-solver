@@ -16,96 +16,95 @@
         "x^2"
     ],
     "params": [
-        0.17747881408917543,
-        0.4348016167305926,
+        0.17620364856418672,
+        0.42629284692828756,
         0.0
     ],
-    "fitted_at": "2026-08-10 18:59:43",
+    "fitted_at": "2026-08-23 13:00:15",
     "n_games": 2000,
     "seed": 0,
     "iterations": 4,
     "converged": true,
     "terms_used": 2,
-    "entropy_baseline_mean_guesses": 3.654,
-    "best_train_mean_guesses": 3.117,
-    "mean_guesses_last_eval": 3.117,
-    "fit_rmse": 0.5041315954457027,
+    "entropy_baseline_mean_guesses": 3.766,
+    "best_train_mean_guesses": 3.079,
+    "mean_guesses_last_eval": 3.079,
+    "fit_rmse": 0.49374834744787743,
     "holdout": {
         "games": 2000,
-        "mean_guesses_solved": 3.114057028514257,
-        "mean_guesses_penalized": 3.116,
-        "solve_rate": 0.9995,
+        "mean_guesses_solved": 3.076,
+        "mean_guesses_penalized": 3.076,
+        "solve_rate": 1.0,
         "distribution": {
-            "2": 220,
-            "3": 1376,
-            "4": 360,
-            "5": 41,
-            "6": 2,
-            "7": 1
+            "2": 282,
+            "3": 1328,
+            "4": 353,
+            "5": 30,
+            "6": 7
         }
     },
-    "opening_word": "raise",
-    "opening_expected_guesses": 3.13116483922048,
+    "opening_word": "salet",
+    "opening_expected_guesses": 3.1137838471762858,
     "history": [
         {
             "label": "entropy seed",
-            "mean_guesses": 3.654,
+            "mean_guesses": 3.766,
             "policy_params": null,
             "fitted_params": [
-                -0.7057583074344279,
-                3.2961573619497617,
-                0.08306161716581238
+                -0.8840766297615775,
+                3.796826832429409,
+                0.10328190199362132
             ],
             "terms_used": 3,
-            "seconds": 0.8993309000506997
+            "seconds": 0.7950663000083296
         },
         {
             "label": "iter 1",
-            "mean_guesses": 3.1325,
+            "mean_guesses": 3.134,
             "policy_params": [
-                -0.7057583074344279,
-                3.2961573619497617,
-                0.08306161716581238
+                -0.8840766297615775,
+                3.796826832429409,
+                0.10328190199362132
             ],
             "fitted_params": [
-                0.17747881408917543,
-                0.4348016167305926,
+                0.17620364856418672,
+                0.42629284692828756,
                 0.0
             ],
             "terms_used": 2,
-            "seconds": 3.977238900028169
+            "seconds": 4.345928399998229
         },
         {
             "label": "iter 2",
-            "mean_guesses": 3.117,
+            "mean_guesses": 3.079,
             "policy_params": [
-                0.17747881408917543,
-                0.4348016167305926,
+                0.17620364856418672,
+                0.42629284692828756,
                 0.0
             ],
             "fitted_params": [
-                0.17170612783956252,
-                0.4474517659891945,
+                0.163725288285325,
+                0.4382054641373493,
                 0.0
             ],
             "terms_used": 2,
-            "seconds": 1.4271414000540972
+            "seconds": 3.8785763000050792
         },
         {
             "label": "iter 3",
-            "mean_guesses": 3.117,
+            "mean_guesses": 3.079,
             "policy_params": [
-                0.17170612783956252,
-                0.4474517659891945,
+                0.163725288285325,
+                0.4382054641373493,
                 0.0
             ],
             "fitted_params": [
-                0.17170612783956252,
-                0.4474517659891945,
+                0.163725288285325,
+                0.4382054641373493,
                 0.0
             ],
             "terms_used": 2,
-            "seconds": 0.6868616999126971
+            "seconds": 0.6671964999986812
         }
     ]
 }

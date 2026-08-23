@@ -92,6 +92,12 @@ def report(solver, words, scores, means, losses):
 
     rho, p = common.rank_correlation(scores, means)
     print(f"\n  rank correlation, f vs truth: {rho:+.3f} (p={p:.4f})")
+    # the same correlation over the leading band alone: f sorts the field far
+    # better than it sorts the top of it, which is the whole of the result
+    for head in (12, 25):
+        if len(words) > head:
+            lead, _ = common.rank_correlation(scores[:head], means[:head])
+            print(f"    over the top {head} alone: {lead:+.3f}")
     print(f"  {'ranks by f':>12} {'openings':>9} {'mean true value':>17} "
           f"{'worst':>9} {'best in band':>20}")
     for low, high in BANDS:

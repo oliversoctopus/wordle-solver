@@ -33,6 +33,13 @@ from wordle_data import DATA_DIR
 WORDLEBOT_PATH = os.path.join(DATA_DIR, "wordlebot_weights.json")
 ANSWER_LIKE_PATH = os.path.join(DATA_DIR, "answer_like.json")
 
+# the frozen copy the live list is validated against: an old list predicting
+# later answers is the only evidence it is not backfilled.  Nothing plays with
+# it; `wordlebot.py` rebuilds it and `analysis/curation_shapes.py` scores it
+WORDLEBOT_SNAPSHOT_DATE = "2023-10-12"
+WORDLEBOT_SNAPSHOT_PATH = os.path.join(
+    DATA_DIR, f"wordlebot_weights_{WORDLEBOT_SNAPSHOT_DATE}.json")
+
 DEFAULT_REPEAT_PROB = 0.10
 DEFAULT_NONCURATED_PROB = 0.10
 
@@ -49,7 +56,7 @@ BIN_ALPHA = 0.5
 FREQ_TEMPERATURE = 0.35
 
 # 'wordlebot': mass kept outside the list, since the 2023 snapshot missed 2 of
-# the 41 off-list answers that followed it
+# the 44 off-list answers that followed it
 OFFLIST_HEDGE = 0.05
 
 _TABLES = {}

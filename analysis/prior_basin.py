@@ -1,6 +1,6 @@
 """How much of the prior's setting actually reaches the board.
 
-Two sweeps over the shipped prior, both replaying the 190 real regime puzzles
+Two sweeps over the shipped prior, both replaying every real regime puzzle
 with the prior rebuilt from strictly earlier puzzles each day:
 
 1. `--part shapes` tempers each shape inside its own group, raising its relative
@@ -164,7 +164,7 @@ if args.part in ("groups", "both"):
     print(f"  the rates the regime really shows: repeat {rates['repeat']:.3f}, "
           f"off-list given not a repeat {rates['noncurated']:.3f}")
 
-print(f"\n  Every point plays the same 190 real answers, paired on each.  A")
+print(f"\n  Every point plays the same {END - START} real answers, paired on each.  A")
 print("  setting far from the one f was fitted for carries a borrowed f as")
 print("  well as its own miscalibration, so the far ends read worse than a")
 print("  refit would leave them, and the basin is at least this wide.")

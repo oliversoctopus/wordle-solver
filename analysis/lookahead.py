@@ -65,7 +65,7 @@ for config in configs:
     delta, se, per_game = common.paired(arms[1], arms[0])
     diffs.append(per_game)
     changed = int((per_game != 0).sum())
-    print(f"\n  one ply at width {args.width}: {delta:+.4f} +- {se:.4f} guesses")
+    print(f"\n  one ply at branch {args.branch}: {delta:+.4f} +- {se:.4f} guesses")
     print(f"  games changing length: {changed} of {args.games} "
           f"({int((per_game < 0).sum())} better, {int((per_game > 0).sum())} worse)\n")
 
