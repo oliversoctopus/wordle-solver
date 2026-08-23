@@ -8,6 +8,19 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 **Read its *If you edit it* rules before changing `SOLVER_EXPLAINED.md`.** That document decays by accretion. A result gets appended, then a paragraph reconciling it with the one above, and eventually the whole thing reads as a changelog instead of an explanation. It has been rewritten once to undo exactly that. The short version: edit the sentence that carries a number instead of adding one that says the number moved, and never let the document mention its own revision history.
 
+## Never poll background work
+
+**A turn whose message says "waiting" must contain zero tool calls.** Long runs are normal here — a refit is an hour, `opening.py` is sixteen minutes, a full sweep longer — and the harness already notifies when a background task exits, as a `Monitor` does on every event it matches. Checking on one costs a full request carrying the whole conversation and returns information that was arriving for free.
+
+Calling `date`, `tail` on a log, `ls` on an output directory, or `wc -l` to watch a counter climb is the exact shape this takes. It looks cheap per call and is not: on 2026-08-23 it ran to dozens of near-identical calls across three episodes, continued after an explicit interrupt, and consumed most of a paid subscription window.
+
+The rules that stop it:
+
+* Before any tool call, ask whether it changes a file or yields something otherwise unavailable. If neither, do not make it.
+* If two consecutive calls return substantively the same output, that is the loop signature — stop and end the turn.
+* Wait productively or not at all. Editing, reading unread source and drafting are fine; re-reading a progress file is not, and ending the turn with nothing pending is the correct move rather than a failure.
+* An instruction to stop is absolute, and does not lapse later in the session.
+
 ## Conventions
 
 **Comments stay to a line or two.** No multi-paragraph blocks justifying a change, no measurement tables in source. The reasoning and the numbers go in `README.md`; the comment says what the line does. File headers explaining what a module is are the exception and are welcome.
