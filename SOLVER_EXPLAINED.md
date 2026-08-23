@@ -136,7 +136,7 @@ Those two 0.10s look aggressive against Wordle's full history, and the reason th
 | curation only | 3.8455 | **3.4903** |
 | both | 3.7507 | **3.0770** |
 
-Read *across* a row, never down a column: each row's weights are its own prior's, so a concentrated prior makes the game genuinely easier and no two rows are comparable. What a row does show is the gap between the two objectives — 0.67 guesses with both priors on, 0.0505 with none, thirteen times less for exactly the same machinery. §9 shows why that collapse is an identity rather than a coincidence.
+Read *across* a row, never down a column: each row's weights are its own prior's, so a concentrated prior makes the game genuinely easier and no two rows are comparable. None of them is a score against answers that really happened, either: §6.4 replays these same four configurations over the 190 the NYT set, where `both` comes to 3.1789 rather than 3.0770. What a row does show is the gap between the two objectives — 0.67 guesses with both priors on, 0.0505 with none, thirteen times less for exactly the same machinery. §9 shows why that collapse is an identity rather than a coincidence.
 
 Three groups says how much mass each one gets, not how it spreads *within* one, and the obvious answer — flat — is wrong twice over. It says `cigar` (Wordle #1) and `sandy` (#1227) are equally likely to come round again, and that `squid` and `xylyl` are equally likely to be tomorrow's answer. The second is the expensive one: that group is 10,638 of the 12,947 words, so it dominates the candidate *count* at almost every position while holding only 9% of the mass. Call the within-group spread the group's **shape**; both were uniform in the original design and both are now sharpened, which is §5.
 
@@ -609,9 +609,9 @@ Every line that says 12,947 is the free choice of guess, and hard mode is the on
 
 Under that dispatch sits most of this document. The lookup that reads the feedback is §1's table; the `argmin` line is §7's rearranged entropy inside §8's blocked, parallel, twice-scanned loop; `exact.solve` is §12's four ideas; and every branch consults §13's memo before doing any of it.
 
-The heuristic `E(g,S)` is genuinely a **fallback**: it only runs where the game is too wide to solve outright. With both priors on and the shapes that ship, over every word the answer could be, the whole thing averages **3.0770 guesses** and opens with `salet`.
+The heuristic `E(g,S)` is genuinely a **fallback**: it only runs where the game is too wide to solve outright. With both priors on and the shapes that ship, over every word the answer could be, the whole thing averages **3.0770 guesses** and opens with `salet`. Against the 190 answers the NYT actually set it reads **3.1789** (§6.4).
 
-That average is what every part above adds up to, and it says nothing about which of them earned it. Splitting it is §16's job, and the split does not fall where the work went.
+That 3.0770 is what every part above adds up to, and it says nothing about which of them earned it. Splitting it is §16's job, and the split does not fall where the work went.
 
 ## 16. The result worth framing
 
