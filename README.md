@@ -153,7 +153,7 @@ Each group also has a **shape**, which is how its mass is spread over its member
 * `--curation-shape wordlebot` (default) weights an off-list word by WordleBot's own published weight, keeping 5% of the mass outside that list as a hedge; `--curation-shape frequency` weights it by how answer-like the word is instead, which is slightly weaker but needs no vendored list.
 * `--repeat-shape uniform`, `--curation-shape uniform` give the flat spread back.
 
-Each shape is worth having on its own terms, and the two are **additive within noise**; *What the two shapes are worth together* below has the measurement. The shape is part of the cache key because the best form of `f` depends on it, and the dependence reaches the opening word: `spline` wins under the sharpened shapes and under the flat ones alike, yet pair a sharpened repeat shape with a flat curation shape and it opens `raise` instead of `salet` and finishes last of the nine.
+Each shape is worth having on its own terms, and the two are **additive within noise**; *What the two shapes are worth together* below has the measurement. The shape is part of the cache key because the best form of `f` depends on it, and the dependence reaches the opening word: `spline` wins under the sharpened shapes and under the flat ones alike, yet pair a sharpened repeat shape with a flat curation shape and it opens `raise` instead of `salet` and drops to seventh, behind every form that stayed concave.
 
 ### The regime the defaults describe
 
