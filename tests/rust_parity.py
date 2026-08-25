@@ -12,6 +12,7 @@ a toolchain still runs the rest of the suite.  Build it with ``cargo build
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -985,6 +986,173 @@ def check_api(report):
 
 
 # (label, what agreement establishes, the check)
+def check_rng(report):
+    """The training draw, against ``np.random.default_rng``.
+
+    Exactly, not to a tolerance: a fit is only comparable with the Python's if
+    the two played the same answers, so one differing index is a failure and
+    not a rounding difference.
+    """
+    path = binary("parity_rng")
+    if path is None:
+        return None
+
+    import priors
+    from solver import sample_answers
+    from wordle_data import load_data
+
+    seeds = (0, 1, 12345)
+    with tempfile.TemporaryDirectory() as out_dir:
+        done = subprocess.run([path, ROOT, out_dir], capture_output=True, text=True)
+        if done.returncode != 0:
+            report((done.stdout + done.stderr).strip())
+            return False
+
+        for seed in seeds:
+            mine = np.random.default_rng(seed).random(64)
+            got = np.fromfile(os.path.join(out_dir, f"doubles_{seed}.f64"), dtype="<f8")
+            if not np.array_equal(mine, got):
+                report(f"PCG64 doubles differ at seed {seed}")
+                return False
+        report(f"{len(seeds)} seeds of PCG64 doubles, bit for bit")
+
+        data = load_data(with_feedback_table=False)
+        for config in priors.ALL_CONFIGS:
+            weights = priors.build_weights(data, config)
+            for seed in seeds:
+                mine = sample_answers(weights, 2000, seed=seed)
+                got = np.fromfile(
+                    os.path.join(out_dir, f"answers_{config.slug}_{seed}.f64"),
+                    dtype="<f8").astype(np.int64)
+                if not np.array_equal(mine, got):
+                    differ = int((mine != got).sum())
+                    report(f"{config.slug} seed {seed}: {differ} of 2000 answers differ")
+                    return False
+        report(f"{len(priors.ALL_CONFIGS) * len(seeds)} draws of 2,000 answers, "
+               f"every index identical")
+        return True
+
+
+def check_fit(report):
+    """The least-squares solve, against ``estimator.fit``.
+
+    Compared on a tolerance rather than exactly, and it is the second place in
+    the port that has to be: LAPACK reduces in an order that is neither written
+    down nor stable across builds, so ``core/src/fit.rs`` solves by its own SVD.
+    """
+    path = binary("parity_fit")
+    if path is None:
+        return None
+
+    import estimator
+
+    # the datasets parity_fit.rs builds: one wide, one too narrow for a spline's
+    # upper hinges, one falling with n so the guard drops every term
+    def dataset(kind):
+        i = np.arange(900)
+        step = ((i * 7919) % 1000).astype(np.float64)
+        n = 1.0 + step * (0.03 if kind == 1 else 12.9)
+        x = np.log2(n)
+        wobble = ((i * 37) % 13) / 13.0 - 0.5
+        targets = (6.0 - 0.35 * x + wobble) if kind == 2 else (1.0 + 0.42 * x + wobble)
+        return n, targets
+
+    with tempfile.TemporaryDirectory() as out_dir:
+        done = subprocess.run([path, ROOT, out_dir], capture_output=True, text=True)
+        if done.returncode != 0:
+            report((done.stdout + done.stderr).strip())
+            return False
+
+        worst, worst_where = 0.0, None
+        for kind in range(3):
+            n_eff, targets = dataset(kind)
+            for name in sorted(estimator.FORMS):
+                form = estimator.get_form(name)
+                mine, terms = estimator.fit(n_eff, targets, form, n_max=12947.0)
+                got = np.fromfile(os.path.join(out_dir, f"fit_{kind}_{name}.f64"),
+                                  dtype="<f8")
+                if int(got[-1]) != terms:
+                    report(f"{name} on dataset {kind}: kept {int(got[-1])} terms "
+                           f"against {terms}")
+                    return False
+                here = gap(got[:-1], mine)
+                if here > worst:
+                    worst, worst_where = here, f"{name}/dataset {kind}"
+        report(f"{3 * len(estimator.FORMS)} fits, and every one kept the same terms")
+        report(f"worst {worst:.3f} of tolerance" +
+               (f", on {worst_where}" if worst_where else ""))
+        if worst > 1.0:
+            report("over tolerance")
+            return False
+        return True
+
+
+def check_train(report):
+    """The seed round of policy iteration, against ``train``.
+
+    Everything up to and including the first fit: the answers drawn, the games
+    played under greedy entropy, the states recorded from them and the
+    parameters fitted to those states. That is as far as the two can be held to
+    each other. Past the fit they walk different paths -- the least-squares
+    solves differ in the last bits, and acting greedily on the result turns that
+    into a differently broken tie, a different rollout and a different next fit.
+    Even this round's own holdout is downstream of it, being played with the
+    fitted parameters, so what is compared here stops at the fit.
+    """
+    path = binary("train")
+    if path is None:
+        return None
+
+    import estimator
+    import train as training
+    from priors import ALL_CONFIGS
+    from wordle_data import load_data
+
+    games = 200
+    data = load_data(mask_last=1)
+    worst, worst_where = 0.0, None
+
+    for config in ALL_CONFIGS:
+        form = estimator.get_form(estimator.load_record(config)["form"])
+        done = subprocess.run(
+            [path, ROOT, "--prior", config.slug, "--form", form.name,
+             "--games", str(games), "--seed", "0", "--max-iters", "0",
+             "--exact-max", "0"],
+            capture_output=True, text=True)
+        if done.returncode != 0 or not done.stdout.strip():
+            trouble = (done.stdout + done.stderr).strip().splitlines()
+            report(trouble[-1] if trouble else "the trainer wrote nothing")
+            return False
+        theirs = json.loads(done.stdout)[0]
+
+        _, meta = training.policy_iteration(
+            config, data=data, form=form, n_games=games, seed=0, max_iters=0,
+            solver_options={"exact_max": 0}, save=False, verbose=False)
+
+        mine_round, their_round = meta["history"][0], theirs["history"][0]
+        if mine_round["mean_guesses"] != their_round["mean_guesses"]:
+            report(f"{config.slug}: the seed round's means differ, "
+                   f"{their_round['mean_guesses']} against "
+                   f"{mine_round['mean_guesses']}")
+            return False
+        if mine_round["terms_used"] != their_round["terms_used"]:
+            report(f"{config.slug}: the fit kept {their_round['terms_used']} terms "
+                   f"against {mine_round['terms_used']}")
+            return False
+        here = gap(their_round["fitted_params"], mine_round["fitted_params"])
+        if here > worst:
+            worst, worst_where = here, config.slug
+
+    report(f"{len(ALL_CONFIGS)} priors, {games} games each: the same answers "
+           f"drawn, the same mean off the same rollouts, the same terms kept")
+    report(f"worst {worst:.3f} of tolerance" +
+           (f", on {worst_where}" if worst_where else ""))
+    if worst > 1.0:
+        report("over tolerance")
+        return False
+    return True
+
+
 CHECKS = [
     ("the coloring rule",
      "every one of the 12,947^2 pairs matches feedback_table.npy",
@@ -995,6 +1163,15 @@ CHECKS = [
     ("the estimator",
      "f over every form and every cached fit matches estimator.f_eval_x",
      check_estimator),
+    ("the training draw",
+     "every sampled answer matches np.random.default_rng, index for index",
+     check_rng),
+    ("the least-squares fit",
+     "f fitted over three datasets and every form matches estimator.fit",
+     check_fit),
+    ("policy iteration",
+     "the seed round agrees: the draw, the rollouts and the fit off them",
+     check_train),
     ("the kernels",
      "the three scorers and the split helpers match kernels, either side of "
      "both thresholds",

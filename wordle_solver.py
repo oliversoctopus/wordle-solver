@@ -165,6 +165,7 @@ def cmd_train(args):
         max_iters=args.max_iters,
         tol=args.tol,
         seed=args.seed,
+        use_rust=args.rust,
         solver_options=solver_kwargs(args),
     )
     return 0
@@ -311,6 +312,10 @@ def build_parser():
     tr.add_argument("--max-iters", type=int, default=training.DEFAULT_MAX_ITERS)
     tr.add_argument("--tol", type=float, default=training.DEFAULT_TOL)
     tr.add_argument("--seed", type=int, default=0)
+    tr.add_argument("--rust", action="store_true",
+                    help="fit with the native trainer where it can reproduce "
+                         "the settings; it returns a different valid fit, not "
+                         "the Python's (README *Fitting in Rust*)")
     tr.add_argument("--this-config-only", action="store_true",
                     help="fit only the prior combination given by the prior flags, "
                          "instead of all four")

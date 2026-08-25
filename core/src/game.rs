@@ -98,7 +98,7 @@ where
 /// Games in flight at once. Not a thread count -- the threads are the kernels'
 /// -- but how many of them may be between scans before the cache gives out.
 #[cfg(not(target_arch = "wasm32"))]
-const SWEEP_CHUNKS: usize = 3;
+pub const SWEEP_CHUNKS: usize = 3;
 
 /// Guesses taken against one answer, a loss counting as one over the limit.
 fn length<S: Source>(solver: &mut Solver<S>, answer: usize, max_guesses: usize) -> f64 {

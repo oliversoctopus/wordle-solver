@@ -1,10 +1,9 @@
 //! `f(n)`, the estimated guesses still needed from a position of effective
 //! size `n`, and the basis functions it is fitted in.
 //!
-//! Only the runtime half is here. Fitting stays in Python, where
-//! `estimator.fit` reaches for a real least-squares solve and runs a handful of
-//! times per training run; what crosses over is evaluating a fit that already
-//! exists. The parameters arrive as JSON the Python wrote.
+//! The runtime half: evaluating a fit, wherever the parameters came from. The
+//! least-squares solve that produces them is `fit`, and the loop that drives it
+//! is `train`; a fit read back off disk arrives as JSON the Python wrote.
 
 use std::error::Error;
 
@@ -149,28 +148,34 @@ pub fn get_form(name: &str) -> Option<Form> {
 /// `x` rather than `n` is the primitive because every caller reaches `f`
 /// through an entropy and so has `x` in hand; going via `n` would raise `2^x`
 /// only for this to take the logarithm straight back off.
+/// One basis term at `x = log2(n)`. The fit builds its design matrix from this
+/// too, so the basis cannot drift between fitting and playing.
+#[inline]
+pub fn term_value(code: i64, knot: f64, x: f64) -> f64 {
+    match code {
+        TERM_CONST => 1.0,
+        TERM_X => x,
+        TERM_X2 => x * x,
+        TERM_X3 => x * x * x,
+        TERM_INVN => 1.0 - 2.0f64.powf(-x), // 1 - 1/n
+        TERM_LOG1PX => (1.0 + x).log2(),
+        TERM_SQRTX => x.sqrt(),
+        _ => {
+            let hinge = x - knot;
+            if hinge < 0.0 {
+                0.0
+            } else {
+                hinge
+            }
+        }
+    }
+}
+
 #[inline]
 pub fn f_eval_x(x: f64, params: &[f64], form: &Form) -> f64 {
     let mut val = form.base;
     for (i, &code) in form.codes.iter().enumerate() {
-        let term = match code {
-            TERM_CONST => 1.0,
-            TERM_X => x,
-            TERM_X2 => x * x,
-            TERM_X3 => x * x * x,
-            TERM_INVN => 1.0 - 2.0f64.powf(-x), // 1 - 1/n
-            TERM_LOG1PX => (1.0 + x).log2(),
-            TERM_SQRTX => x.sqrt(),
-            _ => {
-                let hinge = x - form.knots[i];
-                if hinge < 0.0 {
-                    0.0
-                } else {
-                    hinge
-                }
-            }
-        };
-        val += params[i] * term;
+        val += params[i] * term_value(code, form.knots[i], x);
     }
     if val < 1.0 {
         1.0

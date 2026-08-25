@@ -339,6 +339,18 @@ What says the round count is not set by how far the seed sits from the answer is
 
 None of it is kept. The seed argument those three arms needed was measured and taken back out, so the figures above are facts about an implementation that no longer exists, as the turn-conditioned ones below are.
 
+### Fitting in Rust
+
+The whole loop has a native side. `core/src/train.rs` is `train.policy_iteration` term for term, `core/src/fit.rs` does the least-squares solve, and `core/src/rng.rs` reproduces `np.random.default_rng` — SeedSequence, PCG64 and `choice`'s own cumulative sum and right-hand search — so that both implementations draw the same training answers rather than merely similar ones. `wordle_solver.py train --rust` hands a fit over; `rust_train.py` declines rather than guessing where a setting has no flag, and `estimator.save_params` still writes the cache, so there is one writer and one format.
+
+Two of the three pieces agree exactly. The sampler is bit for bit, over three seeds and all five priors, index by index. The fit is not, and cannot be: `np.linalg.lstsq` is LAPACK's SVD with a minimum-norm solution for the rank-deficient case a spline routinely hands it, and `fit.rs` solves by one-sided Jacobi instead, which agrees to about 1e-12 across 27 dataset-and-form pairs and keeps the same terms in every one. That makes it the second thing `tests/rust_parity.py` compares on a tolerance, after the letter odds.
+
+**Parity stops at the seed round, and that is as far as it can go.** Given identical parameters the two play identically — the same guesses, the same rollouts, the same mean. But the first fit differs in its last bits, greedy policy iteration acts on that, and somewhere a tie breaks the other way: one rollout changes, the next fit changes, and from there the two walk different paths to different fixed points. Even the seed round's own holdout is downstream of it. So the Rust returns a *different valid fit* rather than the Python's, and `--rust` is off by default for that reason: adopting it means refitting every prior and rerunning every measurement that moves with a fit.
+
+What it buys is **about 1.25×** over a whole `train`, which is well short of the 1.6× the same port gets on a sweep. The reason is where the time goes: a sweep spends two thirds of its Python time outside the kernels, where Rust is roughly twice as quick, while a training round is mostly kernel scans that are already parallel and already at memory bandwidth.
+
+The sweep's other trick does not carry over at all. Playing several games at once is worth 1.12× there and *costs* here — 0.790 s a round serially against 0.939 at two chunks and 1.125 at three, over the five priors at 2,000 games. Training turns the endgame search off, and the search is what leaves a core somewhere to go while a game is between scans; with nothing but scans left, splitting the memo three ways only makes each copy refill. Under `--exact-max 60` it reverses, three chunks taking the default prior's loop from 17.4 s to 14.6 s, so `train --chunks` follows `--exact-max` unless it is set outright.
+
 ## The exact endgame
 
 Once the candidate set is small, or few turns remain, `exact.py` computes the value outright:

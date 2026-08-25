@@ -22,6 +22,7 @@ import time
 import numpy as np
 
 import estimator
+import rust_train
 from priors import ALL_CONFIGS
 from solver import DEFAULT_DEADLINE, ENTROPY, EXPECTED, WordleSolver, sample_answers
 from wordle_data import load_data
@@ -86,7 +87,8 @@ def fit_rmse(n_eff, counts, targets, params, form):
 def policy_iteration(config, data=None, form=None, n_games=DEFAULT_GAMES,
                      max_iters=DEFAULT_MAX_ITERS, tol=DEFAULT_TOL, seed=0,
                      patience=DEFAULT_PATIENCE, holdout_games=None,
-                     solver_options=None, verbose=True, save=True, active=True):
+                     solver_options=None, verbose=True, save=True, active=True,
+                     use_rust=False):
     """Fit f for one prior combination and (optionally) cache it.
 
     Exact convergence is not guaranteed: the policy is greedy, so a small
@@ -101,6 +103,18 @@ def policy_iteration(config, data=None, form=None, n_games=DEFAULT_GAMES,
     if verbose:
         print(f"\n=== {config.slug} / {form.name}: {config.describe()} ===")
         print(f"  form: {form.description}")
+
+    if use_rust:
+        handed = rust_train.policy_iteration(
+            config, form, n_games, seed, max_iters, tol, patience,
+            holdout_games, options, verbose=verbose)
+        if handed is not None:
+            params, meta = handed
+            if save:
+                path = estimator.save_params(config, params, form, meta, active=active)
+                if verbose:
+                    print(f"  saved -> {path}")
+            return params, meta
 
     seed_solver = WordleSolver(data=data, config=config, mode=ENTROPY, **options)
     answers = sample_answers(seed_solver.weights, n_games, seed=seed)
