@@ -338,7 +338,10 @@ def build_parser():
     comp.add_argument("--holdout-games", type=int, default=2000)
     comp.add_argument("--max-iters", type=int, default=training.DEFAULT_MAX_ITERS)
     comp.add_argument("--seed", type=int, default=0)
-    comp.set_defaults(func=cmd_compare)
+    # same default as train, and for the same reason: fitting under the full
+    # search buys at most 0.0007 guesses and costs 4x the loop (README
+    # *What it is worth*)
+    comp.set_defaults(func=cmd_compare, default_exact_max=0)
 
     info = sub.add_parser("info", parents=[common], help="show cached estimator fits")
     info.add_argument("--forms", action="store_true", help="also list the available forms")

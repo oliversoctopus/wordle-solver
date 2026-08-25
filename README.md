@@ -321,6 +321,24 @@ The loop stops when the parameters settle, or when the measured mean stops impro
 
 The refusal carries the `train` command that ends it, so both front ends can hand it over as it stands: the terminal prints it and exits 2 rather than a traceback, and the page reports it as a 503 with the same command in it. Startup shows it on the veil instead of a stack trace, since there is nothing to debug.
 
+### What the loop converges to
+
+It does not converge to the best `f` it sees, which is why `policy_iteration` keeps the parameters whose policy measured best rather than the ones it stopped on. Under `train`'s settings the fit for `repeat0_curation1_c-wordlebot` settles by its third round and stays there, and that settled `f` is worth **3.5241** guesses over every answer against **3.4953** for the round-one transient the loop keeps — so running to convergence would ship an `f` 0.029 guesses worse. Nothing guarantees otherwise: `f` carries at most six parameters and a whole candidate set is compressed to one scalar before it ever sees it, so the fixed point of the fit is nobody's optimum in particular.
+
+That makes the selection statistic look like the weak link, and it is not. `best_train_mean_guesses` is a mean over the same 2,000 answers the round was fitted on, and the loop takes an argmin over half a dozen correlated draws of it, which is the shape of a selection that overfits itself. Hand every distinct `f` any round produced to `every_answer --form --params` instead (`analysis/fit_rounds.py`) — all 12,947 words, weighted by the prior, computed rather than sampled — and the kept fit is the exact best of its own run in **nine of ten** runs across the five priors and both settings, giving up 0.0003 guesses in the tenth. There is nothing left there to win.
+
+Round 0 is not a throwaway either. On `repeat1_curation0_r-binned` the `f` fitted from the entropy seed's rollouts outscores every later round at both settings, and it is what both runs keep.
+
+### Warm starting from the previous fit (tried, rejected)
+
+After `solutions.py --write` the previous fit is still sitting in `estimator_cache/`, so seeding round 0 with it rather than with greedy entropy looks like a free head start. It is not, because the entropy seed is the one round that costs nothing — entropy mode consults neither `f` nor the endgame search, so round 0 runs in about a second where an expected-mode round on a flat prior runs in thirty. Seeded at `--exact-max 60`, `repeat0_curation0` took the same four rounds and its loop went from 31.8 s to 59.0 s.
+
+With the search off the seeding does save rounds, 29 to 24 across the five priors and 27.5 s to 23.2 s, and it lands somewhere slightly worse for them. Scored over every answer the warm-started fits average **3.5571** against **3.5511** cold, and nearly all of the gap is one prior: `repeat0_curation1_c-wordlebot` reaches 3.5241 and opens `raise`, where the cold run reaches 3.4953 and opens `reast`. Skipping the early rounds means skipping the transients, and the transients are where the good fits were.
+
+What says the round count is not set by how far the seed sits from the answer is the third arm. Seeding with the *current* fit, the very `f` the run is trying to reproduce, saves nothing over seeding with one from a fortnight earlier: 24 rounds either way.
+
+None of it is kept. The seed argument those three arms needed was measured and taken back out, so the figures above are facts about an implementation that no longer exists, as the turn-conditioned ones below are.
+
 ## The exact endgame
 
 Once the candidate set is small, or few turns remain, `exact.py` computes the value outright:
@@ -377,7 +395,7 @@ At three and four candidates every disagreement is a tie — a different word of
 
 The search's own regret reads 0.0004 rather than zero, and that is the loss penalty rather than any limit of the search: it optimizes a penalized score while this column measures mean guesses. At `--loss-penalty 1` it is 0.0000 exactly, which also says the branch cap costs nothing at these sizes.
 
-Refitting `f` under the search moves the curve by under 0.03 guesses everywhere (fit RMSE 0.63), does not change measured play, and costs about 50× the wall clock, so `train` keeps only the free `t ≤ 2` part by default; `--exact-max 24` fits under the full policy.
+Refitting `f` under the search moves the curve by under 0.03 guesses everywhere (fit RMSE 0.63) and buys next to nothing in play. Scored over every answer rather than on a sample, the search-fitted `f` is worth **0.0003 guesses** on average across the five priors and 0.0007 at worst, two of the five coming out identical, while the fitting loop takes about **4×** as long. `train` and `compare` therefore both keep only the free `t ≤ 2` part; `--exact-max 24` or `60` fits under the full policy on either.
 
 ## Losing less
 
@@ -513,6 +531,18 @@ It could not have done. Where those curves differ is where the deadline binds, a
 | 1 | 0 | 1 | 0 | 30 |
 
 `f` takes **no** decision at all in the 1,117 positions with three or fewer turns left; the 84 at four turns left are the last it ever sees. Every row where a turn-conditioned curve would say something different is a row nobody reads. The outcome measured when it was tried, over 80,000 paired games, was losses 81 → 79 and a mean of +0.0005 ± 0.0007 — a fact about an implementation since removed, where the table above is a fact about the solver as it stands.
+
+### Conditioning f on the pattern (tried, rejected)
+
+`f` reads one scalar, so ten candidates in the `-atch` family and ten well-separated ones are the same position to it. The feedback pattern is the one structural feature already in hand where `f` is evaluated — `kernels._expected_guesses` is iterating over exactly the `r` of `E(g, S) = 1 + sum over r != GGGGG of p_r * f(n_r)` — so `f(n) + offset[class(r)]` would cost one read from a 243-entry table and no rescan of anything.
+
+The bias it would correct is real and large. Fitting the offsets alongside `f` on 2,000 games of rollouts, with the green count entered as dummies and depth controlled for (`analysis/pattern_offsets.py`), a bucket reached by three greens needs **+0.49 ± 0.06** guesses more than its effective size predicts under the repeat-only prior and +0.20 ± 0.07 under no prior at all, rising with the green count throughout. The three priors carrying a curation shape show about 0.05 and nothing worth chasing.
+
+Play gets worse anyway. Hold `f` at the shipped fit and scale the correction from nothing up to the fitted value, and the mean over every answer climbs at every step on four of the five priors — `repeat0_curation0` goes 4.0699 → 4.2473 and its opening from `tares` to `estop` — while the fifth moves 0.0006 the other way. Refitting `f` jointly with the offsets rescues none of it.
+
+Gating the offset by bucket size says why, and the answer is extrapolation rather than a wrong correction. Applied only to buckets of 30 candidates or fewer, which is where the residuals were measured — a four-green bucket averages four candidates — it costs 0.0020 guesses averaged over the five priors and helps one of them. Applied to buckets of hundreds, which the residuals never sampled and which the widest scans are made of, it costs up to 0.18. A constant of +0.45 guesses is a small thing against a four-candidate bucket and an enormous one against a five-hundred-candidate bucket, and the ranking at the opening is decided by exactly the latter.
+
+What the correction does buy, slightly and on all five priors, is a lower loss rate at the tightest gate. That trade already has a dial in `--loss-penalty`, which does not need 243 floats to turn.
 
 ## The opening is not where the estimator is weak
 
