@@ -312,10 +312,11 @@ def build_parser():
     tr.add_argument("--max-iters", type=int, default=training.DEFAULT_MAX_ITERS)
     tr.add_argument("--tol", type=float, default=training.DEFAULT_TOL)
     tr.add_argument("--seed", type=int, default=0)
-    tr.add_argument("--rust", action="store_true",
+    tr.add_argument("--rust", action=argparse.BooleanOptionalAction, default=True,
                     help="fit with the native trainer where it can reproduce "
-                         "the settings; it returns a different valid fit, not "
-                         "the Python's (README *Fitting in Rust*)")
+                         "the settings (default); --no-rust fits here instead, "
+                         "which is a different valid fit rather than a better "
+                         "one (README *Fitting in Rust*)")
     tr.add_argument("--this-config-only", action="store_true",
                     help="fit only the prior combination given by the prior flags, "
                          "instead of all four")

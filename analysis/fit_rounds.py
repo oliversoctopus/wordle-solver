@@ -60,7 +60,10 @@ for config in ALL_CONFIGS:
         started = time.perf_counter()
         params, meta = training.policy_iteration(
             config, data=data, form=form, n_games=args.games, seed=args.seed,
-            solver_options={"exact_max": reach}, save=False, verbose=False)
+            solver_options={"exact_max": reach}, save=False, verbose=False,
+            # pinned to the Python: the native trainer returns a different valid
+            # fit, and README quotes this script against the cached ones
+            use_rust=False)
         loops[reach] += sum(round_["seconds"] for round_ in meta["history"])
         print(f"  --exact-max {reach:<3} {meta['iterations']} rounds in "
               f"{time.perf_counter() - started:5.1f} s, converged="

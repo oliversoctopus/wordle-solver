@@ -7,10 +7,18 @@
 //! value reduces them to the exact score when two guesses remain.
 //!
 //! Ported from `kernels.py`, arithmetic order included, so a score here is the
-//! same float the numba kernel produces rather than merely a close one. The
-//! candidate weights are summed left to right for the same reason: `sum.rs`
-//! reproduces `np.sum`, and these loops are the one place the Python does not
-//! reach for it.
+//! same float the numba kernel produces rather than merely a close one.
+//!
+//! Nothing here reduces through `sum::pairwise`, and that is the shape of the
+//! work rather than deference to numba. Filling a bucket means scattering each
+//! candidate into whichever of 243 slots its pattern names, which is no
+//! reduction a pairwise routine could be handed. The candidate weights are then
+//! totalled left to right so the total comes out the very float those buckets
+//! add up to: without that, a guess leaving every candidate in one bucket gives
+//! a share a hair off 1.0 and stops scoring exactly zero bits. Draining the
+//! buckets afterwards walks candidate order below `RESCAN_MAX` and pattern
+//! order above it, so that sum has no canonical order to be accurate about even
+//! within the one function.
 //!
 //! Every kernel takes a `pool` of guess indices, standing in for all of them
 //! when `None`. That parameter is what keeps a deeper search affordable, and it

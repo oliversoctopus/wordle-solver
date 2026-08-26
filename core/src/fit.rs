@@ -1,111 +1,105 @@
 //! Least squares for `f`, and the monotonicity guard that trims a form.
 //!
-//! `estimator.fit` is one `np.linalg.lstsq` per candidate term count, and that
-//! is an SVD with a minimum-norm solution when the basis is rank deficient --
-//! which it routinely is, since a spline hinge beyond the widest position seen
-//! is a column of zeros. A plain QR would return nonsense there rather than the
-//! zero coefficient numpy returns, so this solves by SVD too: one-sided Jacobi,
-//! which is accurate on the tall thin matrices a fit actually has and short
-//! enough to read.
+//! `estimator.fit` is one `np.linalg.lstsq` per candidate term count, and the
+//! basis it hands over is routinely rank deficient: a spline hinge beyond the
+//! widest position seen is a column of zeros, and no solve can pick a
+//! coefficient for a direction the data never visits. numpy answers that with
+//! an SVD and a minimum-norm solution, which lands such a column on exactly
+//! zero. This drops those columns outright and solves the full-rank remainder
+//! by Householder QR -- the same answer by a shorter route, since the
+//! coefficient either way is zero.
 //!
-//! It agrees with numpy to about 1e-12 rather than to the last bit. LAPACK
-//! reduces in an order neither documented nor stable across builds, so this is
-//! the second place in the port compared on a tolerance, the letter odds being
-//! the first.
+//! That leaves it agreeing with numpy closely rather than bitwise, so the fit
+//! is one of the fields `tests/rust_parity.py` compares on a tolerance.
 
 use crate::estimator::{term_value, Form};
+use crate::sum::pairwise_of;
 
-/// numpy's `rcond=None`: singular values below `max(m, n) * eps * s_max` are
-/// treated as zero, which is what turns a dead column into a zero coefficient.
+/// numpy's `rcond=None`: a direction below `max(m, n) * eps * scale` carries
+/// nothing, which is what turns a dead column into a zero coefficient.
 const EPS: f64 = f64::EPSILON;
 
-/// Columns of `a` orthogonalized in place by Givens rotations, accumulating the
-/// right factor. Returns `(singular values, v)` with `a` left holding `u * s`.
-fn jacobi_svd(a: &mut [Vec<f64>], v: &mut [Vec<f64>]) -> Vec<f64> {
-    let n = a.len();
-    let m = if n == 0 { 0 } else { a[0].len() };
-    for (j, row) in v.iter_mut().enumerate() {
-        for (i, slot) in row.iter_mut().enumerate() {
-            *slot = if i == j { 1.0 } else { 0.0 };
-        }
-    }
-
-    // 30 sweeps is far past convergence for the six columns a form can have;
-    // the loop exits as soon as a whole sweep rotates nothing.
-    for _ in 0..30 {
-        let mut rotated = false;
-        for p in 0..n {
-            for q in (p + 1)..n {
-                let mut alpha = 0.0;
-                let mut beta = 0.0;
-                let mut gamma = 0.0;
-                for i in 0..m {
-                    alpha += a[p][i] * a[p][i];
-                    beta += a[q][i] * a[q][i];
-                    gamma += a[p][i] * a[q][i];
-                }
-                if gamma == 0.0 || gamma.abs() <= EPS * (alpha * beta).sqrt() {
-                    continue;
-                }
-                rotated = true;
-                let zeta = (beta - alpha) / (2.0 * gamma);
-                let t = zeta.signum() / (zeta.abs() + (1.0 + zeta * zeta).sqrt());
-                let c = 1.0 / (1.0 + t * t).sqrt();
-                let s = c * t;
-                for i in 0..m {
-                    let (ap, aq) = (a[p][i], a[q][i]);
-                    a[p][i] = c * ap - s * aq;
-                    a[q][i] = s * ap + c * aq;
-                }
-                for i in 0..n {
-                    let (vp, vq) = (v[p][i], v[q][i]);
-                    v[p][i] = c * vp - s * vq;
-                    v[q][i] = s * vp + c * vq;
-                }
-            }
-        }
-        if !rotated {
-            break;
-        }
-    }
-
-    a.iter()
-        .map(|column| column.iter().map(|z| z * z).sum::<f64>().sqrt())
-        .collect()
-}
-
-/// Minimum-norm least-squares solution of `a x = b`, `a` given as columns.
+/// Least-squares solution of `a x = b`, `a` given as columns.
 ///
-/// Mirrors `np.linalg.lstsq(a, b, rcond=None)`: singular directions below the
-/// cutoff contribute nothing, so a column carrying no information comes back
-/// with a coefficient of exactly zero instead of an arbitrary large one.
+/// Columns carrying no information are dropped before the solve and come back
+/// with a coefficient of exactly zero, so the system QR sees is full rank --
+/// which a plain QR needs, its back-substitution dividing by a diagonal that a
+/// dead column would leave at zero.
 pub fn lstsq(columns: &[Vec<f64>], b: &[f64]) -> Vec<f64> {
     let n = columns.len();
     if n == 0 {
         return Vec::new();
     }
     let m = columns[0].len();
-    let mut a: Vec<Vec<f64>> = columns.to_vec();
-    let mut v = vec![vec![0.0; n]; n];
-    let sigma = jacobi_svd(&mut a, &mut v);
 
-    let s_max = sigma.iter().cloned().fold(0.0, f64::max);
-    let cutoff = s_max * (m.max(n) as f64) * EPS;
+    let norms: Vec<f64> = columns
+        .iter()
+        .map(|column| pairwise_of(m, |i| column[i] * column[i]).sqrt())
+        .collect();
+    let scale = norms.iter().cloned().fold(0.0, f64::max).max(1.0);
+    let cutoff = scale * (m.max(n) as f64) * EPS;
+    let live: Vec<usize> = (0..n).filter(|&j| norms[j] > cutoff).collect();
 
     let mut x = vec![0.0; n];
-    for j in 0..n {
-        if sigma[j] <= cutoff || sigma[j] == 0.0 {
+    if live.is_empty() {
+        return x;
+    }
+    let reduced: Vec<Vec<f64>> = live.iter().map(|&j| columns[j].clone()).collect();
+    for (slot, value) in live.iter().zip(qr_solve(reduced, b.to_vec())) {
+        x[*slot] = value;
+    }
+    x
+}
+
+/// `a x = b` in the least-squares sense, by Householder QR with `a` full rank.
+///
+/// The reflections are applied to `b` as they are formed rather than
+/// accumulated into a `q`, so what is left to do at the end is one
+/// back-substitution against the triangle in the first rows.
+fn qr_solve(mut a: Vec<Vec<f64>>, mut b: Vec<f64>) -> Vec<f64> {
+    let k = a.len();
+    let m = a[0].len();
+
+    for j in 0..k {
+        let norm = pairwise_of(m - j, |t| a[j][t + j] * a[j][t + j]).sqrt();
+        if norm == 0.0 {
             continue;
         }
-        // a[j] is u_j * sigma_j, so this is (u_j . b) / sigma_j in one pass
-        let mut projection = 0.0;
-        for i in 0..m {
-            projection += a[j][i] * b[i];
+        // reflect onto the axis pointing away from the pivot, which is the
+        // choice that avoids cancelling the leading entry against itself
+        let alpha = if a[j][j] > 0.0 { -norm } else { norm };
+        let mut v = vec![0.0; m];
+        v[j..m].copy_from_slice(&a[j][j..m]);
+        v[j] -= alpha;
+        let vv = pairwise_of(m - j, |t| v[t + j] * v[t + j]);
+        if vv == 0.0 {
+            continue;
         }
-        let coefficient = projection / (sigma[j] * sigma[j]);
-        for (i, slot) in x.iter_mut().enumerate() {
-            *slot += coefficient * v[j][i];
+
+        for c in j..k {
+            let dot = pairwise_of(m - j, |t| v[t + j] * a[c][t + j]);
+            let factor = 2.0 * dot / vv;
+            for i in j..m {
+                a[c][i] -= factor * v[i];
+            }
         }
+        let dot = pairwise_of(m - j, |t| v[t + j] * b[t + j]);
+        let factor = 2.0 * dot / vv;
+        for i in j..m {
+            b[i] -= factor * v[i];
+        }
+    }
+
+    let mut x = vec![0.0; k];
+    for j in (0..k).rev() {
+        if a[j][j] == 0.0 {
+            continue;
+        }
+        let mut total = b[j];
+        for c in (j + 1)..k {
+            total -= a[c][j] * x[c];
+        }
+        x[j] = total / a[j][j];
     }
     x
 }

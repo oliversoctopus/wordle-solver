@@ -61,9 +61,17 @@ pub const DEFAULT_MEMO_LIMIT: usize = 500_000;
 /// would save is the only one a wide position does.
 pub const COLUMNS_MAX: usize = 256;
 
-/// Two guesses that split the candidates identically score identically, so this
-/// only decides when their feedback vectors are worth comparing.
-pub const SPLIT_TIE_TOL: f64 = 1e-9;
+/// Two guesses that split the candidates identically score identically -- the
+/// same buckets filled in the same order -- so this gates the feedback-vector
+/// comparison at equality rather than at a tolerance.
+pub const SPLIT_TIE_TOL: f64 = 0.0;
+
+/// The branch cap orders on the bound rounded to this, so two bounds within a
+/// float's noise of each other tie and the lower word index decides. `exact.py`
+/// rounds the same way, which is what lets the two agree without agreeing
+/// bitwise: the ordering stops turning on a last bit that no reduction order
+/// reproduces.
+pub const BRANCH_TIE_TOL: f64 = 1e-11;
 
 /// The search visited more nodes than allowed; the caller falls back to the
 /// heuristic policy.
@@ -519,13 +527,20 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     ///
     /// The bounds tie in bulk -- a position can hold a thousand splits at one
     /// value -- so which of them the cap keeps rests entirely on the tie-break,
-    /// and it has to be one `exact.py` can spell too. Word index is that:
-    /// `np.argsort(kind="stable")` on the far side.
+    /// and it has to be one `exact.py` can spell too. Word index is that, over
+    /// the bound rounded to `BRANCH_TIE_TOL`: `np.argsort(kind="stable")` on
+    /// the same key on the far side.
+    ///
+    /// Rounded and not floored because the ties sit on whole values like 2.0,
+    /// which a floor would run a bucket edge through; spelled `floor(x + 0.5)`
+    /// because numpy rounds a half to even where Rust rounds it away from zero,
+    /// and floor is IEEE in both.
     fn branch_order(&self, bounds: &[f64], cap: Option<usize>) -> Vec<usize> {
         let mut order: Vec<usize> = (0..bounds.len()).collect();
+        let key = |i: usize| (bounds[i] / BRANCH_TIE_TOL + 0.5).floor();
         order.sort_by(|&a, &b| {
-            bounds[a]
-                .partial_cmp(&bounds[b])
+            key(a)
+                .partial_cmp(&key(b))
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then(a.cmp(&b))
         });

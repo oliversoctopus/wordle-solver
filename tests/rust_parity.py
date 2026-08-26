@@ -344,9 +344,9 @@ def check_exact(report):
     """The endgame search, against ``exact.ExactEndgame``.
 
     Both the guess and the value have to match.  A guess of equal value would
-    not do: ``SPLIT_TIE_TOL`` is 1e-9 and the closest real pair of scores over a
-    whole scan is 1.1e-9, so a drifting branch order shows up as a different
-    word long before it shows up as a different number.
+    not do: the closest real pair of scores over a whole scan is 1.1e-9, so a
+    drifting branch order shows up as a different word long before it shows up
+    as a different number.
     """
     path = binary("parity_exact")
     if path is None:
@@ -1127,7 +1127,10 @@ def check_train(report):
 
         _, meta = training.policy_iteration(
             config, data=data, form=form, n_games=games, seed=0, max_iters=0,
-            solver_options={"exact_max": 0}, save=False, verbose=False)
+            solver_options={"exact_max": 0}, save=False, verbose=False,
+            # explicitly, since the default is now the native trainer and this
+            # is the side it is being compared against
+            use_rust=False)
 
         mine_round, their_round = meta["history"][0], theirs["history"][0]
         if mine_round["mean_guesses"] != their_round["mean_guesses"]:

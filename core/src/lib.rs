@@ -26,6 +26,8 @@ pub mod solver;
 pub mod source;
 pub mod state;
 pub mod sum;
+// the fitting loop plays games across cores, which the wasm build has none of
+#[cfg(not(target_arch = "wasm32"))]
 pub mod train;
 pub mod words;
 

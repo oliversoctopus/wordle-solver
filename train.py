@@ -88,7 +88,7 @@ def policy_iteration(config, data=None, form=None, n_games=DEFAULT_GAMES,
                      max_iters=DEFAULT_MAX_ITERS, tol=DEFAULT_TOL, seed=0,
                      patience=DEFAULT_PATIENCE, holdout_games=None,
                      solver_options=None, verbose=True, save=True, active=True,
-                     use_rust=False):
+                     use_rust=True):
     """Fit f for one prior combination and (optionally) cache it.
 
     Exact convergence is not guaranteed: the policy is greedy, so a small

@@ -1,10 +1,10 @@
 //! Solves the endgame positions Python handed over, for Python to diff.
 //!
 //! The search has to return the identical guess *and* the identical value. A
-//! guess of equal value is not good enough: `SPLIT_TIE_TOL` is 1e-9 and the
-//! closest real pair of scores measured over a whole scan is 1.1e-9, so "same
-//! value" and "same word" are nearly the same question here, and only the
-//! stricter one catches a branch order that has drifted.
+//! guess of equal value is not good enough: the closest real pair of scores
+//! measured over a whole scan is 1.1e-9, so "same value" and "same word" are
+//! nearly the same question here, and only the stricter one catches a branch
+//! order that has drifted.
 //!
 //!     parity_exact <repo root> <sets file> <output directory>
 //!

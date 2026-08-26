@@ -87,10 +87,16 @@ DEFAULT_MAX_BRANCH = 50
 # WORDLE_ROOT_BRANCH narrows it back, and the Rust reads the same variable
 DEFAULT_ROOT_BRANCH = int(os.environ.get("WORDLE_ROOT_BRANCH") or 150)
 
-# two guesses that split the candidates identically score identically, so this
-# only decides when their feedback vectors are worth comparing; the comparison
-# is what settles whether they are one guess under two spellings
-SPLIT_TIE_TOL = 1e-9
+# two guesses that split the candidates identically score identically -- the
+# same buckets filled in the same order -- so this gates the feedback-vector
+# comparison at equality rather than at a tolerance; the comparison is what
+# settles whether they are one guess under two spellings
+SPLIT_TIE_TOL = 0.0
+
+# the branch cap orders on the bound rounded to this, so two bounds within a
+# float's noise of each other tie and the lower word index decides; `exact.rs`
+# rounds the same way, which is what lets the two agree without agreeing bitwise
+BRANCH_TIE_TOL = 1e-11
 
 
 class SearchBudgetExceeded(Exception):
@@ -289,12 +295,20 @@ class ExactEndgame:
         ``cap``.  Where the dedupe already did its job the cap never binds, so
         the endgame stays exact and only the wide positions are truncated.
 
-        Stable, so a tie goes to the lower word index rather than to whatever
-        quicksort leaves it at.  The bounds tie in bulk -- a position can hold a
-        thousand splits at one value -- so which of them the cap keeps rests
-        entirely on this, and ``exact.rs`` has to be able to spell the same rule.
+        Ordered on the bound rounded to ``BRANCH_TIE_TOL`` and stable, so a tie
+        goes to the lower word index rather than to whatever quicksort leaves it
+        at.  The bounds tie in bulk -- a position can hold a thousand splits at
+        one value -- so which of them the cap keeps rests entirely on this, and
+        ``exact.rs`` has to be able to spell the same rule.
+
+        Rounded rather than floored because the ties sit on whole values like
+        2.0, which a floor would put a bucket edge through; ``floor(x + 0.5)``
+        rather than ``round`` because numpy rounds a half to even and Rust
+        rounds it away from zero, where floor is IEEE in both.
         """
-        order = np.argsort(bounds, kind="stable")
+        keys = np.floor(np.asarray(bounds, dtype=np.float64) / BRANCH_TIE_TOL
+                        + 0.5)
+        order = np.argsort(keys, kind="stable")
         return order if cap is None else order[:cap]
 
     def _duplicates(self, guess, score, listed, candidates):
