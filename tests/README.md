@@ -5,9 +5,11 @@ python tests/run.py           a few seconds, needs nothing loaded
 python tests/run.py --full    also the parts that load the 167 MB table
 ```
 
-Eight files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
+Nine files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, the coloring rule and every copy of it can be wrong together, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
 
-None of them assert numbers written down by hand. Each has something else to check against — the second implementation, the answer record, or a property that holds of every board there is — because a number copied into a test is a fourth place for it to go stale, and `README.md` § *Numbers in the documents* already has three.
+None of them assert numbers written down by hand. Each has something else to check against — the second implementation, the answer record, or a property that holds of every board there is. Staleness is part of it, a number copied into a test being a fourth place for it to drift when `README.md` § *Numbers in the documents* already has three. The larger part is that a case someone writes covers what they had in mind, which is the part they were least likely to get wrong; an oracle can be run over inputs nobody chose, and that is where the bugs turn out to be.
+
+The exception is `anchors.py`, and it is the exception the rest of this depends on. Diffing two implementations shows they agree and shows nothing else, so somewhere the chain has to be pinned to facts from outside the repository — Wordle's coloring rule, Shannon's entropy, and what optimal play is worth in a position small enough to settle on paper.
 
 ## `board.test.js` — the solve board's editing rules
 
@@ -58,6 +60,36 @@ Needs the table, so `run.py` keeps it behind `--full`.
 python tests/scoring.py --games 6     three games per mode by default
 ```
 
+## `anchors.py` — the facts the rest of this is measured against
+
+Everything else here compares one part of the repository with another. That is how you get coverage, but it establishes nothing: two transcriptions of a wrong rule agree perfectly. The clearest case is the coloring rule. `rust_parity.py` compares the Rust against all 167,624,809 entries of `feedback_table.npy`, but that table is the output of `feedback_table.wordle_result`, and `wordle_data.score_guess` is a third hand-written copy of the same algorithm. Get the duplicate-letter rule wrong and all three are wrong together, with every one of those comparisons still passing.
+
+So four things are asserted from definitions that live outside this repository, worked out by hand and never captured from a run — a captured value asserts only that today's behavior is today's.
+
+**The coloring rule.** Seven patterns. Six turn on a duplicate, which is the only part anyone transcribes wrongly. `eerie` against `crane` is `NNYNG`: the answer holds one `e`, the green at the end takes it, and both earlier ones come back gray. Assign the yellows before the greens, which is the mistake you make writing this from memory, and that case and one other fail at once.
+
+**The pattern encoding.** A pattern is a base-3 numeral read from the left, so `NNNNY` is 1, `YNNNN` is 81, and `GGGGG` is 242 — which is what `WIN_PATTERN` has to be for a win to be recognized at all. All 243 survive the round trip.
+
+**Information gain, in bits.** Shannon's, not whatever the kernel computes: a guess that tells four equally likely candidates apart is worth exactly log2(4) = 2 bits, one that colors every candidate alike is worth exactly 0, and an uneven 3:1 split is worth H(3/4, 1/4).
+
+**What optimal play is worth.** One candidate costs one guess. Two equally likely ones cost 1.5, since guessing either wins half the time and leaves the other known. At 3:1 they cost 1.25 and the search has to guess the likely one. Three cost (1+2+2)/3, because at most one candidate can be had in a single guess and a candidate separating the other two reaches that floor.
+
+The last two run on a miniature game — six words and a 6×6 table built by `score_guess` — so nothing loads the 167 MB table and every position is small enough to settle by hand. Each asserts the structure it rests on before it asserts the value: *this guess separates all three* is what makes 5/3 the answer, and a word list that quietly stopped having that property would leave a check that passes while proving nothing.
+
+Two bounds then run over positions nobody chose, drawn from random five-letter strings over a small alphabet so that patterns collide: no guess can be worth more than the prior entropy, and no play can beat winning outright on the likeliest word and needing a second guess for everything else. That half is the coverage; the fixed cases above are the anchor. The first version of the three-candidate check asserted *which* word came back, and the tie-break — all three separate, so all three are optimal — failed it immediately. That assertion was pinning an implementation detail, which is the failure this file exists to avoid.
+
+`--full` adds the one differential check that belongs here: `score_guess` against `feedback_table.npy`, over every pair of 400 drawn words, half of them from the 4,637 that carry a repeated letter. Nothing else compares those two transcriptions, though everything here trusts both.
+
+```
+python tests/anchors.py --full --seed 7 --rounds 200
+```
+
+## `fit_provenance.py` — the cached f is a fit of the answer record we have
+
+`estimator` keys its cache on the `PriorConfig` alone. It checks that a cached fit was made for the prior and the form being asked for, and nothing checks which answer record it was fitted against — so `solutions.py --write` leaves every fit describing a shorter history than the solver now scores against, and the page carries on recommending under it. Nothing anywhere says so.
+
+This is the one file here that does not test code. It compares two files: the `fitted_at` stamp each cache carries, and the date of the newest answer the solver actually uses. What it catches is not a wrong `f` but a stale one, which is invisible from every other direction — the fit loads, the priors are right, the page answers, and the policy is one round out of date. `python wordle_solver.py train --this-config-only` is the fix, and the failure names the configuration to pass.
+
 ## `doc_refs.py` — every pointer into the documents and the code still points somewhere
 
 The documents cross-reference each other, `analysis/README.md` pairs each script with the claim it backs, and the scripts repeat that in their docstrings. Nothing held any of it together, and it drifted: a heading gets reworded and the pointers at it quietly stop resolving. When this was written seven references pointed nowhere, four of them at a SOLVER_EXPLAINED numbering that had not existed for some time.
@@ -74,7 +106,7 @@ The solver is being ported to Rust so it can compile to WASM for a static site a
 
 Most of what is here compares *outputs* over inputs both sides are handed, and those checks say nothing about how the Rust gets there — the coloring rule, the weights, `f`, the least-squares solve, the kernels, the endgame, the dispatch, the endpoints and the messages all survive the Rust picking a different algorithm, which `fit.rs` has since done. Two do not: the training draw has to *be* numpy's, and policy iteration's seed round rests on it to play the same games. That is the whole of what forces the port to reproduce a library internal, and it could be lifted by passing the drawn answers to the trainer rather than the seed. It skips rather than fails when nothing is built, so a checkout without a toolchain still runs the rest; `cargo build --release` builds it, and `./build.sh` does the same when cargo is not on your PATH.
 
-The coloring rule has a complete oracle and gets the strongest check there is: every one of the 12,947² pairs must equal `feedback_table.npy`, which is the file the Python rule generated. There is nothing about the rule left over once all 167,624,809 agree.
+The coloring rule gets the widest check here: every one of the 12,947² pairs must equal `feedback_table.npy`, which is the file the Python rule generated. There is nothing about the *port* left over once all 167,624,809 agree — but they agree about the Python, which is why `anchors.py` pins the Python to Wordle separately.
 
 The prior weights are compared per configuration, the Rust writing raw little-endian f64 and the Python diffing with numpy — a vector of 12,947 floats is one line to compare there and a parser to get wrong here.
 

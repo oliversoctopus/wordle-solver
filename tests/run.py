@@ -23,6 +23,8 @@ FAST = [
     ("the fitted f is current", [sys.executable, os.path.join(HERE, "fit_provenance.py")]),
     ("every pointer resolves",
      [sys.executable, os.path.join(HERE, "doc_refs.py")]),
+    ("the facts the rest is measured against",
+     [sys.executable, os.path.join(HERE, "anchors.py")]),
 ]
 
 SLOW = [
@@ -32,6 +34,8 @@ SLOW = [
      [sys.executable, os.path.join(HERE, "splits.py")]),
     ("the scoring rules are what they claim",
      [sys.executable, os.path.join(HERE, "scoring.py")]),
+    ("the coloring rule and the table agree",
+     [sys.executable, os.path.join(HERE, "anchors.py"), "--full"]),
     ("the Rust core agrees with the Python",
      [sys.executable, os.path.join(HERE, "rust_parity.py")]),
 ]
