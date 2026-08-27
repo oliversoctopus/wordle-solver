@@ -25,7 +25,7 @@ The rules that stop it:
 
 **Comments stay to a line or two.** No multi-paragraph blocks justifying a change, no measurement tables in source. The reasoning and the numbers go in `README.md`; the comment says what the line does. File headers explaining what a module is are the exception and are welcome.
 
-**Point at code by name, never by line number.** `priors.build_weights`, not `priors.py:221`. Line references go stale on the next edit and nothing checks them; a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted. A `module.function` name is stable, greppable, and fails loudly instead of quietly when the symbol is renamed.
+**Point at code by name, never by line number.** `priors.build_weights` for the Python and `source::Columns` for the Rust, not `priors.py:221`. Line references go stale on the next edit and nothing resolves them; a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted. A name survives every edit but a rename, and a rename is greppable — `tests/doc_refs.py` resolves every pointer against the module, class or crate module it names, so a renamed symbol fails a test instead of sitting there. The rule is about text that outlives the edit it describes: the documents, the comments, and commit messages. A message in the terminal is read in the minute it was written, so it can point wherever is most clickable.
 
 **Line endings are LF, everywhere, including `web/`.** The whole tree is normalized, so a CRLF file is a regression rather than a local convention.
 

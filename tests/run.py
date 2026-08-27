@@ -21,7 +21,7 @@ FAST = [
      ["node", os.path.join(HERE, "wasm_api.test.js")]),
     ("the two front ends agree", [sys.executable, os.path.join(HERE, "front_ends_agree.py")]),
     ("the fitted f is current", [sys.executable, os.path.join(HERE, "fit_provenance.py")]),
-    ("every document reference resolves",
+    ("every pointer resolves",
      [sys.executable, os.path.join(HERE, "doc_refs.py")]),
 ]
 

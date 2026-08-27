@@ -58,13 +58,15 @@ Needs the table, so `run.py` keeps it behind `--full`.
 python tests/scoring.py --games 6     three games per mode by default
 ```
 
-## `doc_refs.py` — every pointer into the documents still points somewhere
+## `doc_refs.py` — every pointer into the documents and the code still points somewhere
 
 The documents cross-reference each other, `analysis/README.md` pairs each script with the claim it backs, and the scripts repeat that in their docstrings. Nothing held any of it together, and it drifted: a heading gets reworded and the pointers at it quietly stop resolving. When this was written seven references pointed nowhere, four of them at a SOLVER_EXPLAINED numbering that had not existed for some time.
 
 The headings are the oracle, so nothing here is written down by hand. A reference names its heading — `README *Results*` — and matches on a prefix, since a pointer often quotes a heading's opening words rather than all of it. SOLVER_EXPLAINED is also numbered, so a section sign or the word *section* followed by a number resolves against that numbering instead. Whitespace is collapsed first, which is the part that matters: Python is hard-wrapped, so a title in a docstring is routinely split across a line break, and a line-oriented `grep` misses exactly the references hardest to find by hand.
 
-What it cannot do is tell you a reference points at the *right* section, only that it points at a real one. A pointer that survives a renumbering by landing on the wrong existing section still passes.
+It resolves pointers at code the same way, against the code. CLAUDE.md's convention is to name a symbol rather than a line — `priors.build_weights`, `WordleSolver.guess_pool`, `source::Columns` — on the grounds that a name outlives an edit above it, which holds until someone renames the thing. So the module has to be a file here and the name has to be something it defines: the Python is read with `ast`, which is what makes a method or an attribute set in `__init__` resolve as readily as a top-level `def`, and the Rust is matched against its item declarations. A name that belongs to neither is reported rather than assumed to be an import, so `EXTERNAL` is the short list of ones that really are.
+
+What it cannot do is tell you a reference points at the *right* section, only that it points at a real one. A pointer that survives a renumbering by landing on the wrong existing section still passes, and so does one naming a symbol that still exists but no longer does what the sentence says.
 
 ## `rust_parity.py` — the Rust core agrees with the Python it came from
 
