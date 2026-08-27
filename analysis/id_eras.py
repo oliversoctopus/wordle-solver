@@ -1,12 +1,36 @@
 """What the NYT's `id` field indexes, and the two eras it does it in.
 
 `solutions.json` carries the NYT's own `id` per puzzle.  It is not the puzzle
-number and it is not stable per word: it is a position in the list the editor
-draws from, and that list was re-sorted at the regime boundary.  Backs
-SOLVER_EXPLAINED *The off-list group*, whose block argument rests on it.
+number and it is not stable per word: it is a position in one list that has
+only ever been appended to, and reading it that way accounts for every id in
+the record.  SOLVER_EXPLAINED *The off-list group* takes only what its block
+argument needs; the rest of the reconstruction is here.
 
-Nothing here feeds the solver.  It is the evidence for one paragraph, kept
-runnable because the answer log moves under it.
+    1    - 2287   the curated words in the order they were first scheduled,
+                  which is the order `wordles.json` is stored in, with 22
+                  slots skipped
+    2288 - 2309   where words displaced by that skip came back
+    2310 - 2397   off-list words, appended in alphabetically sorted batches
+    2398 -        the list re-sorted alphabetically, from the regime boundary
+
+The skip is one edit rather than a drift.  Twenty-two slots between positions
+285 and 526 are never reached, and the words in them -- `fanny`, `vomit`,
+`bobby`, `harry` and the rest -- are a content purge, which dates it to the
+NYT's acquisition rather than to the fifteen months over which play walked
+into the gaps one at a time.  Eighteen were dropped outright.  `hasty` and
+`unlit` were requeued past the end, and `shine` and `gecko` were pulled
+forward from positions 2265 and 2266 to fill two of the holes on the spot.
+Twenty-two out and twenty-two back in is why the curated region is still
+exactly 2,309 wide, and so why the off-list appends start at 2310.
+
+Nothing was chosen about 2398 either.  It is where the end of the list had got
+to when `cigar` needed an entry that its spent slot could not give it, which is
+what a repeat is: every one of them carries an era-2 id for that reason alone.
+Everything else is still drawn off the old list.  The five curated first-uses
+that took an era-2 id had a free era-1 slot and took a new number anyway, and
+nothing here separates them from the 159 that did not.
+
+Nothing here feeds the solver, and the answer log moves under it.
 """
 
 import bisect
@@ -52,24 +76,42 @@ print(f"  wordles.json is stored in that order, not alphabetically "
       f"(sorted: {curated == alpha})")
 print(f"  id equals the file position for the first {max(exact)} puzzles")
 print()
-print("  after that the two drift, one step at a time:")
+print("  after that the id runs behind it, by a gap that widens with position:")
 seen, drift = None, []
 for i, w, date in era1:
     off = play_pos[w] - i
-    # the handful of words that moved wholesale are not part of the climb
+    # the two words that moved wholesale are not part of the step function
     if off != seen and abs(off) < 100:
         drift.append((i, w, date, off))
         seen = off
-for i, w, date, off in drift[:4]:
+for i, w, date, off in drift[:3]:
     print(f"    id {i:5d}  {w}  {date}   position - id = {off:3d}")
 print("      ...")
 for i, w, date, off in drift[-2:]:
     print(f"    id {i:5d}  {w}  {date}   position - id = {off:3d}")
-print(f"    climbing to {drift[-1][3]} by {drift[-1][2]}, in "
-      f"{len(drift) - 1} moves")
-moved = [(i, w) for i, w, _ in era1 if abs(play_pos[w] - i) >= 100]
-print(f"  {len(moved)} words sit far out of place, which is a substitution "
-      f"rather than a step: " + ", ".join(w for _, w in moved))
+
+# invert the step function: the file slots no era-1 id ever lands on
+step, cursor = {}, 0
+known = {i: play_pos[w] - i for i, w, _ in era1 if abs(play_pos[w] - i) < 100}
+last_id = max(i for i, w, _ in era1 if abs(play_pos[w] - i) < 100)
+for i in range(1, last_id + 1):
+    cursor = known.get(i, cursor)
+    step[i] = cursor
+covered = {i + step[i] for i in step}
+era1_slot = {curated[i + step[i] - 1]: i for i in step}
+gone = [p for p in range(1, len(curated) + 1) if p not in covered]
+played = {r["solution"] for r in sol}
+print(f"  the gap is a step function of position, not of date: {len(gone)} "
+      f"file slots are skipped,")
+print(f"  and the last curated id is {last_id} = {len(curated)} - {len(gone)}. "
+      f"The skipped words are")
+print("  a single edit to the list, met one at a time as play reached them:")
+for row in range(0, len(gone), 6):
+    print("    " + " ".join(curated[p - 1] for p in gone[row:row + 6]))
+back = [curated[p - 1] for p in gone if curated[p - 1] in played]
+print(f"  {len(gone) - len(back)} of them were never played at all; "
+      f"{len(back)} came back elsewhere in the numbering: "
+      + ", ".join(back))
 
 # ------------------------------------------------------- the off-list block
 print()
@@ -138,3 +180,37 @@ for i, w in tail:
     print(f"    {i:5d}  {w}  ({kind})")
 print("  curated and off-list share that range, so an era-2 id no longer says")
 print("  which list a word came from.")
+
+# --------------------------------------------- what takes an era-2 id, and why
+print()
+start = common.regime_start(sol)
+first_use = {}
+for row in sol:
+    first_use.setdefault(row["solution"], row)
+table = {}
+for row in sol[start:]:
+    word = row["solution"]
+    if first_use[word] is not row:
+        kind = "repeat"
+    elif word not in curated_set:
+        kind = "off-list"
+    else:
+        kind = "curated, first use"
+    era = "era-2" if row["id"] >= ERA2_LO else "era-1"
+    table[(kind, era)] = table.get((kind, era), 0) + 1
+print(f"  answers since {common.REGIME_DATE}, by kind and numbering:")
+print(f"    {'':22s} {'era-1':>7s} {'era-2':>7s}")
+for kind in ("repeat", "curated, first use", "off-list"):
+    print(f"    {kind:22s} {table.get((kind, 'era-1'), 0):7d} "
+          f"{table.get((kind, 'era-2'), 0):7d}")
+
+# a repeat has no era-1 slot left to use; the rest of era 2 had one and did not
+taken = {row["id"] for row in sol}
+chose = [(row["id"], w) for w, row in first_use.items()
+         if row["id"] >= ERA2_LO and w in era1_slot and era1_slot[w] not in taken]
+print()
+print(f"  a repeat is forced into era 2, its own slot being spent.  The other")
+print(f"  {len(chose)} era-2 first-uses had a free era-1 slot and took a new "
+      f"number anyway:")
+for i, w in sorted(chose):
+    print(f"    {w:6s} era-2 id {i:5d}, era-1 slot {era1_slot[w]} never played")

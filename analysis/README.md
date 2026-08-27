@@ -59,7 +59,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `repeat_shapes.py` | README *The repeat prior's shape* table, SOLVER_EXPLAINED §5.1 |
 | `drift.py` | the closing paragraph of README *The repeat prior's shape* |
 | `curation_shapes.py` | SOLVER_EXPLAINED §5.2 — the shape table, the snapshot's forward-prediction table, and why the hedge is flat; the opening of README *The curation prior's shape* |
-| `id_eras.py` | the id evidence for the off-list block in SOLVER_EXPLAINED §5.2 — the alphabetical runs, and the 2026 re-sort that ended them |
+| `id_eras.py` | the id evidence for the off-list block in SOLVER_EXPLAINED §5.2. Its header carries the rest of the reconstruction, which that section deliberately does not: the 2022 purge, where the displaced words went, and what a repeat costs in numbering |
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §15 |
