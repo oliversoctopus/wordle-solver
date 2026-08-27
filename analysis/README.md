@@ -9,6 +9,7 @@ python analysis/regime.py           the regime table and the pool arithmetic
 python analysis/repeat_shapes.py    prequential comparison of repeat shapes
 python analysis/drift.py            is the source window moving?
 python analysis/curation_shapes.py  prequential comparison of curation shapes
+python analysis/id_eras.py          what the NYT's id field indexes, and when it changed
 python analysis/hard_mode.py        what the hard-mode restriction costs
 python analysis/lookahead.py        what one ply of lookahead is worth
 python analysis/lookahead_accuracy.py   how well the two valuations price a position
@@ -58,6 +59,7 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 | `repeat_shapes.py` | README *The repeat prior's shape* table, SOLVER_EXPLAINED §5.1 |
 | `drift.py` | the closing paragraph of README *The repeat prior's shape* |
 | `curation_shapes.py` | SOLVER_EXPLAINED §5.2 — the shape table, the snapshot's forward-prediction table, and why the hedge is flat; the opening of README *The curation prior's shape* |
+| `id_eras.py` | the id evidence for the off-list block in SOLVER_EXPLAINED §5.2 — the alphabetical runs, and the 2026 re-sort that ended them |
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
 | `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §15 |
@@ -81,7 +83,7 @@ Rerun after `solutions.py --write`. Every one of these numbers moves with the an
 
 `replay.py --dump PATH` writes every arm's per-game guess counts out as JSON — 190 regime games plus the three arms' 21, 46 and 154 events, one row per arm. Take one whenever you run the thing, and a contrast nobody thought to print becomes arithmetic over that file rather than another replay: a pair the tables skip, a subgroup split some other way. None is kept here at present. A dump is true only of the fit and the answer log it was made against, and nothing would catch a checked-in one drifting out of step with either — worth weighing against the two minutes `--all-priors` takes to make a fresh one.
 
-**Check the method before believing a changed number.** `repeat_shapes.py --events 18` scores only the first 18 repeats, so its answer is frozen whatever the answer log does — uniform −134.5, binned −116.1 at +18.4, α = 1.0 at −118.4, and +1.024 ± 0.235 nats/event at 4.4σ winning 14 of 18. If those still come out, a number that moved moved because the data did. `regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s uniform baseline (−9.27) are fixed points for the same reason.
+**Check the method before believing a changed number.** `repeat_shapes.py --events 18` scores only the first 18 repeats, so its answer is frozen whatever the answer log does — uniform −134.5, binned −116.1 at +18.4, α = 1.0 at −118.4, and +1.024 ± 0.235 nats/event at 4.4σ winning 14 of 18. If those still come out, a number that moved moved because the data did. `regime.py`'s 2021–2025 row (1,657 / 0.00% / 1.75%) and `curation_shapes.py`'s uniform baseline (−9.27) are fixed points for the same reason. So is the whole first half of `id_eras.py`: the id matching the file position for 284 puzzles, the drift climbing to 22, and the runs of 4, 12 and 7 in the appended block are settled history, and only its era-2 fit moves as answers arrive.
 
 **An older answer log is reproducible in place**, which is the other half of that question. `load_data(mask_last=n)` drops the most recent n entries of `solutions.json` and rebuilds the priors from what is left — the same mechanism that keeps today's unplayed answer out of the used-word prior at the default of 1 — and every front end takes it as `--mask-last`. Wind the log back to the day a figure was recorded, rerun, and whether the data moved or the code did stops being a matter of opinion. The fit does not wind back with it: `estimator.cache_path` is keyed on the `PriorConfig` slug alone, so the current `f` loads against the truncated log without complaint. Refitting is the wrong fix rather than the slow one — `train --mask-last n` writes to that same path, so it replaces the prior's live fit with one describing a deliberately short log, under a filename recording nothing about the difference. Copy `params_<slug>.json` aside first, or take the stale `f` as the known cost of a cheap check and say which you did.
 
