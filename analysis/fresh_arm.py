@@ -20,14 +20,14 @@ Two candidates, and the script separates them:
    arms, at each of the two fits, and see how much of the gap is left.
 
 The second is the one that carries it, which made the census a quiet case of the
-thing SOLVER_EXPLAINED 6.2 opens by warning against: answers sampled from the
+thing SOLVER_EXPLAINED 14.1 opens by warning against: answers sampled from the
 prior, smuggled back in through the estimator rather than through the arm.  It
 was training on the test set, and that is why the arm was replaced.
 Note that this locates the effect rather than proving the mechanism -- the
 confirming run is an f fitted on a distribution that includes the editor's
 picks, which is a policy iteration this does not do.
 
-Backs the fresh-arm paragraph of SOLVER_EXPLAINED 6.2 and the caveat under
+Backs the fresh-arm paragraph of SOLVER_EXPLAINED 14.1 and the caveat under
 README *What the two shapes are worth together*.
 """
 

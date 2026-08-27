@@ -54,22 +54,22 @@ Losing it is not a graceful slowdown but a fiftyfold one, which is why `memo.Mem
 
 | script | backs |
 | --- | --- |
-| `regime.py` | README *The regime the defaults describe*, SOLVER_EXPLAINED §4; its last block the implied-rate table in §6.4, which is why the two priors need each other |
+| `regime.py` | README *The regime the defaults describe*, SOLVER_EXPLAINED §4; its last block the implied-rate table in §14.3, which is why the two priors need each other |
 | `repeat_shapes.py` | README *The repeat prior's shape* table, SOLVER_EXPLAINED §5.1 |
 | `drift.py` | the closing paragraph of README *The repeat prior's shape* |
 | `curation_shapes.py` | SOLVER_EXPLAINED §5.2 — the shape table, the snapshot's forward-prediction table, and why the hedge is flat; the opening of README *The curation prior's shape* |
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |
-| `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §16 |
-| `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §16 |
-| `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §16 |
-| `turn2_regret.py` | README *Perfecting the second guess*, and the last case in SOLVER_EXPLAINED §16 |
-| `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, its `--bound` the `-atch` values in SOLVER_EXPLAINED §12(c), SOLVER_EXPLAINED §12 and §14 |
+| `lookahead_accuracy.py` | the accuracy and decision tables in README *Lookahead*, SOLVER_EXPLAINED §15 |
+| `exact_decisions.py` | the per-decision table under README *The exact endgame*, its `--who-decides` the one under *Conditioning f on turns remaining*, SOLVER_EXPLAINED §15 |
+| `opening.py` | README *The opening is not where the estimator is weak*, SOLVER_EXPLAINED §15 |
+| `turn2_regret.py` | README *Perfecting the second guess*, and the last case in SOLVER_EXPLAINED §15 |
+| `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, its `--bound` the `-atch` values in SOLVER_EXPLAINED §10(c), SOLVER_EXPLAINED §10 and §11 |
 | `prior_basin.py` | README *The prior sits in a flat basin* |
-| `fresh_arm.py` | the fresh-arm paragraphs of SOLVER_EXPLAINED §6.2 and README *What the two shapes are worth together* |
+| `fresh_arm.py` | the fresh-arm paragraphs of SOLVER_EXPLAINED §14.1 and README *What the two shapes are worth together* |
 | `replay.py` | the head-to-head paragraph under README *The curation prior's shape*; its `--shapes` the whole of README *What the two shapes are worth together* and the regime replay under *The repeat prior's shape*; its `--all-priors` the whole of *What each prior is worth on real answers* |
 | `form_default.py` | README *Which form is the default* |
-| `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §9 |
+| `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §6 |
 | `head_to_head.py` | README *Where the estimator's guesses come from* |
 | `split_ranking.py` | the *Alternatives* card under README *In a browser*, and the runners-up paragraph closing *The exact endgame* |
 | `table_layout.py` | SOLVER_EXPLAINED §8 *Storing the table the other way round*, the per-kernel figures |
@@ -113,7 +113,7 @@ All eight are refitted together against one answer record, which is what makes t
 
 `hard_mode.py` is the one that survives a refit, and it is worth knowing why: its two arms play the *same* `f`, so a refit moves both columns together and mostly cancels in the paired difference. Read the difference across refits; read the two means only against each other. `lookahead.py` does *not* get that protection even though it also pairs two arms on one fit: what it measures is how much room the base policy leaves above itself, so a better-fitted `f` should shrink it. Expect that as a direction and not as a prediction — the effect is a few thousandths of a guess against a standard error of about half that, and the 2026-08-23 refit improved every arm's base policy while leaving lookahead worth marginally more.
 
-Several claims about the endgame search have no script, and all of them rest on position samples that were not kept: that a branch cap of 25 measures no better and that two plies costs 205 s for the opening position alone (README *Lookahead*); the 1,275-position comparison of capped against uncapped search, and the memo's 373-repeat position and its ~30% share of the search's time (README *The exact endgame*, SOLVER_EXPLAINED §12(d) and §13). They are timing and tie-break facts rather than answer-log ones, so they do not move with `solutions.json` — but nothing here would catch them going stale either.
+Several claims about the endgame search have no script, and all of them rest on position samples that were not kept: that a branch cap of 25 measures no better and that two plies costs 205 s for the opening position alone (README *Lookahead*); the 1,275-position comparison of capped against uncapped search, and the memo's 373-repeat position and its ~30% share of the search's time (README *The exact endgame*, SOLVER_EXPLAINED §10(d) and §12). They are timing and tie-break facts rather than answer-log ones, so they do not move with `solutions.json` — but nothing here would catch them going stale either.
 
 Two claims about the fit rest on implementations that were not kept, and neither has a script here. Warm starting policy iteration from the cached fit (README *Warm starting from the previous fit*) needed a seed argument on `train.policy_iteration`; conditioning `f` on the feedback pattern (README *Conditioning f on the pattern*) needed a kernel carrying the offsets, and `pattern_offsets.py` reproduces that measurement's residual half but not its verdict. Both were measured on the objective everything else here uses — every answer, weighted by the prior — and both were rejected on it.
 

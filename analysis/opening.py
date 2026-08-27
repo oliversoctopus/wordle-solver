@@ -19,8 +19,8 @@ Unlike its siblings this defaults to the shipped prior alone, since every prior
 is another `--top` full enumerations and the four together run for hours.
 
 Backs README *The opening is not where the estimator is weak*, and the
-third case in SOLVER_EXPLAINED *The result worth framing*.  It moves with
-the fit, the ranking being `f`'s.
+third case in SOLVER_EXPLAINED *A better map, and next to no better
+score*.  It moves with the fit, the ranking being `f`'s.
 """
 
 import argparse

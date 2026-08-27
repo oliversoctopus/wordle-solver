@@ -8,7 +8,7 @@ It exists so that **you can understand the solver without reading the code**. No
 
 It is written as a derivation, not a description. Every section opens with a problem and closes with the machinery that answers it, and nothing is introduced before the question it exists to answer. Entropy is not presented as a formula to accept; you get the "which guess shrinks the set most usefully?" question first, then counting, then bits, then the chain rule that makes information gain computable. The same for the prior, for `f`, and for the endgame search.
 
-It assumes no background in solvers, search, or information theory, and re-derives everything past the mathematics named in *Who it is written for* below. Every display equation is also stated in words in the surrounding prose, so a viewer without math support costs you nothing but elegance.
+It assumes no background in solvers, search, or information theory, and re-derives everything past the mathematics named in *Who it is written for* below.
 
 Two things it deliberately is **not**:
 
@@ -32,7 +32,7 @@ What follows for this document:
 
 **Fair to assume.** Logarithms and exponentials. Expected value, mean, standard deviation, the normal distribution, and the difference between a sample and the thing it estimates — AP Statistics covers these and the derivation leans on them constantly. Fitting a line by least squares, residuals, and correlation as a number between −1 and 1. Derivatives and integrals, though little here needs them. Recursion, sorting, and simple dynamic programming.
 
-**Not fair to assume, so derived here.** Information theory entire: entropy, bits, information gain (§3). What a prior is and what it means to weight a word list (§4–§5). Value functions, policies, and policy iteration (§10). Game-tree search — expectimax, and pruning a search with bounds (§12). None of that appears in AP Statistics, in AIME, or in USACO Silver. Nor does anything about the machine underneath: how an array sits in memory (§1), cache lines and memory-bound loops and what a compiler is allowed to reorder (§8), packing values into a machine integer and what a hash collision costs (§12), cache eviction policy (§13).
+**Not fair to assume, so derived here.** Information theory entire: entropy, bits, information gain (§3). What a prior is and what it means to weight a word list (§4–§5). Value functions, policies, and policy iteration (§7). Game-tree search — expectimax, and pruning a search with bounds (§10). None of that appears in AP Statistics, in AIME, or in USACO Silver. Nor does anything about the machine underneath: how an array sits in memory (§1), cache lines and memory-bound loops and what a compiler is allowed to reorder (§8), packing values into a machine integer and what a hash collision costs (§10), cache eviction policy (§12).
 
 **Needs a sentence of gloss at first use.** Statistics past the AP syllabus, and especially where it resembles something on it: rank correlation is not the `r` taught there, and RMSE wants saying out loud as the root-mean-square of the residuals. A standard error written `± 0.004` should be explained once. So should notation that is ordinary in code and unusual in a classroom — `argmin`, `Σ` over buckets, `O(n)`.
 
@@ -77,27 +77,26 @@ Read start to finish the first time. The order is the argument.
 | § | what it establishes |
 | --- | --- |
 | 0 | the one question the whole program answers, and the two word lists |
-| 1 | the feedback rule, why duplicate letters make it subtle, why 167 MB of table is worth it, and the shape in memory that §7, §8 and §12 all turn out to be arguing about |
+| 1 | the feedback rule, why duplicate letters make it subtle, why 167 MB of table is worth it, and the shape in memory that §8 and §10 both turn out to be arguing about |
 | 2 | the reframe everything rests on: **a guess is a partition of the candidate set** |
 | 3 | entropy and information gain, built up from counting rather than quoted |
-| 4 | the answer is not drawn uniformly — the editor model, and the regime that justifies its two rates |
+| 4 | the answer is not drawn uniformly — the editor model, the regime that justifies its two rates, and the honest "count" of a weighted set |
 | 5 | how the mass is spread *inside* each group: the repeat histogram, WordleBot's weights, and the fallback that needs no scrape |
-| 6 | how to measure a prior without fooling yourself, one question about the priors the data settles emphatically, and one about their shapes it cannot settle at all |
-| 7 | effective size: giving a weighted set an honest "count", and the rearrangement that makes it cheap |
-| 8 | the scoring loop, and the two cost assumptions that turned out to be wrong |
-| 9 | the real objective, `E(g, S)`, and **why minimizing it is not entropy in disguise** |
-| 10 | where `f` comes from, since it is defined in terms of the play it decides — policy iteration |
-| 11 | the six-guess deadline, and what losing should cost |
-| 12 | the endgame search, and the four ideas that make brute force affordable |
-| 13 | why positions are memoized, and why the cache evicts rather than jams |
-| 14 | why the loss penalty is 5 when 1 is the principled answer |
-| 15 | one full turn of play, with every piece above in its place |
-| 16 | the result worth framing |
-| 17 | the five ideas that make any of it finish, collected |
+| 6 | the real objective, `E(g, S)`, and **why minimizing it is not maximizing information** |
+| 7 | where `f` comes from, since it is defined in terms of the play it decides — policy iteration, and why the fit is per shape |
+| 8 | the scoring loop: the rearrangement that makes it cheap, and the two cost assumptions that turned out to be wrong |
+| 9 | the six-guess deadline, and what losing should cost |
+| 10 | the endgame search, the four ideas that make brute force affordable, and the shallower search above it |
+| 11 | why the loss penalty is 5 when 1 is the principled answer |
+| 12 | why positions are memoized, and why the cache evicts rather than refuses |
+| 13 | one full turn of play, with every piece above in its place |
+| 14 | how to measure a prior without fooling yourself, one question about the priors the data settles emphatically, and one about their shapes it cannot settle at all |
+| 15 | a better map, and next to no better score — the five measurements behind it |
+| 16 | the five ideas that make any of it finish, collected |
 
-If you have ten minutes rather than an evening: **§2, §9, §16**. §2 is the idea the solver is built on, §9 is where it stops being a standard entropy solver, and §16 is the finding worth carrying away — *a better map, and next to no better score*, which held five separate times here and cost real work to learn.
+If you have ten minutes rather than an evening: **§2, §6, §15**. §2 is the idea the solver is built on, §6 is where it stops being a standard entropy solver, and §15 is the finding worth carrying away — *a better map, and next to no better score*, which held five separate times here and cost real work to learn.
 
-If you want the punchline first, §16 reads fine cold and will send you back for the parts you want. §17 is the same lesson from the engineering side and reads cold too.
+If you want the punchline first, §15 reads fine cold and will send you back for the parts you want. §16 is the same lesson from the engineering side and reads cold too.
 
 ## How it sits next to the other documents
 
@@ -123,18 +122,28 @@ It was rewritten end to end to undo that. These are the rules that undid it, and
 
 **Say what is true now, in the place it belongs.** When a number moves, edit the sentence that carries it. Do not add a paragraph saying it moved. If two paragraphs disagree, one of them is a patch and should not exist.
 
-**Keep superseded numbers only where the contrast is the lesson.** The possible-answer bonus growing +0.051 → +0.633 as the prior sharpens is evidence for §16's thesis, so it stays — as a clause, inside the current statement. "An earlier version of this table reported −8.08" teaches nothing and goes. The test: does the old number explain something about the solver, or only about the repo?
+**Keep superseded numbers only where the contrast is the lesson.** The possible-answer bonus growing +0.051 → +0.638 as the prior sharpens is evidence for §15's thesis, so it stays — as a clause, inside the current statement. "An earlier version of this table reported −8.08" teaches nothing and goes. The test: does the old number explain something about the solver, or only about the repo?
 
-**Never let the document talk about itself.** No "the claim this section used to make is dead", no "this section has been updated", no dates of revision. Where the project was wrong and the error is instructive — §6.3's superadditivity, §6.1's `sqrt` trap, the `fastmath` bug in §8 — tell it as something that happened to the *project*, in the past tense, as part of the argument. The reader should never be made aware they are reading a file with a git history.
+**A number earns its place by its size, not by being true.** Keep a figure where the argument turns on how large it is — the 0.63 the possible-answer bonus is worth against the 0.04 for curvature, the ±0.16 that stops the repeat arm settling anything. Where the claim is only directional, the words carry it and the digits are noise: "worse, and by a lot" beats a log-likelihood the reader has nothing to compare against. The document once cited a figure every other sentence, which is how an explanation turns into a results table with connective tissue. And when a figure is compressed into words, check the compression — weights moving sevenfold and fourfold are not "an order of magnitude in both directions", and 0.05 against 0.68 is a thirteenth rather than a twentieth. Both of those were written here before anyone checked them.
 
-**Put a new finding where the argument needs it, not at the end.** Hard mode earns its place in §9 because it is the cleanest test of the entropy identity; it appears again in §12 and §15 only as a consequence, and in §16 as an example of the thesis. It is not a section of its own. Ask what a new result is *evidence for*, and put it next to the claim it supports. The one deliberate exception is §17, which collects patterns the reader has already met in place — it adds no new material, and if it ever starts to, that material belongs upstream.
+**A table for two axes, prose for one.** Four shape combinations against four arms, or nine forms against both fit quality and opening word, is a grid; writing it out as sentences asks the reader to rebuild the grid in their head while you read it aloud to them. A sequence, a single contrast or a lone ratio is prose, and tabulating it is furniture. The corollary bites harder than the rule: when a table goes, the sentences pointing into it have to go with it. "Read across a row", "the second column", "the bottom two rows" all survive the deletion perfectly well and point at nothing.
+
+**Never let the document talk about itself.** No "the claim this section used to make is dead", no "this section has been updated", no dates of revision. Where the project was wrong and the error is instructive — §14.2's superadditivity, §7's `sqrt` trap, the `fastmath` bug in §8 — tell it as something that happened to the *project*, in the past tense, as part of the argument. The reader should never be made aware they are reading a file with a git history.
+
+**Nothing is measured before it is built.** The document is a derivation, so a section that scores something belongs after the machinery it scores. That is why the model of the editor is built in §4–§5 and only asked what it was worth in §14, three sections after the solver exists; why the caveat about refitting `f` per shape sits inside §7, where `f` is fitted, rather than beside the shapes it is about; and why lookahead is explained in §10, next to the expectimax it is a shallower version of, rather than in §15 where it is measured. A section that has to open by saying which later section defines its subject is in the wrong place, and moving it is the fix.
+
+**Put a new finding where the argument needs it, not at the end.** Hard mode earns its place in §6 because it is the cleanest test of the entropy identity; it appears again in §10 and §13 only as a consequence, and in §15 as an example of the thesis. It is not a section of its own. Ask what a new result is *evidence for*, and put it next to the claim it supports. The one deliberate exception is §16, which collects patterns the reader has already met in place — it adds no new material, and if it ever starts to, that material belongs upstream.
+
+**A heading states the finding, not that a finding is coming.** "The result worth framing" announces; "A better map, and next to no better score" tells you, and a reader who never opens the section still leaves with it. The same one level down: "Why this isn't just entropy in disguise" is a denial, where "A straight-line `f` is entropy plus a bonus" is the thing proved.
 
 **Say each thing once.** The warning that the §4 table is not comparable between rows belongs at that table and nowhere else. A caveat repeated in three sections is three places to forget to update.
 
-**Every join is bridged, from one side or the other.** Often a section ends by naming the question the next one answers: §0 lists what §1–§3 must supply, §2 ends "now we need to make 'many small ones' precise", §14 points at the order §15 puts everything in. Just as often the bridge sits at the far end instead — §7 opens on what unequal weights break, §8 on what removing the logarithms exposed — and those sections want no closing sentence above them saying it a second time. What matters is that the seam is carried once, not that every section has a last line pointing forward. The order is the argument, and a section that could be moved without anyone noticing is not carrying its weight; but a sentence appended to satisfy the rule where the next section already bridges is worse than the join it papers over. Where a section opens cold on its own thesis, as §16 does, nothing reaches back and the bridge has to come from the line above it — which is why §15 ends by pointing at the split §16 makes.
+**Every join is bridged, from one side or the other.** Often a section ends by naming the question the next one answers: §0 lists what §1–§3 must supply, §2 ends "now we need to make 'many small ones' precise", §12 points at the order §13 puts everything in. Just as often the bridge sits at the far end instead — §4's last subsection opens on what unequal weights break, §8 on what removing the logarithms exposed — and those sections want no closing sentence above them saying it a second time. What matters is that the seam is carried once, not that every section has a last line pointing forward. The order is the argument, and a section that could be moved without anyone noticing is not carrying its weight; but a sentence appended to satisfy the rule where the next section already bridges is worse than the join it papers over. Where a section opens cold on its own thesis, as §15 does, nothing reaches back and the bridge has to come from the line above it — which is why §13 ends by naming the two questions §14 and §15 answer.
 
 **Point at code by name, never by line number** — `priors.build_weights`, not `priors.py:221`. One pass found seven references that had silently drifted.
 
 **Section numbers are load-bearing, which does not make them fixed.** The map above and some eighty-odd cross-references are keyed to them, so renumbering is a whole-repository edit — and a whole-repository edit is allowed, provided every reference moves with it in the same change. They live in three files, and only three: `SOLVER_EXPLAINED.md` itself, this one, and `analysis/README.md`, which pairs each measured claim with the script behind it and so has to say where the claim lives. Nothing else references a section number, and nothing else should: `README.md`, `CLAUDE.md` and the analysis scripts name the section they mean instead, which survives a renumbering untouched. `git grep -n "§[0-9]"` finds every reference — the digit matters, since `§ *Editing the board*` and its kind point at a title rather than a number — and the job is done when each hit reads correctly, not when the numbers have been shifted. `tests/doc_refs.py` then catches what a careless renumbering left pointing at nothing, in the named references as much as the numbered ones; what it cannot catch is a reference that lands on a real section which is now the wrong one, so the reading is still the part that matters. Renumber when the argument genuinely wants a new section in the middle; where a subsection at the end of an existing section does the same work, that is still the cheaper move.
 
-A quick way to check yourself: read the section you edited from its first line, out loud if you can stand it. If you hear the seam where your paragraph joins, the reader will too.
+The same freedom covers the words of a heading, and more plainly: a title is not kept because it reads badly *and* `analysis/` quotes it. Rename it, move the quotes, and let `tests/doc_refs.py` name the ones you missed. The reference machinery is downstream of the prose and never the other way round. For a reordering, cut the file at its headings, reassemble the blocks and then diff the *set* of paragraphs against the old file: everything that vanished should be a seam you rewrote deliberately, and anything else is a paragraph you dropped without noticing.
+
+A quick way to check yourself: read the section you edited from its first line, out loud if you can stand it. If you hear the seam where your paragraph joins, the reader will too. After anything larger than a paragraph, read the whole document instead — a cut lands in one place and breaks the sentence that pointed at it somewhere else entirely, and nothing here checks that for you.

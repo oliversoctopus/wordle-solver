@@ -28,8 +28,9 @@ from a prior rebuilt as of each puzzle.  That handicap is common to the arms and
 cancels in the pair, which is the only quantity read off those rows.
 
 So this backs a negative result, and it is the sharpest of the cases in
-SOLVER_EXPLAINED *The result worth framing*: not that a better valuation fails to
-pay, but that at the last position where the estimator decides anything, playing
+SOLVER_EXPLAINED *A better map, and next to no better score*: not that a
+better valuation fails to pay, but that at the last position where the
+estimator decides anything, playing
 *optimally* is worth less than the error in the prior it would be optimal for.
 README *Perfecting the second guess* is the write-up.
 

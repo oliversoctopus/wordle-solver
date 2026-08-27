@@ -9,7 +9,7 @@ So collect every reference and resolve it against the headings themselves.
 The oracle is the documents, so nothing here is a figure written down by hand.
 
 Two forms are recognized.  A *named* one quotes the heading in italics --
-``README *Results*``, ``SOLVER_EXPLAINED *The result worth framing*`` -- and
+``README *Results*``, ``SOLVER_EXPLAINED *A better map, and next to no*`` -- and
 matches on a prefix, since a reference often names a heading's opening words
 rather than all of it.  A *numbered* one is SOLVER_EXPLAINED's ``§12`` or
 ``section 12`` or ``6.4``, which resolves against that document's numbering.
