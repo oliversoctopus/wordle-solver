@@ -1,17 +1,21 @@
-"""Command line front end for the Wordle solver.
+"""The terminal front end: fitting, measuring and inspecting the solver.
 
-    python wordle_solver.py play                 interactive solving
     python wordle_solver.py train                fit + cache f for all five prior combinations
     python wordle_solver.py benchmark            self-play, entropy vs. expected guesses
     python wordle_solver.py compare              policy iteration once per form of f
     python wordle_solver.py info                 show the cached fits
+    python wordle_solver.py play                 solve a puzzle here rather than on the page
+
+Solving is what the page is for.  `play` stays because `tests/front_ends_agree.py`
+diffs its parser against the page's, which is the only thing making the two agree
+on what a switch means.
 
 Prior toggles (default: both on) are accepted by every subcommand:
 
     --no-repeat-prior      stop down-weighting answers that have already been used
     --no-curation-prior    stop down-weighting words off the curated answer list
 
-e.g. python wordle_solver.py play --no-curation-prior --mode entropy
+e.g. python wordle_solver.py train --no-curation-prior --form saturating
 """
 
 import argparse

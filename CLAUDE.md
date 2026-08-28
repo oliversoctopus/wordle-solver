@@ -40,12 +40,14 @@ Write JSON through `wordle_data.write_json`, which handles this. Anything else t
 ```
 .venv/Scripts/activate            PowerShell: .venv\Scripts\Activate.ps1
 python web.py                     the page, on http://127.0.0.1:8000
-python wordle_solver.py play      the solver in the terminal
-python wordle_game.py             a game in the terminal
+python wordle_solver.py play      the solver in the terminal; the page's oracle
+python wordle_game.py             a game in the terminal; web.py imports from it
 ./build_site.sh                   the same page as static files, in site/
 ./deploy.sh                       build that, and upload it to Vercel
 python editor.py                  rewrite what the site says, on :8001/editor
 ```
+
+The page is the front end; the terminal is where the solver is fitted, measured and inspected. Neither interactive one is dead weight, though, and both are worth more than they look. `tests/front_ends_agree.py` diffs `play`'s parser against `web.py`'s and is the only thing making the two agree on what a switch means, so retiring `play` costs that check its oracle and leaves a hand-written expectation in its place. And `web.py` imports `wordle_game.TILE_BLOCK` and `wordle_game.pick_random_answer` for the page's own *Play* view, so the game is a dependency of the site rather than a leaf.
 
 `requirements.txt` splits in two: the solver needs `numpy` and `numba`, and the last two lines are for the one-off builders only. It is what `.venv` was built from; installing into the system Python is not the setup here.
 
@@ -99,8 +101,8 @@ Fast math is not a hazard you can reach by accident here: `rustc` exposes no suc
 | `rust_train.py` | hands a fit to the native trainer where it can reproduce the settings |
 | `priors.py` | the repeat and curation priors |
 | `wordle_data.py` | word lists, feedback scoring, the table |
-| `wordle_solver.py` | the terminal front end: `play`, `train`, `benchmark`, `compare`, `info` |
-| `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer |
+| `wordle_solver.py` | the terminal front end: `train`, `benchmark`, `compare`, `info`, and `play` as the page's oracle |
+| `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer; `web.py` imports from it |
 | `web.py` | the HTTP server and JSON API |
 | `web/app.js` | the whole page; served unmodified by both the Python and the static build |
 | `web/wasm-api.js` | stands in for `fetch` on `/api/*` in the static build, and passes it to the worker |

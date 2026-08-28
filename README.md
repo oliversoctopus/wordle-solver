@@ -3,18 +3,20 @@
 It runs in a browser at **[wordleoracle.vercel.app](https://wordleoracle.vercel.app/)** — the whole solver, in WASM, with no server behind it. That is a chosen name rather than Vercel's generated one, though still a subdomain of theirs, so a custom domain would move it again. The generated address the site used to answer on, `wordle-solver-lac.vercel.app`, is still aliased to the same build.
 
 ```
-python wordle_solver.py play         # interactive solving
 python wordle_solver.py train        # fit + cache the estimator, every prior combination
 python wordle_solver.py benchmark    # self-play: greedy entropy vs. expected guesses
 python wordle_solver.py compare      # policy iteration once per form of f, then tabulate
 python wordle_solver.py info --forms # what is cached, and which forms exist
+python wordle_solver.py play         # solve a puzzle here rather than on the page
 ```
+
+Solving a puzzle is what the page is for; the terminal is where the solver is fitted, measured and inspected. `play` is kept as the page's oracle — `tests/front_ends_agree.py` diffs its parser against `web.py`'s, and with no second parser to diff, a switch meaning one thing in the browser and another on the command line would be invisible from both sides.
 
 The prior toggles, `--mode` and `--form` go after the subcommand:
 
 ```
-python wordle_solver.py play --no-curation-prior --mode entropy
 python wordle_solver.py train --this-config-only --no-repeat-prior --form saturating
+python wordle_solver.py play --no-curation-prior --mode entropy
 ```
 
 ## Layout
@@ -30,8 +32,8 @@ python wordle_solver.py train --this-config-only --no-repeat-prior --form satura
 | `memo.py` | the bounded LRU the solver and the search cache positions in |
 | `solver.py` | `WordleSolver`: pick a guess, apply feedback, play a game out |
 | `train.py` | policy iteration, self-play evaluation, form comparison |
-| `wordle_solver.py` | command line front end |
-| `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer |
+| `wordle_solver.py` | the terminal front end: fitting, benchmarking, inspection, and `play` as the page's oracle |
+| `wordle_game.py` | play Wordle yourself, against a chosen or a sampled answer; `web.py` imports its emoji grid and its random deal |
 | `web.py`, `web/` | both of the above in a browser, plus the word finder: stdlib HTTP server and a static page |
 | `wording.py` | finds every string the site says, so `editor.py` can rewrite any of it |
 | `editor.py` | the editor itself, previewing the static build it is editing |
@@ -615,6 +617,8 @@ So the recurring result stated under *Lookahead* above arrives here in its stron
 
 ## Playing it yourself
 
+The page's *Play* view is the one to reach for. This is the same game in a terminal, and the source of the two pieces `web.py` imports to build that view: `wordle_game.TILE_BLOCK` and `wordle_game.pick_random_answer`.
+
 ```
 python wordle_game.py                  menu: type an answer, or draw one from a prior
 python wordle_game.py --answer crane   play against a known answer
@@ -634,6 +638,8 @@ python web.py --no-browser    do not open one
 ```
 
 Both terminal front ends are there, plus one thing that has no terminal equivalent. The group beside *Settings* says which of the three the page is doing. It marks where you are, not where the button will take you.
+
+The two mappings below explain the page by way of the simpler thing. They are not directions to the terminal, which is where the solver is fitted rather than used.
 
 **Solve** is `wordle_solver.py play`. You enter the feedback by coloring tiles instead of typing `NYGNN`, and the prior toggles, `--mode`, `--form` and `--hard` all become switches. *Shape of f* leaves the choice to the cache by default and marks which form that is, since the winning form is fitted per prior and moves with the toggles. Alongside the board is a panel of alternatives and still-possible candidates, with the prior, the objective and the fitted f under *Advanced*. Each of those comes with an explanation of what it is doing, and the rates quoted in it are measured from `solutions.json` at the moment the board is built. Nothing is written into the page, so the explanation can't fall behind the answer record the way a sentence quoting "about 10%" would. The count runs one puzzle behind the table in *The regime the defaults describe* above: the server drops the last entry of `solutions.json` (`--mask-last`, default 1) to keep today's answer out of the solver's prior while you are solving today's puzzle.
 
