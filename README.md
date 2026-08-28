@@ -276,7 +276,21 @@ Both are only fallbacks, used where the game is too wide to search.
 
 ### Hard mode (`--hard`, off by default)
 
-Wordle's own hard mode: every guess must be a word that could still be the answer. It is a flag on `play` and `benchmark` and a switch on the page.
+Every guess must be a word that could still be the answer. It is a flag on `play` and `benchmark` and a switch on the page.
+
+**This is not the NYT's hard mode**, which is a rule about letters: keep every green where it is, and use every revealed letter somewhere, in as many copies as have been revealed. It says nothing about the letters ruled out, so it permits a guess that spends a gray letter, carries a copy more than the answer holds, or puts a yellow back in the square where it came up yellow. Every word that could still be the answer satisfies that rule, so what is played here is the narrower of the two and the solver never sees the extra moves.
+
+Widening it to the NYT's rule buys nothing, and every word is played under both rules to say so (`analysis/hard_mode_rules.py`). Handing the solver the legal pool at each turn is one substitution again, but the pool is now a function of the rows played rather than of the candidates, so the script plays the policy itself; `--check` is what shows that loop reproducing `common.every_answer` game for game.
+
+| policy | guesses taken off the candidates | words changing length | what the wider rule is worth |
+| --- | --- | --- | --- |
+| expected, as shipped | 0 in 12,947 games | 0 | +0.0000 |
+| expected, endgame off | 95 | 49 (25 better, 24 worse) | −0.0000 |
+| **greedy entropy** | **2,922** | **1,019 (274 better, 745 worse)** | **+0.0631** |
+
+The objective never takes the freedom. The pool is the whole word list at turn one under either rule, and after that a word that cannot win has to be worth more than the win chance it gives up — which is the trade the objective already prices, and it comes out against the probe every time. Switch the endgame off so that the pool rather than the search decides every turn and it does reach for a non-candidate 95 times, splitting 25 words better and 24 worse for no movement in the mean. Only greedy entropy uses the wider rule freely, and it pays: entropy does not price winning outright, so it buys the sharper split and forfeits games it could have ended, which is the same asymmetry SOLVER_EXPLAINED *A straight-line* turns on.
+
+Both arms keep the endgame search restricted to the candidates, since its nodes would need a constraint history they are never given, so the figures above are a floor on what the NYT's rule is worth rather than the whole of it. Widening the search too is untested here — the reason to expect little from it is that the objective declined the wider pool at every turn where it was free to choose, which is an argument rather than a measurement.
 
 Mechanically it is one substitution. The pool of guesses to score becomes the candidate set instead of all 12,947 words (`WordleSolver.guess_pool`), which the kernels already take as a parameter, and the exact search narrows the same way. In the search that also removes the partition dedupe: only a candidate itself can come back `GGGGG`, so no two candidates split S identically and there is nothing left to merge.
 
