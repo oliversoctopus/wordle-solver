@@ -152,7 +152,7 @@ The model is sequential — a repeat first, then curated vs. non-curated on the 
 Each group also has a **shape**, which is how its mass is spread over its members. The defaults are the sharpened shapes, worth −0.064 ± 0.032 guesses over the flat spread the two priors used on their own.
 
 * `--repeat-shape binned` (default) weights a past answer by where it first appeared, binned 200 wide and Laplace-smoothed — reuse concentrates near the start of the run, not uniformly over everything played.
-* `--curation-shape wordlebot` (default) weights an off-list word by WordleBot's own published weight, keeping 5% of the mass outside that list as a hedge; `--curation-shape frequency` weights it by how answer-like the word is instead, which is slightly weaker but needs no vendored list.
+* `--curation-shape wordlebot` (default) weights an off-list word by WordleBot's own weight, keeping 5% of the mass outside that list as a hedge; `--curation-shape frequency` weights it by how answer-like the word is instead, which is slightly weaker but needs no vendored list.
 * `--repeat-shape uniform`, `--curation-shape uniform` give the flat spread back.
 
 Each shape is worth having on its own terms, and the two are **additive within noise**; *What the two shapes are worth together* below has the measurement. The shape is part of the cache key because the best form of `f` depends on it, and the dependence reaches the opening word: `spline` wins under the sharpened shapes and under the flat ones alike, yet pair a sharpened repeat shape with a flat curation shape and it opens `raise` instead of `salet` and drops to seventh, behind every form that stayed concave.
@@ -218,7 +218,7 @@ Whether the source window is drifting forward is likewise unresolved, and the ev
 
 ### The curation prior's shape
 
-Weighting off-list words instead of flatly is a large modeling gain on its own. Scored prequentially over the off-list answers, uniform is −9.27 nats per event; an answer-like score fitted against the curated list as positives is −8.16 at the shipped `t` = 0.35; and WordleBot's published weights, validated against a 2023 snapshot that predates 44 of the 48 events, are −6.46, with the effective support falling from 10,638 words to 911.
+Weighting off-list words instead of flatly is a large modeling gain on its own. Scored prequentially over the off-list answers, uniform is −9.27 nats per event; an answer-like score fitted against the curated list as positives is −8.16 at the shipped `t` = 0.35; and WordleBot's weights, reconstructed by a third party and validated against a 2023 snapshot that predates 44 of the 48 events, are −6.46, with the effective support falling from 10,638 words to 911.
 
 Between the two sharpened shapes there is little to choose. `analysis/replay.py` runs `frequency` against the default `wordlebot` head to head: **+0.055 ± 0.046** blended, and +0.044 ± 0.048 over the 203 regime puzzles — a wash either way. The two trade rather than one dominating, `frequency` taking −0.273 ± 0.164 on the repeat arm and giving back +0.479 ± 0.133 on the off-list arm. `wordlebot` ships because it scores better as a model, not because it measurably plays better, and `frequency` is there for anyone who would rather not vendor a scrape.
 

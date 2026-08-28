@@ -94,9 +94,10 @@ print(f"  words added to the list since    {len(added):5d}")
 print(f"    of those, ever an answer       {len(ever):5d}"
       f"   {', '.join(ever) or ''}")
 print()
-print("  It predicts forward at the rate above, and what it has gained since is")
-print("  not backfill: of everything added, only the words it missed at the time")
-print("  have ever come up as answers.")
+print("  It predicts forward at the rate above. Whether the two it missed were")
+print("  backfilled the archive cannot settle: both are absent on 2025-05-25 and")
+print("  present on 2025-09-16, with no capture in between, and that gap is the")
+print("  window in which both were used.")
 
 common.header("why the hedge is spread flat")
 unlisted = [w for w in noncurated if wordlebot.get(w, 0.0) <= 0.0]
