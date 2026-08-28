@@ -43,11 +43,14 @@ parser.add_argument("--all-priors", action="store_true",
                     help="all four combinations rather than the shipped one")
 parser.add_argument("--every-word", action="store_true",
                     help="ignore --top and sweep the whole list; hours, not minutes")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data()
-configs = ([PriorConfig(repeat=r, curation=c) for r in (False, True) for c in (False, True)]
-           if args.all_priors else [PriorConfig()])
+configs = common.filter_priors(
+    [PriorConfig(repeat=r, curation=c)
+     for r in (False, True) for c in (False, True)]
+    if args.all_priors else [PriorConfig()], args)
 
 
 def opening_value(solver, first, candidates):

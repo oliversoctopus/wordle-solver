@@ -22,6 +22,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--mode", choices=(EXPECTED, ENTROPY), default=EXPECTED)
 parser.add_argument("--all-priors", action="store_true",
                     help="every combination, not just the shipped one")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 
@@ -31,7 +32,8 @@ def opening(solver):
 
 
 data = load_data()
-configs = ALL_CONFIGS if args.all_priors else [PriorConfig()]
+configs = common.filter_priors(
+    ALL_CONFIGS if args.all_priors else [PriorConfig()], args)
 
 for config in configs:
     common.header(config.slug)

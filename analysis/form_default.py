@@ -21,6 +21,7 @@ from solver import WordleSolver
 MAX_GUESSES = 6
 
 parser = argparse.ArgumentParser(description=__doc__)
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 
@@ -36,7 +37,7 @@ def archived(config, form):
 forms = sorted(estimator.FORMS)
 results = {}
 
-for config in ALL_CONFIGS:
+for config in common.filter_priors(ALL_CONFIGS, args):
     common.header(config.slug)
     runs, openings = {}, {}
     for form in forms:

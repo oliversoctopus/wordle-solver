@@ -35,11 +35,13 @@ parser.add_argument("--baseline", action="store_true",
 parser.add_argument("--all-priors", action="store_true")
 parser.add_argument("--losses", type=int, default=10,
                     help="heaviest lost words to name per arm")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
-configs = ([PriorConfig(repeat=r, curation=c)
-            for r in (False, True) for c in (False, True)]
-           if args.all_priors else [PriorConfig()])
+configs = common.filter_priors(
+    [PriorConfig(repeat=r, curation=c)
+     for r in (False, True) for c in (False, True)]
+    if args.all_priors else [PriorConfig()], args)
 
 other = ("greedy entropy" if args.baseline
          else f"IG + {DERIVED_WIN_BONUS:g}*p_win")

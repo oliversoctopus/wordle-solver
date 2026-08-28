@@ -48,6 +48,7 @@ parser.add_argument("--check", action="store_true",
 parser.add_argument("--no-endgame", action="store_true",
                     help="turn the exact search off, so the pool decides "
                          "every turn rather than the first two")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 
@@ -178,7 +179,8 @@ def check_loop(data, config):
 
 data = load_data()
 legality = Legality(data.all_words)
-configs = ALL_CONFIGS if args.all_priors else [PriorConfig()]
+configs = common.filter_priors(
+    ALL_CONFIGS if args.all_priors else [PriorConfig()], args)
 answers = np.arange(args.answers or len(data.all_words))
 
 if args.check:

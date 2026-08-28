@@ -30,6 +30,7 @@ parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2],
 parser.add_argument("--games", type=int, default=training.DEFAULT_GAMES)
 parser.add_argument("--reach", type=int, default=0,
                     help="--exact-max to fit at (default %(default)s, train's)")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data(mask_last=1)
@@ -50,7 +51,7 @@ def scored(config, params, form):
 
 
 deltas, losses, declined = [], [], 0
-for config in ALL_CONFIGS:
+for config in common.filter_priors(ALL_CONFIGS, args):
     common.header(config.slug)
     form = estimator.get_form(estimator.load_record(config)["form"])
     for seed in args.seeds:

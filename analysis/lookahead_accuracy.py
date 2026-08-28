@@ -66,11 +66,14 @@ parser.add_argument("--top", type=int, default=DEFAULT_LOOKAHEAD_BRANCH,
                     help="guesses played out per position under --decisions; at "
                          "the default these are exactly the ones the lookahead "
                          "re-ranks")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data()
-configs = ([PriorConfig()] if args.shipped_only else
-           [PriorConfig(repeat=r, curation=c) for r in (False, True) for c in (False, True)])
+configs = common.filter_priors(
+    [PriorConfig()] if args.shipped_only else
+    [PriorConfig(repeat=r, curation=c)
+     for r in (False, True) for c in (False, True)], args)
 
 
 def heuristic_decides(solver, candidates, turns_left):

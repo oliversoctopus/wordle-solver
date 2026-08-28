@@ -157,6 +157,16 @@ ALL_CONFIGS = [
 ]
 
 
+def depends_on_answer_record(config):
+    """Does this prior read the answer record at all?
+
+    `build_weights` consults the used-word mask only under ``config.repeat``, so
+    a repeat-off prior -- and every fit and prior-weighted figure made under it
+    -- is unchanged when `solutions.py --write` extends the record.
+    """
+    return config.repeat
+
+
 def _repeat_shape(data, used_mask):
     """Relative weights within the used group, by where the word first appeared.
 

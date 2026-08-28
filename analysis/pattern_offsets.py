@@ -33,6 +33,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--games", type=int, default=2000,
                     help="rollout games per prior (default %(default)s)")
 parser.add_argument("--seed", type=int, default=0)
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 GREENS = np.array([num_to_feedback(p).count("G") for p in range(243)])
@@ -77,7 +78,7 @@ def dummies(values, levels):
     return np.column_stack([(values == level).astype(float) for level in levels])
 
 
-for config in ALL_CONFIGS:
+for config in common.filter_priors(ALL_CONFIGS, args):
     common.header(config.slug)
     params, form = estimator.load_active(config)
     solver = WordleSolver(data=data, config=config, mode=EXPECTED, params=params,

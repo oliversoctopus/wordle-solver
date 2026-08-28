@@ -21,7 +21,8 @@ for path in (ROOT, HERE):
         sys.path.insert(0, path)
 
 import rust  # noqa: E402  -- needs the path above
-from priors import WORDLEBOT_SNAPSHOT_DATE  # noqa: E402  -- likewise
+from priors import (WORDLEBOT_SNAPSHOT_DATE,  # noqa: E402  -- likewise
+                    depends_on_answer_record)
 
 DATA = os.path.join(ROOT, "data")
 
@@ -30,6 +31,38 @@ REGIME_DATE = "2026-02-02"
 # the Wayback snapshot the WordleBot list is validated against; `wordlebot.py`
 # fetches it and names the file, so the date is not written down twice
 SNAPSHOT_DATE = WORDLEBOT_SNAPSHOT_DATE
+
+
+def add_prior_filter(parser):
+    """The flag that drops the arms an extended answer record cannot have moved."""
+    parser.add_argument("--repeat-only", action="store_true",
+                        help="sweep only the priors whose weights read the "
+                             "answer record, i.e. skip the repeat-off arms, "
+                             "which solutions.py --write cannot move")
+    return parser
+
+
+def keep_prior(config, args):
+    """Whether ``--repeat-only`` keeps this arm."""
+    return (not getattr(args, "repeat_only", False)
+            or depends_on_answer_record(config))
+
+
+def filter_priors(items, args):
+    """The arms to sweep, given configs or (label, config) pairs.
+
+    Says which it dropped, so a table assembled from two runs says so in both.
+    """
+    items = list(items)
+    if not getattr(args, "repeat_only", False):
+        return items
+    kept = [it for it in items
+            if keep_prior(it[1] if isinstance(it, tuple) else it, args)]
+    if not kept:
+        raise SystemExit("--repeat-only left nothing to sweep")
+    print(f"--repeat-only: {len(kept)} of {len(items)} arms; the rest do not "
+          f"read the answer record, so their last figures still stand\n")
+    return kept
 
 
 def load(name):

@@ -28,11 +28,14 @@ parser.add_argument("--games", type=int, default=5000, help="answers per prior")
 parser.add_argument("--seed", type=int, default=4242)
 parser.add_argument("--branch", type=int, default=DEFAULT_LOOKAHEAD_BRANCH)
 parser.add_argument("--shipped-only", action="store_true")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data()
-configs = ([PriorConfig()] if args.shipped_only else
-           [PriorConfig(repeat=r, curation=c) for r in (False, True) for c in (False, True)])
+configs = common.filter_priors(
+    [PriorConfig()] if args.shipped_only else
+    [PriorConfig(repeat=r, curation=c)
+     for r in (False, True) for c in (False, True)], args)
 
 
 def lengths_of(solver, answers):

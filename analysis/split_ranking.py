@@ -44,12 +44,14 @@ parser.add_argument("--exact-root-branch", type=int, default=DEFAULT_ROOT_BRANCH
                          "is timing, so 50 gives the pre-widening figures")
 parser.add_argument("--seed", type=int, default=4242)
 parser.add_argument("--all-priors", action="store_true")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data()
-configs = ([PriorConfig(repeat=r, curation=c)
-            for r in (False, True) for c in (False, True)]
-           if args.all_priors else [PriorConfig()])
+configs = common.filter_priors(
+    [PriorConfig(repeat=r, curation=c)
+     for r in (False, True) for c in (False, True)]
+    if args.all_priors else [PriorConfig()], args)
 
 # a split stops being shared long before the candidates run out; these are where
 # it happens, not an even division of the range

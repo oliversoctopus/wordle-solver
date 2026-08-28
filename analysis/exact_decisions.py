@@ -55,11 +55,14 @@ parser.add_argument("--shipped-only", action="store_true")
 parser.add_argument("--who-decides", action="store_true",
                     help="count which valuation takes each decision, by turns "
                          "left, instead of scoring the choices")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data()
-configs = ([PriorConfig()] if args.shipped_only else
-           [PriorConfig(repeat=r, curation=c) for r in (False, True) for c in (False, True)])
+configs = common.filter_priors(
+    [PriorConfig()] if args.shipped_only else
+    [PriorConfig(repeat=r, curation=c)
+     for r in (False, True) for c in (False, True)], args)
 
 # where the search decides and the estimator would otherwise have had to
 BANDS = ((3, 4), (5, 10), (11, args.exact_max))

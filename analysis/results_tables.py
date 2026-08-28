@@ -25,6 +25,7 @@ MAX_GUESSES = 6
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--part", choices=("forms", "priors", "both"), default="both")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 
@@ -85,12 +86,12 @@ if args.part in ("priors", "both"):
     print(f"  {'priors':14s} {'opening':>8s} {'entropy':>9s} {'expected':>9s} "
           f"{'solved':>8s} {'form':>11s}")
     rows = []
-    for label, config in [
+    for label, config in common.filter_priors([
         ("none", PriorConfig(repeat=False, curation=False)),
         ("curation only", PriorConfig(repeat=False)),
         ("repeat only", PriorConfig(curation=False)),
         ("both", PriorConfig()),
-    ]:
+    ], args):
         means = {}
         for mode in (ENTROPY, EXPECTED):
             solver = WordleSolver(config=config, mode=mode)

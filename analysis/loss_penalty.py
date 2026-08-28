@@ -55,11 +55,13 @@ parser.add_argument("--bound-family", default="atch",
                     help="the suffix whose family --bound values")
 parser.add_argument("--cost-games", type=int, default=400,
                     help="answers per timed configuration")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data()
 curated = set(common.load("wordles.json"))
-configs = [PriorConfig()] if args.shipped_only else TOGGLE_CONFIGS
+configs = common.filter_priors(
+    [PriorConfig()] if args.shipped_only else TOGGLE_CONFIGS, args)
 
 
 def play_all(solver):

@@ -1,7 +1,7 @@
 """Command line front end for the Wordle solver.
 
     python wordle_solver.py play                 interactive solving
-    python wordle_solver.py train                fit + cache f for all 4 prior combinations
+    python wordle_solver.py train                fit + cache f for all five prior combinations
     python wordle_solver.py benchmark            self-play, entropy vs. expected guesses
     python wordle_solver.py compare              policy iteration once per form of f
     python wordle_solver.py info                 show the cached fits
@@ -20,7 +20,8 @@ import sys
 import estimator
 import train as training
 from exact import DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH
-from priors import ALL_CONFIGS, CURATION_SHAPES, REPEAT_SHAPES, PriorConfig
+from priors import (ALL_CONFIGS, CURATION_SHAPES, REPEAT_SHAPES, PriorConfig,
+                    depends_on_answer_record)
 from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
                     DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED, MODES,
                     WordleSolver)
@@ -157,6 +158,8 @@ def cmd_train(args):
                         curation_shape=c.curation_shape)
             for c in ALL_CONFIGS
         ]
+        if args.repeat_only:
+            configs = [c for c in configs if depends_on_answer_record(c)]
     training.train_all(
         configs=configs,
         data=data,
@@ -319,7 +322,10 @@ def build_parser():
                          "one (README *Fitting in Rust*)")
     tr.add_argument("--this-config-only", action="store_true",
                     help="fit only the prior combination given by the prior flags, "
-                         "instead of all four")
+                         "instead of all five")
+    tr.add_argument("--repeat-only", action="store_true",
+                    help="skip the repeat-off priors, whose fits an extended "
+                         "answer record cannot have moved")
     # f is only ever queried where the exact search does not reach, so training
     # fits only that free part by default; README *What it is worth* has why
     tr.set_defaults(func=cmd_train, default_exact_max=0)

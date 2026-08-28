@@ -10,6 +10,10 @@ This is the one thing here that is not a test of code.  It compares two files:
 the `fitted_at` stamp each cache already carries, and the newest answer the
 solver actually uses.  What it catches is not a wrong function but a stale one.
 
+A repeat-off prior is exempt and says so: `priors.build_weights` reads the
+answer record only under `config.repeat`, so nothing `solutions.py --write` does
+can reach that fit.
+
     python tests/fit_provenance.py
 
 Refit what it names with:  python wordle_solver.py train --this-config-only
@@ -24,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import estimator
 import web
+from priors import depends_on_answer_record
 from wordle_data import DATA_DIR
 
 failures = 0
@@ -79,6 +84,12 @@ def main():
         with open(path, encoding="utf-8") as fh:
             fit = json.load(fh)
         fitted = date_of(fit["fitted_at"])
+        if not depends_on_answer_record(config):
+            report(True, f"{label} does not read the answer record",
+                   f"{config.slug}: fitted {fitted} in the '{fit['form']}' form; "
+                   f"build_weights consults the used words only under the repeat "
+                   f"prior, so a longer record cannot stale this fit")
+            continue
         stale = fitted < newest_date
         report(not stale, f"{label} is fitted against the record we have",
                f"{config.slug}: fitted {fitted} in the '{fit['form']}' form, "

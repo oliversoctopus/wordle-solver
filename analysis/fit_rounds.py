@@ -33,6 +33,7 @@ parser.add_argument("--games", type=int, default=training.DEFAULT_GAMES,
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--reaches", type=int, nargs="+", default=[60, 0],
                     help="--exact-max settings to fit under (default 60 and 0)")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data(mask_last=1)
@@ -50,7 +51,7 @@ runs = 0
 penalties = []
 loops = {reach: 0.0 for reach in args.reaches}
 
-for config in ALL_CONFIGS:
+for config in common.filter_priors(ALL_CONFIGS, args):
     common.header(config.slug)
     form = estimator.get_form(estimator.load_record(config)["form"])
     seen = {}

@@ -54,7 +54,9 @@ parser.add_argument("--probe-games", type=int, default=300,
                     help="games to read the gap distribution off (default "
                          "%(default)s)")
 parser.add_argument("--priors", type=int, default=len(ALL_CONFIGS),
-                    help="how many priors to sweep (default all %(default)s)")
+                    help="how many priors to sweep, after --repeat-only "
+                         "(default all %(default)s)")
+common.add_prior_filter(parser)
 args = parser.parse_args()
 
 data = load_data(mask_last=1)
@@ -132,7 +134,7 @@ def shape(lengths):
 
 moves = []
 totals_agree = []
-for config in ALL_CONFIGS[:args.priors]:
+for config in common.filter_priors(ALL_CONFIGS, args)[:args.priors]:
     common.header(config.slug)
     unfloored, weights = played(config, raw)
     base_mean, base_loss = common.exact_stats(unfloored, weights)

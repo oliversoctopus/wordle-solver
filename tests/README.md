@@ -88,7 +88,7 @@ python tests/anchors.py --full --seed 7 --rounds 200
 
 `estimator` keys its cache on the `PriorConfig` alone. It checks that a cached fit was made for the prior and the form being asked for, and nothing checks which answer record it was fitted against — so `solutions.py --write` leaves every fit describing a shorter history than the solver now scores against, and the page carries on recommending under it. Nothing anywhere says so.
 
-This is the one file here that does not test code. It compares two files: the `fitted_at` stamp each cache carries, and the date of the newest answer the solver actually uses. What it catches is not a wrong `f` but a stale one, which is invisible from every other direction — the fit loads, the priors are right, the page answers, and the policy is one round out of date. `python wordle_solver.py train --this-config-only` is the fix, and the failure names the configuration to pass.
+This is the one file here that does not test code. It compares two files: the `fitted_at` stamp each cache carries, and the date of the newest answer the solver actually uses. What it catches is not a wrong `f` but a stale one, which is invisible from every other direction — the fit loads, the priors are right, the page answers, and the policy is one round out of date. `python wordle_solver.py train --this-config-only` is the fix, and the failure names the configuration to pass. The two repeat-off priors are exempt and say so rather than passing quietly: `priors.build_weights` reads the answer record only under `PriorConfig.repeat`, so a longer record cannot stale a fit made without it.
 
 ## `doc_refs.py` — every pointer into the documents and the code still points somewhere
 

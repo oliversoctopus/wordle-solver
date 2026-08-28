@@ -168,6 +168,8 @@ It previews `site/`, so what you are editing is what deploys, and it loads no wo
 
 Every measured claim about the priors is reproduced by a script in `analysis/`, and the claims move with `solutions.json` — rerun after `solutions.py --write`, and refit before rerunning `analysis/replay.py` or it measures a stale policy against fresh answers. Nothing warns you: the estimator cache is keyed on the `PriorConfig` alone, so a fit made against a shorter answer log loads silently.
 
+Not every arm moves, though. `priors.depends_on_answer_record` says a repeat-off prior never reads the record, so its fit and every figure weighted by it stand as they are — `--repeat-only` skips those arms on `train` and on the scripts that sweep priors. `analysis/README.md` § *Rerunning them* has where the exemption stops, which is at the scripts that replay the record itself.
+
 **A cause needs a measurement as much as a number does.** Every figure here is backed by a script; the sentence explaining *why* a figure moved usually is not, and it is the likelier of the two to be wrong. Before writing "because", name at least two candidate causes and run something that separates them. Where nothing does, propose the likeliest anyway and mark it untested — a labelled conjecture earns its place by saying where to look next, and §6.3's "the mechanism is unmeasured here rather than absent" is the house phrasing for it. What goes wrong is the *unlabelled* one, which reads exactly like a measured claim and is the sentence a later pass will quote back as established.
 
 Say which kind of claim a sentence is. Measured, follows from the code, and guessed are three different things, and the third does not belong in a document at all.
