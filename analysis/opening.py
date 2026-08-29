@@ -129,8 +129,8 @@ for config in configs:
     means, losses = [], []
     for n, first in enumerate(words, start=1):
         # two openings partition the list differently, so almost nothing carries
-        # over between them; kept across all of them, the finished openings'
-        # positions are dead weight competing for the cap with live ones
+        # over between them; the finished openings' entries are dead weight the
+        # memo would otherwise hold on to for a whole run's worth of insertions
         solver.reset_memo()
         mean, loss = opening_value(solver, first, candidates)
         means.append(mean)

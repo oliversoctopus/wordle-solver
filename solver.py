@@ -142,11 +142,12 @@ class WordleSolver:
         """Drop the cached guesses, for a sweep playing many independent
         configurations in one process.
 
-        A finished run's positions are dead weight: the memo evicts by least
-        recent use, so they linger and compete for the cap with the positions the
-        next run is actually reusing.  Clearing between runs keeps it small and
-        useful.  The exact search's memo is left alone: its values depend only on
-        the weights, so they stay valid and stay worth sharing.
+        A finished run's positions are dead weight -- two openings partition the
+        list differently, so almost nothing carries over.  They cost memory and
+        not hits: being the least recently used, they are evicted before any live
+        entry is, so this reclaims space rather than restoring a hit rate.  The
+        exact search's memo is left alone: its values depend only on the weights,
+        so they stay valid and stay worth sharing.
         """
         self._memo.clear()
         self._lookahead_memo.clear()

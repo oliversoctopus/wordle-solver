@@ -135,9 +135,9 @@ What drives the change is mechanical, and it is the kind of thing a model should
 | curation only | 3.85 |
 | both | 3.75 |
 
-Resist reading that column as a scoreboard. Each row weights the words by its own prior, so a sharper prior is scoring an easier game, and no two rows describe the same population — what the column shows is how much of the difficulty was in the belief rather than in the board. Nor is any row a score against answers that really happened; §14 replays these same four configurations over the puzzles the NYT actually set.
+Resist reading that column as a scoreboard. Each row weights the words by its own prior, so a sharper prior is scoring an easier game, and no two rows describe the same population — what the column shows is how much of the difficulty was in the belief rather than in the board. There is only one column for a related reason: every figure here is greedy entropy, the one rule built so far, and what the prior is worth to a solver *trying to minimize guesses* is §6's to show and §14's to check against the puzzles the NYT actually set.
 
-There is only one column, too, because the objective that would fill a second does not exist yet: every figure here is greedy entropy, the one rule built so far. What the prior is worth to a solver that is *trying to minimize guesses* is §6's to show and §14's to check against the answer record.
+One reading does survive that caveat, because it compares a prior against itself rather than against another. Switching the repeat prior on moves 4.12 to 4.10 — two hundredths of a guess, on a game that same prior chose the difficulty of. A belief that can barely make its own examination easier is not doing much work, and it is the first sign of something §14.3 takes apart properly: alone, the repeat prior is nearly idle, and what it is really for is correcting the other one.
 
 Three groups is a statement about how much mass each group gets. It says nothing about how the mass spreads *within* a group, and the obvious answer — spread it flat — is wrong in both directions. Flat says `cigar`, the very first Wordle, is no likelier to come round again than a word played last month. It also says `squid` and `xylyl` are equally plausible as tomorrow's answer. The second mistake is the expensive one: the non-curated group holds 10,638 of the 12,947 words, so it dominates the candidate *count* at nearly every position while carrying under a tenth of the mass. Call the within-group spread a group's **shape**. Both shapes started flat and neither is now — but before either can be described, the weights have broken something.
 
@@ -165,9 +165,21 @@ $$w_b = \frac{r_b + \alpha}{n_b}, \qquad \alpha = 0.5$$
 
 where `r_b` is how many repeats came out of that bin and `n_b` how many used words live there; each bin's share is then spread evenly over its members. That `α` is the whole reason `sandy` does not break the model — it keeps a bin that has never yet produced a repeat from being written off completely. It is the "maybe next time" term, and it is why no word's weight ever reaches zero. In the end `cigar` carries about six times the flat repeat weight and the late words fall below it.
 
-The bins are fixed rather than sliding, and *that* is the part worth learning from. A sliding window over the recent past is the more natural-sounding model, and it needs a boundary. A boundary is a parameter. That parameter has to be tuned on the same 22 events you are trying to predict, and 22 events cannot afford to feed a parameter and be predicted by it.
+The bins are fixed rather than sliding, and *that* is the part worth learning from. A sliding window over the recent past is the more natural-sounding model, and it needs a boundary. A boundary is a parameter, and 22 events cannot afford to feed a parameter and be predicted by it.
 
-The way to see this without fooling yourself is **prequential scoring**: predict each repeat using only the repeats before it, so no parameter ever sees the event it is graded on. Scored that way, the histogram beats a flat spread by about **+1.18 ± 0.20 nats per event**. That `±` is a standard error — how far the estimate itself would wander if the same 22 events were drawn again — so the useful reading is that the gap is nearly six times its own uncertainty, which is a gap to believe. The best of sixteen tuned windows does not come close, and neither does a model that lets the rate refit as events arrive. Twenty-odd events cannot pin a rate down, and a histogram has no rate to pin.
+The way to settle that without fooling yourself is **prequential scoring**: predict each repeat using only the repeats before it, so no parameter ever sees the event it is graded on. Scored that way, the histogram beats a flat spread by about **+1.18 ± 0.20 nats per event**. That `±` is a standard error — how far the estimate itself would wander if the same 22 events were drawn again — so the useful reading is that the gap is nearly six times its own uncertainty, which is a gap to believe.
+
+The windows lose, and the whole field is worth seeing at once. Scored the same way over the same 22 events (`analysis/repeat_shapes.py`), in total nats rather than per event:
+
+| model | log-likelihood | vs. a flat spread |
+| --- | --- | --- |
+| flat over the used words | −164.6 | — |
+| **binned by first appearance, α = 0.5** | **−138.8** | **+25.9** |
+| best of sixteen sliding windows | −149.6 | +15.1 |
+| worst of those same sixteen | −252.6 | −88.0 |
+| a repeat rate refitted as events arrive | −156.3 | +8.3 |
+
+How that comparison is set up is what makes losing mean something. The sixteen windows are four choices of how many recent repeats fix the centre against four widths, and the row above is the *best* of them, picked after seeing how each one did. That is hindsight the histogram is never given, and it still trails by eleven nats across the 22 events — about half a nat apiece. Choose the boundary badly instead and the model scores far below knowing nothing at all, which is the other half of the same point: the parameter has to be right, and there is nothing to set it with. Twenty-odd events cannot pin a rate down, and a histogram has no rate to pin.
 
 ### 5.2 The off-list group: WordleBot's own weights
 
@@ -267,27 +279,29 @@ The identity is testable, because one of the fitted forms is linear in `x` and s
 
 Read the bottom row first. Nearly all of the improvement over a standard entropy solver is the free discount for guessing a word that might be the answer, and the fitted curve's shape — the thing §7 works hardest for — is about a sixteenth of it.
 
-Then read the columns, because both halves turn out to be the prior's doing rather than the objective's. The bonus climbs by more than tenfold as the prior sharpens, which is what §15 is about. Curvature is not a constant ~0.04 either: it is worth that much wherever the **curation** prior is on and nothing whatsoever where it is off, and with curation off the best form of `f` is a straight line — there is no shape left to exploit. A bent `f` only pays where the prior has made the candidate sets uneven enough to bend it for.
+Then read the columns, because both halves turn out to be the prior's doing rather than the objective's. The bonus climbs by more than tenfold as the prior sharpens, which is what §15 is about. Curvature is not a constant ~0.04 either: it is worth that much wherever the **curation** prior is on and next to nothing where it is off. Why a prior should decide whether a curve has anything to offer is a question the fitted curve answers below, once there is a curve to look at.
 
 It is worth saying plainly that none of that bonus needs fitting. Written in its own terms the rule is `IG(g) + a·p_win(g)`, with no `f` anywhere, and two exact facts fix `a` with no data at all: one candidate takes one guess and two take one and a half, so a bit of information is worth half a guess, and winning outright saves a whole one — two bits' worth. A solver playing that rule collects essentially the same bonus with no estimator, no fit and no answer log behind it. `README.md` carries it as a second reference rather than as the baseline, since it pays for those guesses with a much higher loss rate.
 
 The solver's **hard mode** is the cleanest test of the identity, because it isolates the bonus from everything else. It requires every guess to be a word that could still be the answer — narrower than the NYT's rule of the same name, which only asks that the letters already revealed be reused. Restricting greedy entropy to it therefore forces `p_win` up without touching entropy's scoring rule at all — and it gains about a quarter of a guess, which is roughly two fifths of what the objective gets by *pricing* the same bonus instead of imposing it. The objective does better because it takes the bonus **and** keeps the probes. It plays a non-candidate whenever the split is worth more than the win chance it gives up, which is exactly the trade hard mode forbids. Handing it the wider pool the NYT's own rule allows shows the same thing from the other side: the objective declines those probes across all 12,947 answers, where greedy entropy takes 2,922 of them and is worse for it.
 
-So `f` has to be concave in `x`, and the curve fitted for the default prior is a piecewise-linear spline that obliges:
+Curvature is what is left once that bonus is priced, and some of it is expected before any fitting happens. A guess cuts a candidate set by a *factor* rather than by an amount, and how large a factor is on offer depends on how much there is to cut: two candidates admit one bit and no more, where a few dozen admit four or five, one guess being able to send them to as many as 243 different patterns. Bits per guess therefore rise with the size of the set, guesses per bit fall, and `f` flattens as `x` grows. The curve fitted for the default prior is a piecewise-linear spline that obliges:
 
 ```
-f(n) = 0.955 + 0.372·x − 0.112·(x−2)₊ − 0.138·(x−4)₊ − 0.104·(x−6)₊
+f(n) = 0.945 + 0.375·x − 0.099·(x−2)₊ − 0.194·(x−4)₊
                                             (x = log₂ n, (u)₊ = max(u, 0))
 ```
 
-Every knot — a knot being a value of `x` where the curve is allowed to change slope — bends it flatter, and none bends it back. What that means concretely is worth seeing next to the curve fitted under flat shapes:
+A knot is a value of `x` where the curve is allowed to change slope; both of these bend it flatter and neither bends it back, taking it from 0.375 of a guess per doubling to 0.276 and then to 0.083. Both bends are spent below sixteen candidates, and above that the fit is a straight line. Set it beside the curve fitted under flat shapes:
 
-| n | 100 | 1,000 | 12,947 |
-| --- | --- | --- | --- |
-| `f(n)`, shipped shapes | **2.47** | **2.53** | **2.60** |
-| `f(n)`, flat shapes | 2.58 | 3.02 | 3.42 |
+| n | 2 | 4 | 16 | 100 | 1,000 | 12,947 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `f(n)`, shipped shapes | **1.32** | **1.70** | **2.25** | **2.47** | **2.74** | **3.05** |
+| `f(n)`, flat shapes | 1.33 | 1.75 | 2.17 | 2.58 | 3.10 | 3.67 |
 
-Going from a hundred candidates to a thousand costs six hundredths of a guess on the shipped curve, and from a thousand to the whole word list another seven. That is the honest shape of the game once the prior is doing its work, and it is precisely what a linear `f` cannot express. Over that same stretch the flat-shape curve climbs six times as far, which is more than a rescaling — it is the prior changing what `f` even has to model. With the mass concentrated, the effective size rarely reaches the range where a saturating curve has flattened out, so saturation stopped being the liability it used to be.
+The two halves of that table say different things. On the left both curves bend, and land within a rounding of each other doing it — this is the part a linear `f` cannot express, and it is bought entirely in positions of a handful of candidates. On the right neither bends at all, and what separates them is a slope: 0.083 of a guess per doubling against 0.156, so across the nine-odd doublings from sixteen candidates to the whole list the flat curve climbs about twice as far. That is the prior changing what `f` has to model rather than rescaling it. Concentrate the mass and effective sizes stay small, so the positions the solver actually meets sit where the curve is doing something instead of out along the straight part.
+
+Which is what the curvature column was asking, and the answer is not that a flatter prior leaves `f` with no shape. Every fitted `f` in this repo is concave, the ones fitted with the curation prior off included — and the one fitted with no prior at all saturates hardest of them all, flat to three decimals by the time it reaches a thousand candidates. What those configurations lack is a *use* for the shape. A bend is only ever worth the guesses it reorders, and where the candidate sets are large and alike a bend and a straight line rank the same guesses the same way. That last step is a reading of the fitted curves rather than a measurement of its own.
 
 One caveat matters when reading any of this: `f` is fitted **per prior**, so the curve above is the default prior's and no other. Turn a prior off and a different curve, in a different functional form, is what scores the guesses.
 
@@ -320,7 +334,9 @@ Three constraints are worth flagging.
 
 ### The form of `f` has to be refitted per shape
 
-That cache is keyed per prior, and it has to be keyed per *shape* as well. Why is the least obvious thing in this section. `f` is queried at its largest argument exactly once per game: at the opening, where the candidate set is the whole word list. That is the far tail of the fit, extrapolated rather than supported by data. Change the shapes of §5 and every effective size moves out there, so a curve fitted for one pair of shapes can rank opening words wrongly under another.
+That cache is keyed per prior, and it has to be keyed per *shape* as well. There is nothing surprising in that on its own — the shapes are the weights, and `f` is fitted against the weights. What earns the subsection is the way a mis-paired `f` fails, because it does not fail by being slightly off.
+
+`f` is queried at its largest argument exactly once per game: at the opening, where the candidate set is the whole word list. That is the far tail of the fit, extrapolated rather than supported by data. Change the shapes of §5 and every effective size moves out there, so a curve fitted for one pair of shapes can rank opening words wrongly under another.
 
 The case to look at is `spline`, since it is the form that ships. Under the sharpened shapes it wins and opens `salet`. Under two flat shapes it wins again and opens `salet` again. Pair a *sharpened* repeat shape with a *flat* curation shape and the same family opens `raise` and falls to seventh of nine, behind every form that stayed concave. Nothing about the board changed — only which curve was fitted to which weights. This is estimator error, not a preference, and it is why the shapes are part of the fit's cache key.
 
@@ -334,7 +350,7 @@ Both scorers — §3's information gain and §6's `E(g, S)` — are the same loo
 
 ### The rearrangement that makes this cheap
 
-There is an implementation trick in computing `n_eff` worth working through slowly, because it is the single biggest optimization in the scoring loop and because the idea generalizes.
+There is an implementation trick in computing `n_eff` worth working through slowly, because it removes nearly all of the loop's arithmetic and because the idea generalizes.
 
 **The problem.** `H` is defined on *normalized* weights, `p_i = w_i / m`. But `m`, the bucket's total mass, is not known until you have seen every member of the bucket — and which bucket a candidate lands in depends on the guess. Read naively, that means: for each of the 12,947 guesses, pass over the candidates to find the bucket totals, then pass over them *again*, taking a logarithm per candidate, to build each bucket's entropy. One logarithm for every (guess, candidate) pair.
 
@@ -459,11 +475,19 @@ There is a nice safety property here. A guess that could itself be the answer *a
 
 The dedupe only bites while `S` is tiny, though. By a dozen candidates almost every guess in the list already splits differently, so beyond that the branching factor is effectively the whole word list. That, rather than the node count, is what makes the occasional deep position slow.
 
-**(b) Closed-form leaves.** With two turns left, no search is needed at all. On the last turn the best you can do inside a bucket is play its heaviest member, worth `1 + (1−p_max)·penalty`, and summing that over the buckets gives
+**(b) Closed-form leaves.** With two turns left, no search is needed at all. Play `g`, and every reply but `GGGGG` leaves you in some bucket with one turn to spend. There is nothing to think about on a last turn: you name the heaviest word in the bucket and you are right with probability `M_r / m_r`, writing `m_r` for bucket `r`'s mass and `M_r` for its largest single weight. So
+
+$$V(S_r, 1) = 1 + \Big(1 - \frac{M_r}{m_r}\Big)\cdot\text{penalty}$$
+
+Now average that over the buckets, each reached with probability `m_r / total`:
+
+$$V(g,2) = 1 + \sum_{r \ne \texttt{GGGGG}} \frac{m_r}{\text{total}}\left[1 + \Big(1 - \frac{M_r}{m_r}\Big)\text{penalty}\right]$$
+
+The `m_r` outside the bracket cancels the one inside it, which is the only step with any content — it turns a sum of ratios into a sum of the two quantities a scan can accumulate:
 
 $$V(g,2) = 1 + \frac{A + (A - B)\cdot\text{penalty}}{\text{total}}$$
 
-with `A` the mass and `B` the sum of bucket maxima over the non-winning buckets. That is *one pass over the guesses* — exactly what heuristic scoring costs. So **two turns or fewer is always solved exactly, for free, at any candidate count.** The same two-turn position is reached along many different orders of guesses, about four calls in five being a repeat, so even this closed form is cached rather than recomputed (§12).
+with `A` the mass and `B` the sum of bucket maxima over the non-winning buckets. Those two totals are all a guess's 243 buckets have to be reduced to, which is why `kernels._two_turn` keeps exactly the two accumulators it does. That is *one pass over the guesses* — exactly what heuristic scoring costs. So **two turns or fewer is always solved exactly, for free, at any candidate count.** The same two-turn position is reached along many different orders of guesses, about four calls in five being a repeat, so even this closed form is cached rather than recomputed (§12).
 
 One detail in it is doing more work than it looks. The penalty there is a parameter rather than a constant. Called as a leaf, it is handed the real one and returns the true value of the position, which is the point of a leaf. The next idea calls the same code with a different penalty, for an entirely different purpose.
 
@@ -471,19 +495,28 @@ One detail in it is doing more work than it looks. The penalty there is a parame
 
 $$V_1(S, 2) \le V_5(S, t) \qquad \text{for every } t \ge 2$$
 
-which splits into two steps, and both of them need that 1.
+which splits into two steps that chain left to right, and both of them need that 1.
 
-*Charging less for a miss cannot raise the value.* Fix any policy at all and score its play twice, once charging 1 for a loss and once charging 5. The second charge is larger on the paths that lose and identical everywhere else, so no policy scores worse under the cheaper penalty — and neither does the best of them.
+*At a penalty of 1, turns in hand cannot make a position cheaper* — so `V₁(S,2) ≤ V₁(S,t)`. This one reads backwards, because more turns ought to be worth having. They are not here, and the reason is that running out is an *exit*. A position two turns from the deadline can take its last shot, miss, pay 1, and stop. A position with four turns in hand has to carry on until it actually wins, and no continuation ever finishes for less than the single guess that exit charges. Being allowed to leave is never worse than playing on.
 
-*At a penalty of 1, turns in hand cannot make a position cheaper.* This one reads backwards, because more turns ought to be worth having. They are not here, and the reason is that running out is an *exit*. A position two turns from the deadline can take its last shot, miss, pay 1, and stop. A position with four turns in hand has to carry on until it actually wins, and no continuation ever finishes for less than the single guess that exit charges. Being allowed to leave is never worse than playing on.
+*Charging less for a miss cannot raise the value* — so `V₁(S,t) ≤ V₅(S,t)`. Fix any policy at all and score its play twice, once charging 1 for a loss and once charging 5. The second charge is larger on the paths that lose and identical everywhere else, so no policy scores worse under the cheaper penalty — and neither does the best of them.
 
-Chain the two steps and the two-turn value at penalty 1 sits underneath every deeper value at the penalty actually in force, which is what makes it safe to prune with.
+Join the two and the two-turn value at penalty 1 sits underneath every deeper value at the penalty actually in force, which is what makes it safe to prune with.
 
-**The cap at 1 is not a safety margin — without it the bound is simply false.** At a penalty of 5 the second step reverses outright, because the exit now costs five guesses instead of one and a position near the deadline would much rather have the turns. Take the ten words ending in `-atch`, a real position and a familiar trap. Under the shipped penalty it is worth about 1.46 guesses with four turns in hand and 1.53 with three — low, because the prior puts most of the family's mass on `hatch` alone. With only two turns it is worth **1.95**, since the last turn is a guess at whatever the first failed to resolve and every miss is charged at 5. A search that pruned the three-turn position because that 1.95 already beat its incumbent would be throwing away a subtree whose true value is 1.53. Recompute the same three numbers with the penalty at 1 and they come out 1.36, 1.44 and 1.44 — rising with `t`, which is the order the bound requires. Hence `ExactEndgame.bound_penalty`, which is `min(loss_penalty, 1)`, and hence its use in the bound and nowhere else.
+**The cap at 1 is not a safety margin — without it the bound is simply false.** At a penalty of 5 the first step reverses outright: the exit now costs five guesses rather than one, and a position near the deadline would much rather have the turns. The ten words ending in `-atch` are a real position and a familiar trap, and they show it:
+
+| turns in hand `t` | 2 | 3 | 4 |
+| --- | --- | --- | --- |
+| value at penalty 5 | **1.95** | 1.53 | 1.46 |
+| value at penalty 1 | 1.36 | 1.44 | 1.44 |
+
+The bound needs those values to rise with `t`, and only the second row does. The family is cheap to begin with because the prior puts most of its mass on `hatch` alone; but with two turns and a miss charged at 5, the last turn is a guess at whatever the first failed to resolve, and the position prices at 1.95. A search that pruned the three-turn position because 1.95 already beat its incumbent would be discarding a subtree whose true value is 1.53. Hence `ExactEndgame.bound_penalty`, which is `min(loss_penalty, 1)`, and hence its use in the bound and nowhere else.
 
 The search then does the standard thing with that bound. Guesses are ordered by it and walked in that order, holding on to the best complete value found so far — the **incumbent**. Within a guess, the running total starts as the sum of its buckets' bounds, and each bucket is replaced by its exact value one at a time, so the total only ever rises. The moment it passes the incumbent, the guess is abandoned unevaluated. Biggest-mass buckets go first, since they move the total fastest. All of it is sound because the bound is **admissible** — it never overestimates, so nothing it prunes could have turned out to be the best.
 
-**(d) Branch cap.** Only the fifty best splits by that bound are tried at all. The justification is sharp: branch and bound finds the best guess early and then spends nearly all of its remaining time *proving* that nothing beats it. The cap buys the answer and skips the proof. Over more than a thousand real positions, caps of 25 and 50 pick the uncapped-optimal guess every single time, while the wall clock for the sweep falls from around five minutes to eight seconds. The honest caveat, which the code states: the returned value is an upper bound on the true one, so this is optimal-within-the-cap rather than provably optimal.
+**(d) Branch cap.** Only the fifty best splits by that bound are tried at all, and this is the one idea of the four that gives something up. The three above it are exact: dedupe merges guesses that are genuinely interchangeable, the closed form is a value rather than an estimate, and an admissible bound only ever prunes what could not have won. The cap prunes on no such guarantee. A position holding 1,177 distinct splits has 1,127 of them discarded unexamined, and if the best guess is among those, the search will never know. What comes back is an upper bound on the true value — optimal-within-the-cap rather than optimal, exactly as the code says.
+
+What makes it pay is that the bound is a good *ranking* near the top, even where it is a loose estimate of the value. The optimum reliably sorts into the first few dozen, so the cap keeps it and discards the tail, where a loose bound costs nothing because those guesses were never going to win. Measured over more than a thousand real positions, caps of 25 and 50 pick the uncapped-optimal guess every single time, while the wall clock for the sweep falls from around five minutes to eight seconds. That is an empirical record and not a proof, and the distinction is worth keeping: nothing here rules out a position whose best guess sorts fiftieth.
 
 Two details of the cap are easy to miss, and both bite.
 
@@ -523,7 +556,11 @@ They are not endgame blunders. At the sizes these positions reach, `exact.ExactE
 
 Well over half the loss probability vanishes between 1 and 5 for **four ten-thousandths of a guess**. Widening the exact search's reach adds the rest, and the two together cut the loss probability by about three fifths while the mean *improves* on the way — because reaching deeper replaces an estimate with a true value instead of trading one good thing for another.
 
-That last column cannot pick the penalty, though, and the reason is instructive enough to be worth the detour. Scoring a loss at 7 is precisely the objective that a penalty of 1 optimizes, so ranking the settings by that column can only ever favor risk neutrality. The comparison is circular. Name the price of a loss instead — call it `L` guesses — and every setting becomes a line in `L`, so the choice falls out of where the lines cross. Penalty 1 wins below `L` ≈ 7, **5 wins between about 9 and 13**, and 30 only past 23. So 5 is right if a lost game costs somewhere between nine and thirteen guesses, and very little rides on the choice: across that whole range the best setting beats the next by a fraction of a thousandth of a guess.
+That last column cannot pick the penalty, though, and the reason is instructive enough to be worth the detour. Scoring a loss at 7 is precisely the objective that a penalty of 1 optimizes, so ranking the settings by that column can only ever favor risk neutrality. The comparison is circular. Name the price of a loss instead — call it `L` guesses — and every setting becomes a line in `L`, so the choice falls out of where the lines cross. Penalty 1 wins below `L` ≈ 7, **5 wins between about 9 and 13**, and 30 only past 23.
+
+Which leaves the question of where `L` really sits, and one end of the range can be measured rather than argued. Scoring a loss at 7 says a lost game would have needed exactly one more guess. It would not: lift the deadline and carry each losing game on from the position it died in, and the solver takes **1.2 more guesses** to finish, occasionally four (`analysis/loss_cost.py`). So the risk-neutral price of a loss is about **7.2**, not 7 — which already puts it past the point where penalty 1 gives way. Risk neutrality, done honestly, does not endorse the risk-neutral-looking setting.
+
+What it endorses is the next setting up, which takes over at that very crossover, and nothing near 5. Continuing a lost game prices it in guesses, and that is the risk-neutral question by construction, so this fixes the leftmost line and cannot reach the rest. Choosing 5 is a claim of a different kind: that a failed puzzle costs more than the guesses it cost, which is a judgment about Wordle scoring you out of six rather than counting forever, and no continuation can measure it. It is also a cheap claim to get wrong, because very little rides on the choice: anywhere in the range where 5 wins, it beats the next setting by a fraction of a thousandth of a guess.
 
 Where do the losses collect? Almost entirely on the never-curated words. Wordle is provably solvable in five guesses, but that theorem is about a solver that knows the answer is one of the 2,309 curated words, and this one spreads a tenth of its mass over the other 10,638. Sweep the curated list uniformly instead and it loses eleven words out of 2,309 — every one of them a word that has already been an answer, which is §5.1's repeat prior calling them unlikely, by construction.
 
@@ -531,11 +568,11 @@ Where do the losses collect? Almost entirely on the never-curated words. Wordle 
 
 The four ideas of §10 cut the cost of solving a position once. This one is about not solving the same position twice, and it is the largest single speedup in the project.
 
-The reason it works is a fact about the game rather than about the code. Fix the opening word. The answer decides the feedback — but feedback comes in only 243 varieties, so **all 12,947 possible answers lead to at most 243 distinct positions** at turn two. Playing every word as the answer to measure an opening therefore looks like a thirteen-thousand-wide computation and is really a two-hundred-wide one, repeated. The same collapse happens at every depth: many different paths arrive at the same candidate set. Caching them instead of recomputing is worth about fiftyfold over a sweep.
+The reason it works is a fact about the game rather than about the code. Fix the opening word. The answer decides the feedback — but feedback comes in only 243 varieties, so **all 12,947 possible answers lead to at most 243 distinct positions** at turn two. Playing every word as the answer to measure an opening therefore looks like a thirteen-thousand-wide computation and is really a two-hundred-wide one, repeated. The same collapse happens at every depth: many different paths arrive at the same candidate set. Storing each answer against the position it belongs to, instead of recomputing it every time that position comes round again, is worth about **a hundredfold** over a sweep of every answer (`analysis/ablations.py`).
 
-So `memo.Memo` caches results keyed on the position. The key is the raw bytes of that array of column numbers from §1 — bytes because an array cannot be a dictionary key and its bytes can, and because they are exact where a hash of them would not be — together with the number of turns remaining, since the right guess genuinely depends on how many are left and a value found with four turns in hand is wrong for two.
+A *position*, here, is the pair the answer really depends on: the surviving candidate set, and the number of turns left to spend on it. So `memo.Memo` keys on both. The candidate set is the raw bytes of that array of column numbers from §1 — bytes because an array cannot be a dictionary key and its bytes can, and because they are exact where a hash of them would not be. The turn count is in the key because the deadline is what the recursion bottoms out on, so the same set of words genuinely has different answers at different depths: a value found with four turns in hand is wrong for two, and §10's `-atch` family is the worked example.
 
-There are three such caches and they do not all expire together. `WordleSolver` keeps two, one for the guess it chose and one for lookahead values, and both are dropped whenever `f` is refitted. `ExactEndgame.memo` is not, and the asymmetry is worth noticing: the search returns true values, which depend on the prior weights and never on the estimator, so a refit leaves every one of them correct.
+There are three such caches, holding three different things, and they do not all expire together. `WordleSolver` keeps two — the guess it chose at a position, and the lookahead value of one — and both are dropped whenever `f` is refitted, because both are answers the old `f` gave. `ExactEndgame.memo` holds true values instead, which depend on the prior weights and never on the estimator, so a refit leaves every one of them correct and it is kept.
 
 ### Why it evicts rather than refuses
 
@@ -546,13 +583,15 @@ if len(memo) < limit:       # the tempting version
     memo[key] = value
 ```
 
-That is the wrong way round, and the wrongness is not gradual. What such a cache declines to store are the *most recent* positions, which are exactly the ones the run in front of it is about to reuse. It ends up holding a frozen souvenir of whatever it happened to see first. Cross the limit and the fiftyfold collapse above disappears all at once.
+That is the wrong way round, and the wrongness is not gradual. What such a cache declines to store are the *most recent* positions, which are exactly the ones the run in front of it is about to reuse. It ends up holding a frozen souvenir of whatever it happened to see first. Cross the limit and the hundredfold collapse above disappears all at once.
 
 `memo.Memo` instead drops the **least recently used** entry — LRU, the standard policy of evicting whatever has gone longest untouched, on the reasoning that it is the least likely to be wanted next. It is a dictionary that remembers the order its entries were last touched: a read moves that entry to the newest end, and an insertion past the cap drops whatever sits at the oldest. That a *read* counts as a use is the entire difference between LRU and simply dropping the oldest insertion, and it is what keeps a position that is looked up constantly resident however long ago it was first computed.
 
 The bookkeeping is not free — every read moves an entry, a couple of pointer writes — but the comparison is lopsided. Moving an entry costs on the order of a hundred nanoseconds. The miss it prevents costs a scoring pass over thirteen thousand guesses, which is milliseconds. The overhead is roughly ten thousand times smaller than the thing it buys, and that is not a close call.
 
-One consequence matters for anything sweeping many configurations: a finished run's positions are dead weight, and under LRU they get evicted only after competing with live ones for a while. That is what `WordleSolver.reset_memo` is for, and why it clears only the two memos that depend on the estimator. The search's entries stay valid across everything and stay worth sharing.
+It is worth being careful about what LRU does *not* leave you exposed to, because the obvious worry is not real. A sweep that plays two hundred openings in one process leaves each finished opening's positions behind, and almost none of them recur: two openings partition the word list differently, so the next run is asking about a different set of positions entirely. Dead weight, then — but not weight the live entries have to fight. Those stale entries are precisely the ones that have gone longest untouched, so every insertion evicts one of them before it can reach anything the current run is using. LRU sheds them in the right order without being told.
+
+What `WordleSolver.reset_memo` buys is therefore memory rather than hit rate, and it clears only the two memos that depend on the estimator. The search's entries stay valid across everything and stay worth sharing.
 
 Every piece of the guess rule is now on the table. §13 puts them in the order the solver applies them.
 
@@ -603,11 +642,11 @@ The result is clean and slightly deflating. Each shape moves the arm it was buil
 
 Unlike §4's table, these columns *are* comparable between rows, because every row is scored on the same real answers rather than on a world of its own devising. The table is comparable to nothing outside itself, though. Each row carries the `f` fitted for its own shapes, as §7 says it must, so a refit moves the whole table and the rows have to be refitted together or not at all.
 
-The loosest term in every blend is the repeat arm, at ±0.16–0.21 on 22 events, which leaves the bottom two rows well inside a standard error of each other. Choosing between them rests more on whether you want a vendored scrape in the repo than on anything measured here.
+The loosest term in every blend is the repeat arm, at ±0.16–0.21 on 22 events, which leaves the bottom two rows well inside a standard error of each other. Nothing in *this* table chooses between them. That is not the same as nothing choosing between them: §5.2 already scored the two curation shapes at the job they exist to do, and separated them cleanly — −6.46 nats per event against −8.15, over 48 events rather than 22. What the guesses cannot resolve, the modeling evidence can, and the vendored scrape earns its place there rather than here.
 
 One more thing about that evaluation is worth telling, because it was a mistake and mistakes of this shape are easy to repeat. The fresh arm used to be a *census*: all 487 curated words still unused, played as if today. That is far more data than 164 real answers, and it looked like the better arm. It was training on the test set. `train.policy_iteration` draws its practice answers from the prior it is fitting, and that prior's fresh-curated group is, at fitting time, exactly those 487 words — so four fifths of the evaluation's weight sat on material every arm had already trained against.
 
-What makes that dangerous is that it flatters nobody in particular. Both solvers reach their own tuned best on ground they know, so the arm carrying most of the grade reports a tie, and a tie hands the verdict to the small arms. `analysis/fresh_arm.py` prices it: sharpening the repeat shape reads as costing essentially nothing on the census and about a tenth of a guess on the answers that really happened. Playing the census on those same days does not close the gap, and forcing both arms onto a single `f` mostly does — which is how you can tell it was the fit that differed and not the words.
+What makes that dangerous is not that it favors one arm's words over another's. Both solvers reach their own tuned best on ground they know, so the arm carrying four fifths of the grade reports a tie — and a tie is not neutral. It hands the verdict to the two small arms, which are exactly where a sharpened shape looks its best, so the sharper shapes collect the credit of the repeat and off-list columns while the column that should have charged them for it says nothing. `analysis/fresh_arm.py` prices what was being concealed: sharpening the repeat shape reads as costing essentially nothing on the census and about a tenth of a guess on the answers that really happened. Playing the census on those same days does not close the gap, and forcing both arms onto a single `f` mostly does — which is how you can tell it was the fit that differed and not the words.
 
 The arm is 164 real answers now. That costs precision exactly where the variance lives, and what it keeps is the only advantage this evaluation has over a plain replay: 48 off-list events instead of the 17 that fall inside the regime. The two agree now, as they should, and both say the shapes buy nothing in guesses.
 
@@ -633,11 +672,11 @@ A shape only redistributes mass inside a group that its prior has already carved
 | **repeat on** | 3.9409 | 3.1626 | −0.778 ± 0.057 |
 | **on − off** | −0.099 ± 0.041 | −0.370 ± 0.058 | **−0.271 ± 0.069** |
 
-Those four means do not add up, and the way they fail to is the finding. Each margin is a plain subtraction along a row or a column, so the corner can be reached two ways and comes out the same both times. That corner is the **interaction**, and it is larger than everything the repeat prior buys on its own — which, at one standard error, is nothing at all. The priors are strongly superadditive, even though §14.1 found their shapes are not.
+Those four means do not add up, and the way they fail to is the finding. Each margin is a plain subtraction along a row or a column, so the corner can be reached two ways and comes out the same both times. That corner is the **interaction**, and it is larger than either prior buys on its own. The priors are strongly superadditive, even though §14.1 found their shapes are not. Neither is the senior partner: the repeat prior alone is worth almost nothing, and what it is really buying is the calibration of the other one.
 
-Neither prior is the one that needs the other. What they need is each other.
+One caveat rides along with those four cells. Each carries the `f` fitted for its own prior, as §7 says it must, so what is being compared is four *solvers* rather than four beliefs held by one solver. That is the honest comparison — a prior the estimator was never fitted to is not a configuration anyone would ship — but it does mean a refit moves every cell, and the four have to be refitted together.
 
-The reason is calibration, and it shows plainest if you ask what rates each prior *implies*, set against the two the regime really shows:
+The reason the two are entangled is calibration, and it shows plainest if you ask what rates each prior *implies*. Those follow from the weights alone, with no estimator anywhere in them, so the caveat above does not reach them. Set against the two rates the regime really shows:
 
 | prior | implied repeat rate | implied off-list rate, given not a repeat |
 | --- | --- | --- |
@@ -655,15 +694,23 @@ Per word, that correction reads as a used word falling sevenfold while a fresh c
 
 It also prices what calibration costs on the repeats themselves, where curation alone beats the calibrated pair on the 22 answers that really were one. That is what a calibrated prior costs, not a fault in it. Move a class from an implied 71.7% down to 10.0% and you will pay on the occasions it turns up, in exchange for doing better across the four fifths of the regime that is neither a repeat nor off-list. Any honest prior makes that trade.
 
-One caveat rides along with all four cells. Each carries the `f` fitted for its own prior, as §7 says it must, so what is being compared is four *solvers* rather than four beliefs held by one solver. That is the honest comparison — a prior the estimator was never fitted to is not a configuration anyone would ship — but it does mean a refit moves every row, and the four have to be refitted together.
-
 Half a guess and more, then, for getting the model of the editor roughly right. Hold on to that figure, because §15 is what every other kind of improvement in this project was worth.
 
 ## 15. A better map, and next to no better score
 
-That is the thread running through the whole project, and it is the most interesting thing in it. Five separate attempts to value positions better have all come out the same way, and the cleanest of them comes first.
+That is the thread running through the whole project, and it is the most interesting thing in it. Five separate attempts to value positions better have all come out the same way:
 
-Start with one-ply lookahead, which actually values the replies to a guess instead of estimating them. It values positions **thirteen times more accurately** than the estimator does, measured against ground truth computed by playing those positions out exactly. The accuracy is real, and it reaches the decisions: lookahead disagrees about which guess to play in two games in five, and it is right to disagree, giving up about a tenth as much value per decision as the estimator does. Then the games get played out and almost none of it arrives. The outcome moves in a fifth of them, a shade more often for the better than for the worse, and the net is under a hundredth of a guess for roughly ten times the wall clock. Twenty thousand games are needed to see that at all, and under the prior that actually ships it is half a standard error from zero.
+| the improvement | how much better the valuation got | what it bought on the mean |
+| --- | --- | --- |
+| one-ply lookahead | RMSE **0.0125** against the estimator's **0.1609** | −0.0080 ± 0.0036 over 20,000 games; −0.0018 ± 0.0036 under the shipped prior |
+| the endgame search | exact — the true value, not a better estimate | under a hundredth of a guess, over the positions it reaches |
+| the opening word | `f` ranks the top twelve at **+0.35** against truth, the full two hundred at **+0.74** | nothing left to buy: `salet` is already optimal, at zero regret |
+| turn-conditioned `f` | — | nothing: `f` is never consulted where the deadline binds |
+| the second guess | true values for all 51 positions `f` still decides | **0.0022** guesses, and the sign flips under a slightly different prior |
+
+Read the middle column against the right one and the whole section is there. Every row buys a real improvement in valuation and none of them buys a score. The rest of this section is why, taking the rows in the order that makes the argument.
+
+Start with one-ply lookahead, which actually values the replies to a guess instead of estimating them. Thirteen times more accurate is the root-mean-square of its errors against ground truth — the true expected guesses from a position, computable rather than estimable because the policy is deterministic, so a position can simply be played out once per candidate answer. The accuracy is real and it reaches the decisions: lookahead disagrees about which guess to play in two games in five, and it is right to disagree, giving up about a tenth as much value per decision as the estimator does. Then the games get played out and almost none of it arrives. The outcome moves in a fifth of them, a shade more often for the better than for the worse, and the net needs twenty thousand games to separate from zero at all — at roughly ten times the wall clock, and on the one configuration that ships it does not separate.
 
 The tempting explanation is that you are taking an `argmin`, so the estimator's errors are **common-mode** across the guesses at one position and cancel in the comparison, leaving the ranking intact. They do not. The estimator ranks the ten guesses lookahead re-ranks at a rank correlation of about **+0.56** with their true values, and picks the best of them a little over half the time. (Rank correlation asks whether two orderings agree, not whether two quantities lie on a line, so it is not the `r` of a least-squares fit. It is computed from positions in the sorted order: +1 means identical rankings, 0 means none at all. It is the right question here because the solver only ever uses `f` to *sort* guesses.) A valuation whose errors cancelled would not be overruled two games in five by an accurate one.
 
@@ -671,7 +718,7 @@ What is true instead is that the top of the ranking is a **plateau**. Those ten 
 
 The endgame search is the second case, and it makes the same point more sharply, because where the search reaches, its value is not a better estimate but the truth. A disagreement there is the estimator being wrong, full stop. Over the positions the search claims, the estimator picks a different guess about a third of the time and gives up under a hundredth of a guess doing it. At three and four candidates *every single disagreement is a tie* — a different word of exactly equal value, nothing to improve on. The ties thin out as the set grows, and by the largest sets the search reaches, most disagreements are real. That is the same plateau, found from the other side.
 
-The opening is the third case and the starkest, because `f` decides it alone: no search reaches a position of 12,947 candidates. Played out, `salet` is the best of the two hundred openings `f` likes best — zero regret, where regret is what a choice costs against the best available. Nothing on the shortlist would have been better. Yet `f`'s ranking of the top twelve correlates with the truth at only **+0.35**, against **+0.74** across the full two hundred. That is the shape of the whole result in one line. `f` sorts the field coarsely and then cannot sort the top of it, and every decision it gets right is a decision where coarse was enough.
+The opening is the third case and the starkest, because `f` decides it alone: no search reaches a position of 12,947 candidates. Played out, `salet` is the best of the two hundred openings `f` likes best — zero regret, where regret is what a choice costs against the best available. Nothing on the shortlist would have been better. Yet the two correlations in the table above say that `f` sorts the whole field far better than it sorts the top of it. That is the shape of the whole result in one line. `f` sorts the field coarsely and then cannot sort the top of it, and every decision it gets right is a decision where coarse was enough.
 
 Turn-conditioned `f` is the fourth case, and it never stood a chance. A curve conditioned on turns remaining differs from a flat one only where the deadline binds — and `f` is consulted in **none** of the positions with three or fewer turns left, the search having taken every one of them. The tiny gain it measured is a fact about an implementation since removed. The reason it could not have come out otherwise is structural, and still holds.
 
@@ -683,7 +730,7 @@ The reason is that the gain was never an improvement so much as the residue of a
 
 That is the sharpest form of the whole result, and it is sharper than the four cases above because it does not depend on any valuation being imperfect. **Playing perfectly the last position where the estimator decides anything is worth less than the error in the prior it would be playing perfectly for.** There is no depth of search, no further ply and no better-fitted `f` on the other side of that.
 
-What the solver has been short of is **somewhere better to go**, not a better map.
+Improving how well the solver values its options, then, is worth almost nothing here. What is left is the options themselves.
 
 The exceptions sharpen the rule, and they all have one shape in common: every one of them changes *what the solver is choosing between* rather than how well it scores the choices.
 
@@ -699,19 +746,44 @@ Modeling the editor beat improving the search, every time.
 
 ## 16. Why any of this finishes
 
-One thread has run underneath everything above without being named. Choosing a single guess means scoring thirteen thousand words against a candidate set; the training loop does that a few million times; and the analysis sweeps run it over every word in the list. None of that terminates on the naive reading of any formula here. Five ideas do the work, and each one shows up more than once.
+One thread has run underneath everything above without being named. Choosing a single guess means scoring thirteen thousand words against a candidate set; the training loop does that a few million times; and the analysis sweeps run it over every word in the list. Five ideas make that affordable, and each one shows up more than once.
 
 **Precompute whatever does not vary.** The feedback for a (guess, answer) pair is fixed forever, so it becomes a table (§1) — or, where the table cannot be held, the fraction of it one search will ever read (§8). The quantity `w log w` depends on the candidate but not on the guess, so it leaves the inner loop entirely (§8). `f` is always reached through an entropy, so it takes `x = log₂ n` rather than `n` and saves a round trip through exponentiation (§8). In every case the trick is noticing that a quantity sitting inside a doubly-nested loop only depends on the outer index.
 
-**Cache whatever recurs.** Positions repeat constantly — at most 243 of them behind a fixed opening — so results are memoized on the candidate set, which is worth about fiftyfold and is the difference between an overnight sweep and a coffee break (§12). The compiled kernels are cached to disk (§1) and the fitted `f` to a JSON file (§7), for the same reason at longer timescales.
+**Cache whatever recurs.** Positions repeat constantly — at most 243 of them behind a fixed opening — so results are memoized on the candidate set, which is the largest single speedup here and the difference between an overnight sweep and a coffee break (§12). The compiled kernels are cached to disk (§1) and the fitted `f` to a JSON file (§7), for the same reason at longer timescales.
 
-**Bound before you compute exactly.** The two-turn value is exact, costs one pass, and — evaluated at a capped penalty — is a valid lower bound on every deeper value, which makes it both a leaf and the ordering that prunes the search above it (§10). The branch cap then takes the observation one step further, cheerfully abandoning the *proof* of optimality while keeping the answer.
+**Bound before you compute exactly.** The two-turn value is exact, costs one pass, and — evaluated at a capped penalty — is a valid lower bound on every deeper value, which makes it both a leaf and the ordering that prunes the search above it (§10). The branch cap sits on top of that as the one step here that gives up a guarantee, and the ablation below is what shows how little it is doing: the bound was already pruning to well inside the cap.
 
 **Collapse things that are secretly the same.** §2's reframe — a guess is nothing but its partition — is what lets the search treat thousands of words as one move (§10). Recognizing an equivalence is usually cheaper than exploiting a numerical shortcut, and unlike a shortcut it never costs accuracy.
 
-**Measure where the work actually is.** Two assumptions had to be given up here: that the wide positions dominate, when the small ones are scored far more often, and that the cost is arithmetic, when it is memory traffic at one cache line per scattered lookup. Both changed what the right optimization was, and the second is what stopped the search for further ones (§8).
+**Measure where the work actually is.** Three assumptions had to be given up here: that the wide positions dominate, when the small ones are scored far more often; that the cost is arithmetic, when it is memory traffic at one cache line per scattered lookup (§8); and that the branch cap was carrying the endgame, when the bound underneath it was. Each changed what the right optimization was, and the second is what stopped the search for further ones. The rule is the one this section is an instance of: an optimization you have not tried removing is a guess about its own value.
 
-The through-line is that none of these made the solver cleverer. They made a fixed amount of thinking cheap enough to do at the scale the measurements in this document needed — which is its own version of §15's lesson, from the engineering side.
+What each of those is worth is a question with an answer, since an idea can be taken back out and everything else left alone — which is what `analysis/ablations.py` does. Two warnings about reading it. The three groups are different operations, one scan and one search and one sweep, so a factor from one says nothing about another, and the naive whole is **not** the product of these parts. And every figure is a slowdown against the shipped code, so larger means the idea was worth more:
+
+| taking one idea back out | at the opening | at a mid-game position |
+| --- | --- | --- |
+| `w log w` back inside the inner loop | 4.7× | 1.6× |
+| no table — the coloring rule applied per pair | 45× | 11× |
+| one core instead of sixteen | 9.3× | 8.2× |
+| **all three at once, in plain Python** | **13,800×** | **3,500×** |
+
+The other two levels are one figure each. Lifting the branch cap over 150 real endgame positions costs 2.6×, and playing all 12,947 answers with the three position caches held to a single entry costs **103×** — a figure that climbs with the length of the run, since the longer a memo has been filling the more of what a later game asks for it is already holding. The same ablation over 400 answers costs only 14.5×.
+
+The bottom row of the table is what answers the question in the heading. A naive reading of `E(g, S)` — no table, no rearrangement, no compiled kernel — takes **about seven and a half minutes to choose a single opening guess**, and the endgame search is not even involved in that number. `train.policy_iteration` asks for a guess a few million times.
+
+The branch cap's own figure is the one that misleads, though, and seeing that takes counting rather than timing. `analysis/branch_cap.py` solves 150 real positions twice, once keeping the fifty best splits and once keeping every one of them:
+
+| over 150 real positions | cap 50 | no cap |
+| --- | --- | --- |
+| interior nodes searched | 184 | 184 |
+| subtrees evaluated | 270 | 9,001 |
+| splits evaluated at the busiest single node | 50 | 8,781 |
+
+Read the first row first. The cap changes no interior node at all — the same 184 subtrees are searched either way — and it changes no answer either: all 150 positions come back with the same guess at the same value, which is the claim §10 makes for it, checked here rather than asserted. What it changes is the third row, and essentially only there. At 183 of those 184 nodes the bound cuts the loop after one or two splits and fifty is a limit nothing comes near; at exactly one, the bound fails to separate anything and the uncapped search grinds through 8,781 splits to arrive at the guess it already had.
+
+So the cap is not what prunes the endgame. The admissible bound above it is, and it does that job so thoroughly that the cap is idle almost everywhere. What the cap insures against is the rare node where the bound tells you nothing, and it is worth being exact about the shape of that. The 2.6× above averages the cap's effect over 150 positions, which reads as a modest saving taken evenly from all of them. It is the opposite: nothing whatsoever at 183 nodes out of 184, and an enormous saving at the one — 8,781 splits down to fifty. Time forty positions rather than a hundred and fifty and the figure falls to 1.0×, the smaller sample having missed that node altogether. Averaging a rare, huge effect over the occasions it does not fire is how it comes to look like a small, steady one.
+
+The through-line is not that any of this was mechanical. §8's rearrangement is real algebra, and a two-turn formula serving as a leaf and as the bound above it at once is a trick with no meaning outside this game. What the five share is not how much thought they took but where it was aimed — never at playing better, and none of them does: the solver picks the same words without them, the branch cap being the only one that could differ and the counts above saying it does not. What they bought instead was scale, and §15 is what it was spent on: twenty thousand games, two hundred openings played out in full, every answer swept again under each reweighting. The five are invisible in how the solver plays and indispensable to knowing that.
 
 ---
 
