@@ -73,7 +73,8 @@ Losing it is not a graceful slowdown but a hundredfold one, which is why `memo.M
 | `turn2_regret.py` | README *Perfecting the second guess*, and the last case in SOLVER_EXPLAINED §15 |
 | `loss_penalty.py` | the whole of README *Losing less*, its `--search` the table under *The exact endgame*, its `--bound` the `-atch` values in SOLVER_EXPLAINED §10(c), SOLVER_EXPLAINED §10 and §11 |
 | `loss_cost.py` | the continuation figures in SOLVER_EXPLAINED §11 |
-| `branch_cap.py` | the branch-cap table in SOLVER_EXPLAINED §16, and the claim in §10(d) that the cap never costs the winner |
+| `branch_cap.py` | the branch-cap table in SOLVER_EXPLAINED §16, the claim in §10(d) that the cap never costs the winner, and the node counts under README *The exact endgame* |
+| `ablations.py` | the ablation table in SOLVER_EXPLAINED §16, and the memo and branch-cap figures beside it |
 | `prior_basin.py` | README *The prior sits in a flat basin* |
 | `fresh_arm.py` | the fresh-arm paragraphs of SOLVER_EXPLAINED §14.1 and README *What the two shapes are worth together* |
 | `replay.py` | the head-to-head paragraph under README *The curation prior's shape*; its `--shapes` the whole of README *What the two shapes are worth together* and the regime replay under *The repeat prior's shape*; its `--all-priors` the whole of *What each prior is worth on real answers* |
