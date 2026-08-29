@@ -769,7 +769,7 @@ What each of those is worth is a question with an answer, since an idea can be t
 
 The other two levels are one figure each. Lifting the branch cap over 150 real endgame positions costs 2.6×, and playing all 12,947 answers with the three position caches held to a single entry costs **103×** — a figure that climbs with the length of the run, since the longer a memo has been filling the more of what a later game asks for it is already holding. The same ablation over 400 answers costs only 14.5×.
 
-The bottom row of the table is what answers the question in the heading. A naive reading of `E(g, S)` — no table, no rearrangement, no compiled kernel — takes **about seven and a half minutes to choose a single opening guess**, and the endgame search is not even involved in that number. `train.policy_iteration` asks for a guess a few million times.
+The bottom row of the table is what answers the question in the heading. A naive reading of `E(g, S)` — no table, no rearrangement, no compiled kernel — takes **about seven and a half minutes to choose a single opening guess**, and the endgame search is not even involved in that number. `train.policy_iteration` asks for a guess a quarter of a million times.
 
 The branch cap's own figure is the one that misleads, though, and seeing that takes counting rather than timing. `analysis/branch_cap.py` solves 150 real positions twice, once keeping the fifty best splits and once keeping every one of them:
 
@@ -784,6 +784,26 @@ Read the first row first. The cap changes no interior node at all — the same 1
 So the cap is not what prunes the endgame. The admissible bound above it is, and it does that job so thoroughly that the cap is idle almost everywhere. What the cap insures against is the rare node where the bound tells you nothing, and it is worth being exact about the shape of that. The 2.6× above averages the cap's effect over 150 positions, which reads as a modest saving taken evenly from all of them. It is the opposite: nothing whatsoever at 183 nodes out of 184, and an enormous saving at the one — 8,781 splits down to fifty. Time forty positions rather than a hundred and fifty and the figure falls to 1.0×, the smaller sample having missed that node altogether. Averaging a rare, huge effect over the occasions it does not fire is how it comes to look like a small, steady one.
 
 The through-line is not that any of this was mechanical. §8's rearrangement is real algebra, and a two-turn formula serving as a leaf and as the bound above it at once is a trick with no meaning outside this game. What the five share is not how much thought they took but where it was aimed — never at playing better, and none of them does: the solver picks the same words without them, the branch cap being the only one that could differ and the counts above saying it does not. What they bought instead was scale, and §15 is what it was spent on: twenty thousand games, two hundred openings played out in full, every answer swept again under each reweighting. The five are invisible in how the solver plays and indispensable to knowing that.
+
+## 17. A year to fit `f` once
+
+§16 priced each idea by taking it out, and warned that the factors do not compose — three different operations against three different baselines, so a product of them would be a number no run has ever produced. One composition is legitimate, though, and it is not a product of factors. Take the single operation that was measured end to end with nothing left in it, one opening scan at seven and a half minutes, and count how many of those the project performs.
+
+Nothing in the right-hand column below was run to completion. Each figure is that one measured scan times a counted number of scans, which makes these projections where the rest of this document's numbers are measurements (`analysis/ablations.py --projection`):
+
+| what the project does once | shipped | with none of it |
+| --- | --- | --- |
+| choose the opening guess | 33 ms | 7.5 minutes |
+| play every answer once, all 12,947 games | 8.9 s | 67 days |
+| `train` — fit `f` for all five shipped priors | 38.9 s | 365 days |
+
+The count is the same kind of thing in both of the lower rows, and it is the memo that makes it so. Every game in a sweep and every rollout in a fit opens at the identical position, the full word list, so the shipped solver scans it once per process and hands the answer back to the other 12,946 games. Take the caches away and each game pays the seven and a half minutes again. What happens after the opening barely registers beside that: the position left after `salet` holds 268 candidates rather than 12,947, so every later turn of a game together adds a few percent to a cost the first turn has already set.
+
+Divide the top row by the work inside it and the factor stops being an abstraction. One opening scan is 12,947 guesses against 12,947 candidates — **167,624,809 (guess, answer) pairs**, each one colored, each dropping its candidate's weight into one of 243 buckets. Pure Python spends about **2.7 microseconds** on a pair: a function call, the two-pass rule of §1 over five characters, a dictionary update. The shipped kernels spend about **0.2 nanoseconds** across sixteen cores, so roughly three nanoseconds on each, which is about what one cache line costs to arrive from memory. The whole 13,800× is the distance between calling a function and fetching one byte out of a table — and it is why §8 found the loop memory-bound, there being nothing else left inside it to be slow.
+
+The ratio grows down the table because the levels stack. The first row is the scoring optimizations alone. The second puts the memo on top of them, which is not a faster scan but the opening scan happening once instead of thirteen thousand times. The third asks for more of the same and nothing new: policy iteration plays 2,000 games a round, four to seven rounds per prior, five priors, and every guess any of them asks for is priced by the first row.
+
+None of which is this project with a longer wait attached. §15 rests on five measurements and every one of them is a sweep or a fit — at the right-hand column's prices the cheapest is a season's work, so none of them gets made, and the finding they add up to stays a thing that sounds plausible.
 
 ---
 

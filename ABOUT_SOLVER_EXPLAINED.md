@@ -93,10 +93,11 @@ Read start to finish the first time. The order is the argument.
 | 14 | how to measure a prior without fooling yourself, one question about the priors the data settles emphatically, and one about their shapes it cannot settle at all |
 | 15 | a better map, and next to no better score — the five measurements behind it |
 | 16 | the five ideas that make any of it finish, collected |
+| 17 | what the same project costs with none of them: a year to fit `f` once |
 
 If you have ten minutes rather than an evening: **§2, §6, §15**. §2 is the idea the solver is built on, §6 is where it stops being a standard entropy solver, and §15 is the finding worth carrying away — *a better map, and next to no better score*, which held five separate times here and cost real work to learn.
 
-If you want the punchline first, §15 reads fine cold and will send you back for the parts you want. §16 is the same lesson from the engineering side and reads cold too.
+If you want the punchline first, §15 reads fine cold and will send you back for the parts you want. §16 is the same lesson from the engineering side and reads cold too, and §17 is what it costs to have skipped it.
 
 ## How it sits next to the other documents
 
@@ -132,7 +133,7 @@ It was rewritten end to end to undo that. These are the rules that undid it, and
 
 **Nothing is measured before it is built.** The document is a derivation, so a section that scores something belongs after the machinery it scores. That is why the model of the editor is built in §4–§5 and only asked what it was worth in §14, three sections after the solver exists; why the caveat about refitting `f` per shape sits inside §7, where `f` is fitted, rather than beside the shapes it is about; and why lookahead is explained in §10, next to the expectimax it is a shallower version of, rather than in §15 where it is measured. A section that has to open by saying which later section defines its subject is in the wrong place, and moving it is the fix.
 
-**Put a new finding where the argument needs it, not at the end.** Hard mode earns its place in §6 because it is the cleanest test of the entropy identity; it appears again in §10 and §13 only as a consequence, and in §15 as an example of the thesis. It is not a section of its own. Ask what a new result is *evidence for*, and put it next to the claim it supports. The one deliberate exception is §16, which collects patterns the reader has already met in place — it adds no new material, and if it ever starts to, that material belongs upstream.
+**Put a new finding where the argument needs it, not at the end.** Hard mode earns its place in §6 because it is the cleanest test of the entropy identity; it appears again in §10 and §13 only as a consequence, and in §15 as an example of the thesis. It is not a section of its own. Ask what a new result is *evidence for*, and put it next to the claim it supports. The deliberate exceptions are §16 and §17, and what exempts them is that neither introduces a mechanism: §16 collects patterns the reader has already met in place, and §17 does arithmetic over what §16 measured. That is the test rather than their position — a closing section may gather, price or project what came before, and the moment one of them needs a new idea to make its point, the idea belongs upstream and the section is left holding a consequence of it.
 
 **A heading states the finding, not that a finding is coming.** "The result worth framing" announces; "A better map, and next to no better score" tells you, and a reader who never opens the section still leaves with it. The same one level down: "Why this isn't just entropy in disguise" is a denial, where "A straight-line `f` is entropy plus a bonus" is the thing proved.
 

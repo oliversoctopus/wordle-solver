@@ -26,6 +26,8 @@ another, and the naive whole is not the product of these parts.
 """
 
 import argparse
+import json
+import os
 import time
 
 import numba
@@ -33,11 +35,12 @@ import numpy as np
 from numba import njit, prange, set_num_threads
 
 import common
+import estimator
 from estimator import f_eval_x
 from exact import ExactEndgame
 from kernels import _bucket_guesses, _RESCAN_MAX, _w_log_w, expected_guesses_all
 from memo import Memo
-from priors import PriorConfig, build_weights
+from priors import ALL_CONFIGS, PriorConfig, build_weights
 from solver import EXPECTED, WordleSolver
 from wordle_data import N_PATTERNS, WIN_PATTERN, load_data, score_guess
 
@@ -52,6 +55,8 @@ parser.add_argument("--positions", type=int, default=150,
                     help="real positions in the endgame level")
 parser.add_argument("--check", action="store_true",
                     help="score the naive kernels against the shipped one")
+parser.add_argument("--projection", action="store_true",
+                    help="carry the naive scan up to a sweep and a whole fit")
 args = parser.parse_args()
 
 DEFAULT_THREADS = numba.get_num_threads()
@@ -291,13 +296,15 @@ def scan_level(candidates, name):
     t_py = (time.perf_counter() - t0) * data.n_words / len(pool)
     row("pure Python, no table, no kernels", t_py, t_base,
         f"(scaled from {len(pool)} guesses)")
+    return t_base, t_py
 
 
 common.header("what each optimization is worth, one at a time")
 print("  Wall clock throughout.  On a machine that is doing anything else,")
 print("  these figures are measuring that instead.")
 
-scan_level(data.all_candidates(), "the opening")
+T_OPENING, T_OPENING_NAIVE = scan_level(data.all_candidates(),
+                                       "the opening")
 
 opening = data.word2ind["salet"]
 answer = data.word2ind["month"]
@@ -375,3 +382,56 @@ row("shipped", t_warm, t_warm)
 t_cold, _ = timed(sweep(1), repeat=1)
 row("no memo (all three caches held to one entry)", t_cold, t_warm,
     "grows with --sweep-games")
+
+
+# ---------------------------------------------------- what none of it finishes
+
+def train_games():
+    """Games one `train` plays, from the rounds each cached fit recorded."""
+    total = 0
+    for cfg in ALL_CONFIGS:
+        path = estimator.cache_path(cfg)
+        if not os.path.exists(path):
+            return None
+        with open(path, encoding="utf-8") as fh:
+            fit = json.load(fh)
+        # a rollout per round, one more for the RMSE, then the holdout
+        total += ((len(fit["history"]) + 1) * fit["n_games"]
+                  + fit.get("holdout", {}).get("games", 0))
+    return total
+
+
+def duration(seconds):
+    for unit, size in (("days", 86400.0), ("hours", 3600.0), ("min", 60.0)):
+        if seconds >= size:
+            return f"{seconds / size:,.1f} {unit}"
+    return f"{seconds:.3f} s"
+
+
+if args.projection:
+    pairs = data.n_words * data.n_words
+    common.header("what the project would cost with none of it")
+    print("  Projections, not measurements: the naive column is one measured")
+    print("  opening scan times the number of them the operation performs.")
+    print(f"  One opening scan is {pairs:,} (guess, answer) pairs.\n")
+    print(f"  {'':34s} {'shipped':>14s} {'naive':>16s} {'ratio':>10s}")
+    print("  " + "-" * 78)
+
+    fits = train_games()
+    rows = [("choose the opening guess", T_OPENING, 1),
+            ("play every answer once", None, data.n_words)]
+    if fits:
+        rows.append((f"train, all {len(ALL_CONFIGS)} shipped priors", None, fits))
+
+    for label, shipped, scans in rows:
+        naive = T_OPENING_NAIVE * scans
+        # every game opens at the full list, so a memo-less run rescans it once
+        # per game; the later turns are a rounding error beside that
+        have = f"{duration(shipped):>16s}" if shipped else f"{'--':>16s}"
+        ratio = f"{naive / shipped:>9,.0f}x" if shipped else " " * 10
+        print(f"  {label:<34s} {have} {duration(naive):>16s} {ratio}")
+
+    print(f"\n  per (guess, answer) pair, at the opening:")
+    print(f"    shipped     {T_OPENING / pairs * 1e9:>8.2f} ns "
+          f"across {DEFAULT_THREADS} cores")
+    print(f"    pure Python {T_OPENING_NAIVE / pairs * 1e6:>8.2f} us")
