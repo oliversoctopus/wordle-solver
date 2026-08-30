@@ -262,6 +262,23 @@ That is what reconciles this with *What each prior is worth on real answers*, wh
 
 The far ends read worse than they should, since a setting `f` was never fitted for carries a borrowed estimator on top of its own miscalibration. That inflates the edges and not the middle, so the basin is at least this wide.
 
+### How fresh the answer record has to be
+
+Every measurement above rebuilds the prior from strictly earlier puzzles on every day of the replay, and the prequential shape scores hold each model to the same rule. The deployed solver is not that current: `data/solutions.json` is refreshed by hand with `solutions.py --write`, and `web.py` masks one further day on top of whatever that leaves. `analysis/refit_lag.py` prices the gap, replaying the 203 regime puzzles with the record truncated to `t − lag` instead of `t`:
+
+| lag | mass moved | vs. a record rebuilt daily | games changed of 203 |
+| --- | --- | --- | --- |
+| 1–3 days | 0.17–0.51% | +0.0049 ± 0.0049 | 1 |
+| 4–7 days | 0.67–1.15% | −0.0049 ± 0.0085 | 3 (1 worse, 2 better) |
+| 14 days | 2.25% | +0.0099 ± 0.0140 | 8 (5 worse, 3 better) |
+| 30 days | 4.60% | +0.0000 ± 0.0185 | 14 (7 worse, 7 better) |
+
+Averaged over a refresh cycle, where refitting every k days leaves the lag uniform over 0…k−1, that is **+0.0025 ± 0.0025** every two days, +0.0037 ± 0.0037 every four and +0.0000 ± 0.0042 every week. None of it is distinguishable from nothing, and at 30 days the changed games split evenly enough to be coin flips.
+
+Two things could account for a null like that: the weights barely move, or they move and the board does not care, which is what the basin above finds for every other way of perturbing this prior. Here it is the first. A lag of k days leaves k words carrying fresh-curated mass rather than used mass and changes nothing else, so a week relocates 1.15% of the prior's mass — against the 6.15% that flattening the repeat shape relocates, itself worth only +0.039 ± 0.025.
+
+Refitting `f` does not enter this. `estimator.cache_path` is keyed on the prior's slug alone, so one fit serves every day of a replay and every day of a deployment alike; a fresher record buys fresher weights and nothing more. And it buys those only where `priors.build_weights` reads it, which is under `repeat` alone — a repeat-off prior costs exactly nothing to leave stale, for the same reason `--repeat-only` can skip its arms after a write.
+
 ## Choosing a guess
 
 `--mode entropy` is the greedy scorer: maximize expected information gain, and nothing else — being a possible answer earns a guess no credit at all, which is what keeps it a clean reference for what pricing that chance is worth.
