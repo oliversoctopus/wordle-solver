@@ -3,6 +3,7 @@ numpy>=2.0
 numba>=0.60
 
 # The one-off builders: solutions.py and word_lists.py fetch, answer_like.py
-# scores word frequencies.  Nothing the solver or the web page does needs these.
+# scores word frequencies, and analysis/fresh_shapes.py scores them again.
+# Nothing the solver or the web page does needs these.
 requests>=2.30
 wordfreq>=3.1

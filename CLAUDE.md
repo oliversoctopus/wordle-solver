@@ -140,7 +140,7 @@ Every data file has a builder. Four of them — `answer_like.py`, `solutions.py`
 | `data/wordlebot_weights.json` | `wordlebot.py` | yes, exactly — but only while the site says what it said |
 | `data/wordlebot_weights_2023-10-12.json` | `wordlebot.py` | yes, from the Wayback Machine; frozen, and nothing plays with it |
 
-`answer_like.py` needs `wordfreq`, which nothing else here does. Its fit is sensitive to details that are easy to guess wrong: thirteen features and not the four `SOLVER_EXPLAINED.md` singles out, exactly ten foreign languages, a duplicate-letter *count* where a flag would seem enough, and a ridge that hits the intercept too. Change any of them and it still fits, still correlates at r ≈ 0.98, and no longer reproduces the file.
+`answer_like.py` needs `wordfreq`, which only `analysis/fresh_shapes.py` otherwise does. Its fit is sensitive to details that are easy to guess wrong: thirteen features and not the four `SOLVER_EXPLAINED.md` singles out, exactly ten foreign languages, a duplicate-letter *count* where a flag would seem enough, and a ridge that hits the intercept too. Change any of them and it still fits, still correlates at r ≈ 0.98, and no longer reproduces the file.
 
 ## The web page
 

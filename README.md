@@ -243,6 +243,27 @@ The arm is 164 real answers now, which costs precision where the variance lives 
 
 One thing this measurement still needs: the form of `f` must be refitted per shape. Carry a form across and the opening word can go with it — `spline` is the best form under these shapes and under the flat ones, and still opens `raise` when a sharpened repeat shape is paired with a flat curation one.
 
+### The group with no shape
+
+Two of the three groups `priors.build_weights` builds get a shape; the third and largest does not. The curated words not yet used carry 81% of the mass at the shipped probabilities, spread flat over the ~490 of them that are left, and `analysis/fresh_shapes.py` is what says that flat is where it should stay.
+
+The events are the 1,316 first uses of a curated word from Wordle #507 (2022-11-07), which is the first puzzle `solutions.json` credits to an editor — before it the answers walk the curated list in its stored order, so the pick is not a choice. Each model is normalized over the words still unused that day and never sees the event it is scored on, the same rule the other two shapes are held to:
+
+| shape | nats/event | vs. uniform | effective support |
+| --- | --- | --- | --- |
+| uniform over the pool (current) | −6.9821 | — | 488 |
+| WordleBot weight | −6.9522 | **+0.0299 ± 0.0007** | 468 |
+| WordleBot, 5% hedge (as shipped off-list) | −7.0675 | −0.0854 | 326 |
+| list position, binned 100/200/400 | −6.9820 | +0.0001 | 488 |
+
+WordleBot wins at 44σ on 1,277 of 1,316 events and the win is worth almost nothing: 0.03 nats against a 6.98-nat baseline, moving the effective support from 488 words to 468. The same weights on the off-list group are worth **+2.8085**, taking its support from 10,591 to 867. The group holding 9% of the mass has structure worth recovering and the group holding 81% has next to none.
+
+Nor is that a failure of the features tried. A conditional logit over six of them — word frequency, WordleBot weight, list position, vowels, rare letters, distinct letters — fitted on every event at once and scored on what it was fitted on, gains **+0.1074 nats/event**. That is a ceiling with hindsight built in, and anything prequential comes in under it. The best single feature is word frequency at +0.0653, so the editor leans very slightly towards commoner words and otherwise draws close to uniformly from whatever the list has left.
+
+The shipped hedge going *backwards* is worth knowing before reusing it. Five percent is sized for a group where 9,746 of 10,638 words are unlisted; only 7 curated words are, so the same 5% hands each of those seven several times what a listed word gets. A shape is calibrated to its group, not to the weights underneath it.
+
+That is also why the two groups are not simply pooled and weighted by WordleBot throughout, which is the obvious simplification since the scrape covers curated and off-list words alike. WordleBot lists 844 off-list words carrying more total weight than all 480 listed fresh-curated words, so one pool implies the editor leaves the curated list on 57.4% of non-repeat days against the 9.4% the regime ran at. It is the same failure the `curation only` arm makes on repeats: the weight ranks words within a group and does not set the rate between two.
+
 ### The prior sits in a flat basin
 
 None of the prior's settings is worth tuning, and `analysis/prior_basin.py` is what says so. It sweeps both axes over the 203 real regime puzzles with `f` held fixed throughout, so a difference is the prior's doing rather than the fit's.
