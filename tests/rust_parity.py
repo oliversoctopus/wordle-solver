@@ -869,6 +869,10 @@ def check_api(report):
         {"hard": True},
         {"form": "cubic"},
         {"form": "invonly", "top": 3},
+        # against a known answer the rows are recolored by the server, so the
+        # patterns sent below are overridden and the two have to agree on that
+        {"answer": "fogey"},
+        {"answer": "pouch", "mode": "entropy"},
     ]
     # Two rows of each opening the prior switches can produce, since a board
     # starting on that word is the only one served from `openings.json` rather
@@ -925,7 +929,8 @@ def check_api(report):
             mine = web.build_state(
                 pool, got["session"], parsed,
                 [(data.word2ind[word], web.parse_pattern(pattern))
-                 for word, pattern in rows])
+                 for word, pattern in rows],
+                web.parse_answer(body, data))
             with pool.lock:
                 solver_weights = pool.solver_for(parsed).weights
             # neither is meaningful across the two: one has no network at all,

@@ -73,15 +73,36 @@ function patternString(pattern) {
     ? pattern : pattern.map((tile) => "NYG"[tile]).join("");
 }
 
+/* Wordle's coloring rule, for the fake server to color a board against a known
+   answer with; the real one is pinned in tests/anchors.py */
+function score(guess, answer) {
+  const tiles = [0, 0, 0, 0, 0];
+  const left = answer.split("");
+  for (let i = 0; i < 5; i++) {
+    if (guess[i] === answer[i]) { tiles[i] = 2; left[i] = null; }
+  }
+  for (let i = 0; i < 5; i++) {
+    if (tiles[i]) continue;
+    const at = left.indexOf(guess[i]);
+    if (at >= 0) { tiles[i] = 1; left[at] = null; }
+  }
+  return tiles.map((tile) => "NYG"[tile]).join("");
+}
+
+/* what the draw hands out, in turn */
+const ANSWERS = ["crony", "haste", "fixed", "dumpy"];
+let drawnSoFar = 0;
+
 /* the rules the real server applies that the board can see: a win ends it, and
-   so does the sixth row */
-function boardState(rows) {
+   so does the sixth row -- and against a known answer the colors are its own */
+function boardState(rows, answer = "") {
+  if (answer) rows = rows.map((row) => ({ word: row.word, pattern: score(row.word, answer) }));
   const n = rows.length;
   const solved = n > 0 && rows[n - 1].pattern === WIN;
   const over = solved || n >= MAX_GUESSES;
   return {
     session: "test", turn: n + 1, guesses_left: Math.max(0, MAX_GUESSES - n),
-    max_guesses: MAX_GUESSES, rows, solved, over,
+    max_guesses: MAX_GUESSES, rows, solved, over, answer: answer || null,
     mode: "expected", hard: false, score_label: "expected guesses to finish",
     prior: {}, candidates_left: 100 - n, effective_size: 100 - n,
     possible_answers: [], alternatives: [], estimator: null, elapsed_ms: 1,
@@ -95,12 +116,14 @@ async function fetchStub(url, init) {
   const body = init && init.body ? JSON.parse(init.body) : {};
   let payload;
   if (url === "/api/status") payload = { ready: true, progress: "", forms: ["sqrt"] };
-  else if (url === "/api/new") payload = boardState([]);
+  else if (url === "/api/new") payload = boardState([], body.answer);
   else if (url === "/api/board") {
     sent.push(body.rows);
     payload = boardState(body.rows.map((row) => ({
       word: row.word, pattern: patternString(row.pattern),
-    })));
+    })), body.answer);
+  } else if (url === "/api/draw") {
+    payload = { word: ANSWERS[drawnSoFar++ % ANSWERS.length] };
   } else throw new Error("unexpected url " + url);
   return { ok: true, json: async () => payload };
 }
@@ -119,6 +142,9 @@ globalThis.probe = {
   lastFilledRow: typeof lastFilledRow === "function" ? lastFilledRow : () => -1,
   dirtyRows, suggestion, rowFilled, moveTo, typeLetter, backspace, cycle,
   deleteRow, submit, acceptSuggestion, applyState,
+  answerBox: document.getElementById("solve-answer"),
+  drawAnswer: typeof drawAnswer === "function" ? drawAnswer : () => {},
+  playOut: typeof playOut === "function" ? playOut : () => {},
 };
 `;
 
@@ -233,6 +259,18 @@ const PROPERTIES = {
     }
   },
 
+  "against a known answer the colors are the server's"() {
+    const answer = probe.answerBox.value;
+    if (!answer || probe.busy) return;
+    for (const [r, row] of probe.state.rows.entries()) {
+      const mine = probe.rows[r];
+      if (!mine || mine.letters.join("") !== row.word) continue;   // being retyped
+      const pattern = mine.pattern.map((tile) => "NYG"[tile]).join("");
+      if (pattern !== row.pattern) return `row ${r} shows ${pattern}, the answer gives ${row.pattern}`;
+      if (row.pattern !== score(row.word, answer)) return `row ${r}: server colored ${row.pattern}`;
+    }
+  },
+
   "every tile holds a letter and a color it is allowed"() {
     for (const [r, row] of probe.rows.entries()) {
       for (let c = 0; c < 5; c++) {
@@ -279,6 +317,10 @@ const MOVES = [
   ["enter", 3, () => [["submit"]]],
   ["taking the shadow", 2, () => [["take"]]],
   ["a word played", 5, (r) => [...word(r).map((letter) => ["type", letter]), ["submit"]]],
+  ["an answer set", 2, (r) => [["answer", ANSWERS[Math.floor(r() * ANSWERS.length)]]]],
+  ["the answer cleared", 1, () => [["answer", ""]]],
+  ["an answer drawn", 1, () => [["draw"]]],
+  ["played out", 1, () => [["playout"]]],
 ];
 
 const word = (random) =>
@@ -293,6 +335,12 @@ function apply([kind, a, b]) {
     case "delete": probe.deleteRow(); return "delete row";
     case "submit": probe.submit(); return "enter";
     case "take": probe.acceptSuggestion(); return "take the shadow";
+    case "answer":
+      probe.answerBox.value = a;
+      probe.answerBox.handlers.change();
+      return a ? `answer ${a}` : "answer cleared";
+    case "draw": probe.drawAnswer(); return "draw an answer";
+    case "playout": probe.playOut(); return "play it out";
   }
 }
 
@@ -309,6 +357,7 @@ async function walk(seed, steps) {
   };
 
   sent = [];
+  probe.answerBox.value = "";
   await context.probe.applyState(boardState([]));
   const log = [];
   let queued = [];

@@ -143,6 +143,12 @@ function suggestion() {
   return state && state.recommendation ? state.recommendation.word : "";
 }
 
+/** The word the board is being played against, or "" for none: with one set,
+    the server colors every row itself. */
+const answer = () => $("solve-answer").value.trim().toLowerCase();
+const boardBody = (payload) =>
+  ({ ...settings(), answer: answer(), session: state.session, rows: payload });
+
 /* ---------------------------------------------------------------- editing */
 
 /* A color belongs to the letter under it, so clearing one clears both. */
@@ -196,8 +202,9 @@ function backspace() {
 function cycle(row = cursor.row, col = cursor.col) {
   if (busy || !rows.length) return;
   cursor = { row, col, atEnd: false };
-  // an empty tile has no color to change
-  if (!rows[row].letters[col]) return renderLocal();
+  // an empty tile has no color to change, and against a known answer no tile
+  // has one to give
+  if (!rows[row].letters[col] || answer()) return renderLocal();
   rows[row].pattern[col] = (rows[row].pattern[col] + 1) % 3;
   clearMessage();
   renderLocal();
@@ -253,11 +260,25 @@ function submit() {
   // an emptied board is still worth sending while the solver holds rows
   if (payload.length === 0 && state.rows.length === 0) return;
 
-  send("/api/board", { ...settings(), session: state.session, rows: payload }, () => {
+  return send("/api/board", boardBody(payload), () => {
     if (state.solved) say(`Solved in ${state.rows.length}.`, "good");
-    else if (state.over) say("Out of guesses.", "bad");
+    else if (state.over) say(state.answer ? `Out of guesses. The answer was ${state.answer}.`
+                                          : "Out of guesses.", "bad");
     else clearMessage();
   });
+}
+
+/** Against a known answer, let the solver take every turn that is left.  Each
+    turn is the same submit as pressing Enter on an empty row, so what lands on
+    the board is exactly what stepping through by hand would have. */
+async function playOut() {
+  if (busy || !state || !answer()) return;
+  while (state && !state.over) {
+    const before = state.rows.length;
+    // a word already typed into the open row is played as it stands
+    if (dirtyRows().size === 0) acceptSuggestion();
+    if (!(await submit()) || state.rows.length <= before) return;
+  }
 }
 
 /** Re-run the solver over the board it has already accepted, under whatever the
@@ -269,8 +290,7 @@ function resend() {
   const payload = state.rows.map((row) => ({ word: row.word, pattern: row.pattern }));
   const typing = rows[state.rows.length];
   const at = cursor;
-  return send("/api/board", { ...settings(), session: state.session, rows: payload },
-              () => {
+  return send("/api/board", boardBody(payload), () => {
     if (typing && rows.length > state.rows.length) {
       rows[state.rows.length] = typing;
       cursor = at;
@@ -372,7 +392,7 @@ function renderSolveBoard() {
         if (letter) {
           tile.textContent = letter;
           tile.classList.add("filled", "t-" + TILES[rows[r].pattern[c]]);
-          tile.title = "Click to change the color";
+          tile.title = answer() ? "Colored from the answer" : "Click to change the color";
           tile.addEventListener("click", () => cycle(r, c));
         } else if (r === ghostRow) {
           tile.textContent = ghost[c];
@@ -969,6 +989,9 @@ function renderLocal() {
   const canTake = Boolean(state && !state.over && !edited && !ready && suggestion());
   $("accept").disabled = busy || !state || !(canSubmit || canTake);
   $("accept").textContent = canSubmit ? "Submit" : "Use suggestion";
+  $("draw-answer").disabled = busy || !state;
+  $("play-out").hidden = !answer();
+  $("play-out").disabled = busy || !state || state.over || !suggestion();
   // it clears whatever row has something in it, played or still being typed
   $("undo").disabled = busy || !rows.some((row) => rowFilled(row) > 0);
 }
@@ -989,8 +1012,9 @@ function renderPanel() {
     $("rec-tag").hidden = true;
   } else if (state.over) {
     $("rec-word").textContent = "Out of guesses";
-    $("rec-score").textContent =
-      `${state.candidates_left} word${state.candidates_left === 1 ? "" : "s"} were still possible`;
+    $("rec-score").textContent = state.answer
+      ? `The answer was ${state.answer}; ${state.candidates_left} word${state.candidates_left === 1 ? "" : "s"} were still possible`
+      : `${state.candidates_left} word${state.candidates_left === 1 ? "" : "s"} were still possible`;
     $("rec-note").hidden = true;
     $("rec-tag").hidden = true;
   } else if (rec) {
@@ -1005,7 +1029,8 @@ function renderPanel() {
     tag.textContent = rec.exact ? "Exact" : (state.mode === "entropy" ? "Greedy" : "Estimated");
 
     let note = "";
-    if (state.candidates_left === 1) note = "The only word left.";
+    if (state.answer && rec.word === state.answer) note = "This is the answer.";
+    else if (state.candidates_left === 1) note = "The only word left.";
     else if (!rec.possible) note = "Cannot be the answer itself. It is played purely to split what is left.";
     else if (state.guesses_left === 1) note = `Last guess: a ${(rec.win_probability * 100).toFixed(1)}% chance of being right.`;
     else if (rec.win_probability > 0) note = `A ${(rec.win_probability * 100).toFixed(1)}% chance of being the answer outright.`;
@@ -1282,7 +1307,14 @@ function settings() {
 
 function newBoard() {
   staleBoard = false;
-  return send("/api/new", settings());
+  return send("/api/new", { ...settings(), answer: answer() });
+}
+
+/** One answer from the prior, set as the word to play against. */
+function drawAnswer() {
+  const config = { repeat: $("opt-repeat").checked, curation: $("opt-curation").checked };
+  return request("/api/draw", config, (reply) => { $("solve-answer").value = reply.word; },
+                 () => { resend(); });
 }
 
 /** Whichever of the three the page is showing, start it again. */
@@ -1316,6 +1348,7 @@ function setView(next) {
   $("play-panel").hidden = next !== "play";
   $("finder-panel").hidden = next !== "finder";
   $("solve-controls").hidden = next !== "solve";
+  $("answer-bar").hidden = next !== "solve";
   $("play-controls").hidden = next !== "play";
   $("finder-controls").hidden = next !== "finder";
   $("solve-keys").hidden = next !== "solve";
@@ -1405,6 +1438,13 @@ function wire() {
   }
   onClick("reset", restart);
   onClick("undo", deleteRow);
+  onClick("draw-answer", drawAnswer);
+  onClick("play-out", playOut);
+  // the answer recolors the rows already played, so it is the same request a
+  // switch makes; a word the server refuses stays in the box for fixing
+  $("solve-answer").addEventListener("change", () => {
+    if (view === "solve") resend();
+  });
   // submit falls back to taking the suggestion when there is nothing to send
   onClick("accept", submit);
   onClick("guess", playGuess);

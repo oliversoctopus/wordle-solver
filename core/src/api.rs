@@ -35,6 +35,7 @@ pub fn handle(path: &str, body: &str) -> String {
         "/api/init" => state::init(&parsed).map(|()| status()),
         "/api/new" => board(&parsed, true),
         "/api/board" => board(&parsed, false),
+        "/api/draw" => draw(&parsed),
         "/api/find" => find(&parsed),
         "/api/game/new" => game_new(&parsed),
         "/api/game/guess" => game_guess(&parsed),
@@ -155,6 +156,7 @@ fn parse_settings(body: &Value) -> Result<Settings, String> {
 fn board(body: &Value, fresh: bool) -> Result<String, String> {
     let loaded = state::loaded().ok_or("The word lists have not loaded yet")?;
     let settings = parse_settings(body)?;
+    let answer = parse_answer(body, loaded)?;
 
     let mut rows: Vec<(usize, u8)> = Vec::new();
     if !fresh {
@@ -185,7 +187,39 @@ fn board(body: &Value, fresh: bool) -> Result<String, String> {
         }
     }
 
-    build_state(loaded, &settings, &rows)
+    build_state(loaded, &settings, &rows, answer)
+}
+
+/// The answer the board is being played against, as `web.parse_answer` reads
+/// it: set, it colors every row itself and the page's tiles become a display.
+fn parse_answer(body: &Value, loaded: &state::Loaded) -> Result<Option<usize>, String> {
+    let word = body
+        .get("answer")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_lowercase();
+    if word.is_empty() {
+        return Ok(None);
+    }
+    loaded
+        .data
+        .words
+        .index_of(&word)
+        .map(Some)
+        .ok_or_else(|| format!("'{word}' is not in the word list"))
+}
+
+/// One answer drawn from the prior, for the board to be played against.
+fn draw(body: &Value) -> Result<String, String> {
+    let loaded = state::loaded().ok_or("The word lists have not loaded yet")?;
+    let weights = loaded.weights_for(&parse_config(body))?;
+    let seed = body.get("seed").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let mut out = String::new();
+    let mut object = Object::new(&mut out);
+    object.str("word", loaded.data.words.word(draw_answer(&weights, seed)));
+    object.end();
+    Ok(out)
 }
 
 /// The page sends a pattern as `"NYGNN"` or as `[0, 1, 2, 0, 0]`, and both have
@@ -285,7 +319,21 @@ fn build_state(
     loaded: &state::Loaded,
     settings: &Settings,
     rows: &[(usize, u8)],
+    answer: Option<usize>,
 ) -> Result<String, String> {
+    // against a known answer the rows' patterns are the true ones, whatever
+    // the page sent
+    let truthful: Vec<(usize, u8)>;
+    let rows = match answer {
+        Some(answer) => {
+            truthful = rows
+                .iter()
+                .map(|&(guess, _)| (guess, loaded.data.words.score(guess, answer)))
+                .collect();
+            &truthful[..]
+        }
+        None => rows,
+    };
     let weights = loaded.weights_for(&settings.config)?;
     let form_name = settings.form.as_deref();
     let (form, params) = match settings.mode {
@@ -350,6 +398,10 @@ fn build_state(
         .int("elapsed_ms", 0);
 
     object.raw("prior", |out| describe_prior(out, loaded, &settings.config));
+    match answer {
+        Some(answer) => object.str("answer", loaded.data.words.word(answer)),
+        None => object.null("answer"),
+    };
     if settings.mode == Mode::Expected {
         // which form the menu's empty choice resolves to, whatever is selected
         let fitted = loaded.form_name(&settings.config, None)?;

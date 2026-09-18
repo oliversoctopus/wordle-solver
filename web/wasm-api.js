@@ -48,7 +48,7 @@ const wasmApi = (() => {
   // source of its own.  So the randomness comes from here, while the draw
   // itself stays in Rust, where the prior weights are.
   function seeded(path, body) {
-    if (path !== "/api/game/new") return body;
+    if (path !== "/api/game/new" && path !== "/api/draw") return body;
     const parsed = body ? JSON.parse(body) : {};
     return JSON.stringify({ ...parsed, seed: Math.random() });
   }

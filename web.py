@@ -243,6 +243,17 @@ def parse_settings(body):
                     top=min(10, max(1, int(body.get("top", 5)))))
 
 
+def parse_answer(body, data):
+    """The answer the board is being played against, or None.  Set, it colors
+    every row itself; the page's tiles are then a display, not an input."""
+    word = str(body.get("answer", "") or "").strip().lower()
+    if not word:
+        return None
+    if word not in data.word2ind:
+        raise SolverError(f"'{word}' is not in the word list")
+    return data.word2ind[word]
+
+
 def parse_sort(body):
     sort = str(body.get("sort", DEFAULT_SORT))
     if sort not in FINDER_SORTS:
@@ -326,18 +337,23 @@ def describe_guess(solver, word, score, candidates):
     }
 
 
-def build_state(pool, session_id, settings, rows):
+def build_state(pool, session_id, settings, rows, answer=None):
     """The whole board as the page wants it: what has been played, what the
     solver would play next, and what is still possible.
 
     ``rows`` and ``settings`` are passed in rather than read off the session so
     that a proposed board can be scored before it is adopted; a set of rows that
-    cannot all be true raises rather than returning a state.
+    cannot all be true raises rather than returning a state.  With ``answer``
+    the rows' patterns are replaced by the true ones, so the board is the game
+    the solver would have played against that word.
     """
     started = time.perf_counter()
     with pool.lock:
         solver = pool.solver_for(settings)
         data = solver.data
+        if answer is not None:
+            rows = [(guess, score_guess(data.all_words[guess], data.all_words[answer]))
+                    for guess, _ in rows]
 
         candidates = solver.all_candidates()
         for index, (guess, pattern) in enumerate(rows):
@@ -366,6 +382,7 @@ def build_state(pool, session_id, settings, rows):
             "hard": settings.hard,
             "score_label": score_label(settings.mode),
             "prior": describe_prior(settings.config, data),
+            "answer": None if answer is None else data.all_words[answer],
             "candidates_left": int(len(candidates)),
             "recommendation": None,
             "alternatives": [],
@@ -640,6 +657,7 @@ class Handler(BaseHTTPRequestHandler):
 
         routes = {"/api/new": self.api_new,
                   "/api/board": self.api_board,
+                  "/api/draw": self.api_draw,
                   "/api/find": self.api_find,
                   "/api/game/new": self.api_game_new,
                   "/api/game/guess": self.api_game_guess,
@@ -668,8 +686,17 @@ class Handler(BaseHTTPRequestHandler):
     def api_new(self, body):
         session = Session(parse_settings(body))
         session_id = self.store.create(session)
+        answer = parse_answer(body, self.pool.data())
         return self.send_json(
-            build_state(self.pool, session_id, session.settings, []))
+            build_state(self.pool, session_id, session.settings, [], answer))
+
+    def api_draw(self, body):
+        """One answer drawn from the prior, for the board to be played against."""
+        config = parse_config(body)
+        data = self.pool.data()
+        with self.pool.lock:
+            answer = pick_random_answer(data, config)
+        return self.send_json({"word": data.all_words[answer]})
 
     def api_board(self, body):
         """Set the whole board, and the whole of how to solve it, at once.
@@ -692,6 +719,7 @@ class Handler(BaseHTTPRequestHandler):
             raise SolverError(f"A board is at most {MAX_GUESSES} rows")
 
         data = self.pool.data()
+        answer = parse_answer(body, data)
         rows = []
         for index, row in enumerate(raw_rows):
             if not isinstance(row, dict):
@@ -707,9 +735,10 @@ class Handler(BaseHTTPRequestHandler):
                 raise SolverError(f"Row {index + 1}: {exc}")
             rows.append((data.word2ind[word], pattern))
 
-        state = build_state(self.pool, session_id, settings, rows)
+        state = build_state(self.pool, session_id, settings, rows, answer)
         session.settings = settings
-        session.rows = rows
+        session.rows = [(data.word2ind[row["word"]], parse_pattern(row["pattern"]))
+                        for row in state["rows"]]
         return self.send_json(state)
 
     # -------------------------------------------------------- the word finder

@@ -120,6 +120,22 @@
       <button id="undo" class="ghost" title="Empty the row the cursor is on, leaving its place free for another word">Delete row</button>
     </div>
 
+    <!-- the solver tested against a word: the tiles then color themselves and
+         the only thing left to enter is which word to play -->
+    <div class="answer-bar" id="answer-bar">
+      <div class="controls">
+        <label class="field inline" for="solve-answer"><span class="switch-name">Set answer</span>
+          <input type="text" id="solve-answer" maxlength="5" autocomplete="off"
+                 spellcheck="false" placeholder="none">
+        </label>
+        <button id="draw-answer" class="ghost">Draw random answer</button>
+        <button id="play-out" class="ghost" hidden>Play it out</button>
+      </div>
+      <p class="setting-why">With an answer set, every row is colored from it and the tiles cannot
+      be changed by hand. Enter on an empty row plays the solver's pick, so pressing it
+      repeatedly plays the game out; rows can still be deleted and replayed.</p>
+    </div>
+
     <div class="controls" id="play-controls" hidden>
       <button id="guess" class="primary">Guess</button>
       <button id="hint-btn" class="ghost">Hint</button>
@@ -138,7 +154,7 @@
         <dt>&larr; &rarr;</dt><dd>Move along the row</dd>
         <dt>&uarr; &darr;</dt><dd>Move between rows</dd>
         <dt>Space</dt><dd>Change the selected tile's color: gray &rarr; yellow
-          &rarr; green</dd>
+          &rarr; green. Does nothing while an answer is set.</dd>
         <dt>Enter</dt><dd>On an empty row, take the solver's suggestion; otherwise, submit the
         word you entered</dd>
         <dt>Backspace</dt><dd>Delete a letter</dd>
