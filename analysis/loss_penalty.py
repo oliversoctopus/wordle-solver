@@ -204,12 +204,13 @@ def search():
     common.header("What the endgame search is worth, over every word as the answer")
     print(f"  {'policy':<38} {'mean':>8} {'loss prob':>10} "
           f"{'solve rate':>11} {'wall':>7}")
-    table, losses = [], {}
+    table, losses, masks = [], {}, {}
     for label, solver in rows.items():
         start = time.perf_counter()
         lengths, weights = play_all(solver)
         elapsed = time.perf_counter() - start
         row = stats(lengths, weights)
+        masks[label] = row["lost_mask"]
         print(f"  {label:<38} {row['mean_penalized']:8.4f} "
               f"{row['loss_prob'] * 100:9.4f}% {(1 - row['loss_prob']) * 100:10.4f}% "
               f"{elapsed:6.0f}s")
@@ -230,6 +231,55 @@ def search():
     common.record("search.loss_two", two)
     common.record("search.loss_full", full)
     common.record("search.two_share", (none - two) / (none - full))
+    # the loss probability is a handful of curated words, so name the heaviest
+    # one the full search wins that `t <= 2` alone loses, and its share
+    rescued = masks["expected, exact for t <= 2 only"] & ~masks[
+        "expected, exact for m <= 60 (default)"]
+    heaviest = int(np.argmax(np.where(rescued, weights, 0.0)))
+    share = 100 * weights[heaviest] / ((none - full) / 100)
+    print(f"  heaviest word the full search rescues from t <= 2: "
+          f"{data.all_words[heaviest]} at {100 * weights[heaviest]:.4f}%, "
+          f"{share:.0f}% of the reduction")
+    common.record("search.rescued.word", data.all_words[heaviest])
+    common.record("search.rescued.weight", 100 * weights[heaviest])
+    common.record("search.rescued.share", share / 100)
+    rescue(rows["expected, exact for t <= 2 only"],
+           rows["expected, exact for m <= 60 (default)"], heaviest)
+
+
+def rescue(heuristic, searched, answer):
+    """Where the two policies part on one answer, and what each side leaves.
+
+    Both play the same game until the search first overrules the heuristic;
+    the answer's bucket after each guess is then valued exactly with the turns
+    that remain, which is the comparison the estimator could not make.
+    """
+    words = data.all_words
+    cands = heuristic.all_candidates()
+    for turn in range(1, MAX_GUESSES + 1):
+        left = MAX_GUESSES - turn + 1
+        h, _ = heuristic.best_guess(cands, left)
+        x, _ = searched.best_guess(cands, left)
+        if h != x:
+            break
+        cands = heuristic.filter(h, heuristic.feedback(h, answer), cands)
+    else:
+        return
+    common.record("search.rescued.turn", turn)
+    common.record("search.rescued.at", len(cands))
+    common.record("search.rescued.turns_left", left - 1)
+    print(f"  the two part at turn {turn}, {len(cands)} candidates: "
+          f"heuristic {words[h]}, search {words[x]}")
+    for tag, guess in (("heuristic", h), ("search", x)):
+        bucket = heuristic.filter(guess, heuristic.feedback(guess, answer), cands)
+        _, value = searched.exact.solve(bucket, left - 1)
+        print(f"    {tag} {words[guess]} leaves {len(bucket)}, worth {value:.2f} "
+              f"with {left - 1} turns left: {' '.join(words[c] for c in bucket)}")
+        common.record(f"search.rescued.{tag}.guess", words[guess])
+        common.record(f"search.rescued.{tag}.left", len(bucket))
+        common.record(f"search.rescued.{tag}.value", value)
+        common.record(f"search.rescued.{tag}.words",
+                      ", ".join(f"`{words[c]}`" for c in bucket))
 
 
 def costs():
