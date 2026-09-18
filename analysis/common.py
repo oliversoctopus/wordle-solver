@@ -6,9 +6,12 @@ scripts can be run from anywhere:
     python analysis/repeat_shapes.py
 """
 
+import atexit
+import glob
 import json
 import os
 import sys
+import time
 
 import numpy as np
 
@@ -23,6 +26,7 @@ for path in (ROOT, HERE):
 import rust  # noqa: E402  -- needs the path above
 from priors import (WORDLEBOT_SNAPSHOT_DATE,  # noqa: E402  -- likewise
                     depends_on_answer_record)
+from wordle_data import write_json  # noqa: E402  -- likewise
 
 DATA = os.path.join(ROOT, "data")
 
@@ -304,3 +308,97 @@ def header(title):
     print("=" * 74)
     print(title)
     print("=" * 74)
+
+
+# ---------------------------------------------------------------- results
+#
+# What a script prints, it also records, and `doc_numbers.py` carries the
+# figure into the documents from there.  `record(key, value)` at the print
+# site; the values land in `analysis/results/<script>.json` when the script
+# exits cleanly, merged into whatever an earlier run with other flags left.
+
+RESULTS_DIR = os.path.join(HERE, "results")
+_RECORDED = {}
+_FAILED = False
+
+
+def record(key, value):
+    """Note a figure the documents quote.  Returns it, so it can sit inline."""
+    if isinstance(value, np.generic):
+        value = value.item()
+    _RECORDED[key] = value
+    return value
+
+
+def result(script, key, default=None):
+    """A figure another script recorded, so nothing here quotes one by hand."""
+    path = os.path.join(RESULTS_DIR, f"{script}.json")
+    if not os.path.exists(path):
+        return default
+    with open(path, "r", encoding="utf-8") as file:
+        return json.load(file)["values"].get(key, default)
+
+
+def md_table(columns, rows):
+    """A Markdown table, for recording whole; cells are formatted already."""
+    lines = ["| " + " | ".join(columns) + " |",
+             "| " + " | ".join("---" for _ in columns) + " |"]
+    for row in rows:
+        lines.append("| " + " | ".join(str(cell) for cell in row) + " |")
+    return "\n".join(lines)
+
+
+def neg(text):
+    """A formatted number with the documents' minus sign."""
+    return text.replace("-", "−")
+
+
+def pretty(expression):
+    """A form's expression as the documents typeset it."""
+    return (expression.replace("*", "·").replace("x^2", "x²")
+            .replace("x^3", "x³").replace("sqrt(x)", "√x")
+            .replace("1-1/n", "1−1/n"))
+
+
+def _fits_present():
+    """Which fit each cached prior carries, so a result says what it measured."""
+    out = {}
+    for path in sorted(glob.glob(os.path.join(ROOT, "estimator_cache", "params_*.json"))):
+        with open(path, "r") as file:
+            fit = json.load(file)
+        out[fit["slug"]] = f"{fit['form']} {fit['fitted_at']}"
+    return out
+
+
+def _write_results():
+    if not _RECORDED or _FAILED:
+        return
+    name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+    path = os.path.join(RESULTS_DIR, f"{name}.json")
+    payload = {"runs": {}, "values": {}}
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as file:
+            payload = json.load(file)
+    sol = solutions()
+    payload["runs"][" ".join([name + ".py"] + sys.argv[1:])] = {
+        "at": time.strftime("%Y-%m-%d %H:%M"),
+        "solutions": len(sol),
+        "through": sol[-1]["print_date"],
+        "fits": _fits_present(),
+    }
+    payload["values"].update(_RECORDED)
+    # when the figures were last measured, for the catalogue to quote
+    payload["values"]["measured"] = time.strftime("%Y-%m-%d")
+    payload["values"] = dict(sorted(payload["values"].items()))
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    write_json(path, payload)
+
+
+def _note_failure(kind, value, trace):
+    global _FAILED
+    _FAILED = True
+    sys.__excepthook__(kind, value, trace)
+
+
+sys.excepthook = _note_failure
+atexit.register(_write_results)

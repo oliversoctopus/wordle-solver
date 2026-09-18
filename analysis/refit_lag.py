@@ -123,12 +123,22 @@ print("\nagainst it, paired on the same answers (negative = the stale one is "
       "better)\n")
 print(f"  {'lag':>4s} {'mass moved':>11s} {'mean':>8s} {'paired':>19s}"
       f" {'changed':>8s} {'worse':>6s} {'better':>7s}")
+table = []
 for lag in LAGS[1:]:
     mean, se, d = common.paired(runs[lag], base)
     print(f"  {lag:4d} {np.mean(shift[lag]) * 100:10.2f}%"
           f" {runs[lag].mean():8.4f}"
           f" {mean:+9.4f} +- {se:.4f} {int((d != 0).sum()):8d}"
           f" {int((d > 0).sum()):6d} {int((d < 0).sum()):7d}")
+    worse, better = int((d > 0).sum()), int((d < 0).sum())
+    if lag in (1, 3, 7, 14, 30):
+        split = f" ({worse} worse, {better} better)" if worse + better else ""
+        table.append((f"{lag} day" + ("s" if lag > 1 else ""),
+                      f"{np.mean(shift[lag]) * 100:.2f}%",
+                      common.neg(f"{mean:+.4f} \u00b1 {se:.4f}"),
+                      f"{worse + better}{split}"))
+    common.record(f"lag{lag}.mass", float(np.mean(shift[lag]) * 100))
+    common.record(f"lag{lag}.changed", worse + better)
     for name, mask in (("repeats", repeat), ("off-list", offlist),
                        ("other", rest)):
         if mask.any():
@@ -138,9 +148,15 @@ for lag in LAGS[1:]:
     changed = [words[START + i] for i in range(len(base)) if d[i] != 0]
     print(f"  {'':4s} {'':11s} {', '.join(changed) if changed else 'none'}")
 
+common.record("table", common.md_table(
+    ["lag", "mass moved", "vs. a record rebuilt daily",
+     f"games changed of {END - START}"], table))
+common.record("puzzles", END - START)
+common.record("yardstick", float(yard * 100))
 print(f"\n  for scale, the repeat shape flattened moves {yard * 100:.2f}% of "
       f"the mass,")
-print("  which `prior_basin.py` prices at +0.039 +- 0.025 guesses.")
+print(f"  which `prior_basin.py` prices at "
+      f"{common.result('prior_basin', 'repeat_flattened', 'a figure it has not recorded yet')} guesses.")
 
 print("\nrefitting every k days, the lag then uniform over 0..k-1\n")
 for k in range(2, max(LAGS[-1], 2) + 1):
@@ -150,5 +166,6 @@ for k in range(2, max(LAGS[-1], 2) + 1):
     mean, se, _ = common.paired(np.stack([runs[lag] for lag in have]).mean(0),
                                 base)
     print(f"  every {k:2d} days   {mean:+.5f} +- {se:.5f}")
+    common.record(f"every{k}", common.neg(f"{mean:+.4f} \u00b1 {se:.4f}"))
 
 print(f"\n[{time.time() - STARTED:.0f}s]")

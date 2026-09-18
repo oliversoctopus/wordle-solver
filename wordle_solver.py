@@ -194,7 +194,7 @@ def cmd_benchmark(args):
 def cmd_compare(args):
     data = load_data(mask_last=args.mask_last)
     config = config_from_args(args)
-    forms = args.forms or sorted(estimator.FORMS)
+    forms = sorted(estimator.FORMS) if "all" in args.forms else args.forms
     training.compare_forms(
         config,
         forms=forms,
@@ -348,10 +348,14 @@ def build_parser():
 
     comp = sub.add_parser("compare", parents=[common],
                           help="policy iteration once per form of f, then tabulate")
-    comp.add_argument("--forms", nargs="+", choices=form_choices, default=None,
-                      help="forms to compare (default: all)")
+    comp.add_argument("--forms", nargs="+", choices=form_choices + ["all"],
+                      default=list(estimator.MAIN_FORMS),
+                      help="forms to compare (default: %(default)s; 'all' for "
+                           "every one)")
     comp.add_argument("--games", type=int, default=training.DEFAULT_GAMES)
-    comp.add_argument("--holdout-games", type=int, default=2000)
+    # a sanity check only: the ranking that picks a winner is form_default's
+    # exact sweep, not this sample
+    comp.add_argument("--holdout-games", type=int, default=200)
     comp.add_argument("--max-iters", type=int, default=training.DEFAULT_MAX_ITERS)
     comp.add_argument("--seed", type=int, default=0)
     # same default as train, and for the same reason: fitting under the full

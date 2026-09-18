@@ -150,6 +150,11 @@ for pattern, mass, size, pick, best, regret in sorted(
           f"{regret:>+9.4f} {mass * regret:>9.5f}")
 print(f"\n  a better second guess exists at {len(moved)} of {len(rows)}")
 print(f"  turn-2 regret, weighted by reach: {reach:.5f} guesses")
+common.record("positions", len(rows) + skipped)
+common.record("solved", skipped)
+common.record("decided", len(rows))
+common.record("moved", len(moved))
+common.record("census", float(reach))
 
 # ------------------------------------------------------- does it reach the mean
 overrides = {row[0]: row[4] for row in moved}
@@ -177,6 +182,12 @@ for label, lengths in ((f"all {len(overrides)} overrides", full),
           f"{mean - shipped_mean:>+12.5f}")
 print(f"\n  the census predicted {reach:.5f} and the sweep pays "
       f"{shipped_mean - float(solver.weights @ full):.5f}")
+full_mean, full_loss = common.exact_stats(full, solver.weights)
+common.record("shipped_mean", shipped_mean)
+common.record("override_mean", full_mean)
+common.record("paid", shipped_mean - full_mean)
+common.record("shipped_loss", shipped_loss * 100)
+common.record("override_loss", full_loss * 100)
 
 # ------------------------------------------- but under a distribution it is not
 curated = [w for w in data.curated_list if w in data.word2ind]
@@ -200,18 +211,37 @@ common.header("the same substitution, scored where it was not chosen")
 print(f"  all {len(overrides)} of them: the turn-2 optimum under the "
       f"shipped prior\n")
 print(f"  {'distribution':<33} {'shipped':>9} {'override':>9} {'delta':>9}")
-for label, weights in enumerated:
+table = []
+neg = common.neg
+for (label, weights), key in zip(enumerated, ("default", "all", "curated", "unused")):
     print(f"  {label:<33} {float(weights @ base):>9.4f} "
           f"{float(weights @ full):>9.4f} {float(weights @ delta):>+9.4f}")
+    cell = neg(f"{float(weights @ delta):+.4f}")
+    table.append((label.replace("shipped prior", "the default prior"),
+                  f"{float(weights @ base):.4f}", f"{float(weights @ full):.4f}",
+                  f"**{cell}**" if abs(float(weights @ delta)) > 0.002 else cell))
+    common.record(f"enumerated.{key}", float(weights @ delta))
 for label, words in (("the real regime answers", regime),
                      ("every real answer ever", alltime)):
     seen = np.array([delta[data.word2ind[w]] for w in words
                      if w in data.word2ind])
     weights = uniform_over(words)
+    se = seen.std(ddof=1) / np.sqrt(len(seen))
     print(f"  {label + f' ({len(seen)})':<33} {float(weights @ base):>9.4f} "
           f"{float(weights @ full):>9.4f} {seen.mean():>+9.4f} +/- "
-          f"{seen.std(ddof=1) / np.sqrt(len(seen)):.4f}  "
+          f"{se:.4f}  "
           f"({int((seen < 0).sum())} better, {int((seen > 0).sum())} worse)")
+    key = "regime" if "regime" in label else "alltime"
+    shown = (f"the {len(seen)} real regime answers" if key == "regime"
+             else f"all {len(seen):,} real answers ever")
+    table.append((shown, f"{float(weights @ base):.4f}",
+                  f"{float(weights @ full):.4f}",
+                  neg(f"{seen.mean():+.4f} \u00b1 {se:.4f}")))
+    common.record(f"{key}.delta", neg(f"{seen.mean():+.4f} \u00b1 {se:.4f}"))
+    common.record(f"{key}.sigma", float(abs(seen.mean()) / se))
+    common.record(f"{key}.n", len(seen))
+common.record("table", common.md_table(
+    ["distribution", "shipped", "turn-2 optimum", "delta"], table))
 
 print("\n  each on its own, over the four enumerated distributions:\n")
 print(f"  {'pattern':>7} {'word':>9}" +
@@ -231,6 +261,22 @@ gain = float(solver.weights @ (sweep(solver, opening, everywhere) - base))
 print(f"\n  {len(everywhere)} of the {len(overrides)} help under all four, and "
       f"together they are worth {gain:+.5f}\n  under the shipped prior, against "
       f"the {float(solver.weights @ delta):+.5f} of the whole set")
+common.record("everywhere", len(everywhere))
+common.record("everywhere_gain", float(gain))
+# the widest sign flip among the overrides, between the shipped prior and the
+# curated list, is the example the documents give
+flips = []
+for pattern, word in overrides.items():
+    on_its_own = single[pattern] - base
+    own = float(solver.weights @ on_its_own)
+    cur = float(enumerated[2][1] @ on_its_own)
+    if own < 0 < cur:
+        flips.append((cur - own, data.all_words[word], own, cur))
+if flips:
+    _, word, own, cur = max(flips)
+    common.record("flip.word", word)
+    common.record("flip.default", float(own))
+    common.record("flip.curated", float(cur))
 
 # --------------------------------------------------------- why it does not hold
 common.header("what the gain is made of")
@@ -244,10 +290,21 @@ print(f"  net                            {float(weights @ delta):+.5f}")
 print(f"  sd of the per-answer change    {delta[churn].std():.4f} guesses")
 print(f"  net as a fraction of that      "
       f"{abs(float(weights @ delta)) / delta[churn].std():.4f}")
+common.record("churn", int(churn.sum()))
+common.record("churn_mass", 100 * float(weights[churn].sum()))
+common.record("improves", 100 * float(weights[delta < 0].sum()))
+common.record("worsens", 100 * float(weights[delta > 0].sum()))
+common.record("net", float(weights @ delta))
+common.record("sd", float(delta[churn].std()))
+common.record("net_fraction", abs(float(weights @ delta)) / float(delta[churn].std()))
 
 flat = uniform_over(curated)
 print("\n  blending the prior toward uniform-over-curated:\n")
 print(f"  {'blend':>7} {'delta':>10}")
+crossed = None
 for t in args.blend:
     mixed = (1 - t) * weights + t * flat
     print(f"  {t:>7.2f} {float(mixed @ delta):>+10.5f}")
+    if crossed is None and float(mixed @ delta) >= 0:
+        crossed = t
+common.record("blend_crossing", crossed if crossed is not None else 1.0)

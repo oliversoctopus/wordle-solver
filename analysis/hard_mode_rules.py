@@ -226,3 +226,12 @@ for config in configs:
           f"{int((per_word > 0).sum())} worse)")
     print(f"  losing words: {int((shipped > MAX_GUESSES).sum())} restricted, "
           f"{int((nyt > MAX_GUESSES).sum())} under the NYT's rule\n")
+    if config == PriorConfig() and not args.answers:
+        policy = ("entropy" if args.mode == ENTROPY
+                  else "no_endgame" if args.no_endgame else "shipped")
+        off_pool = dict((name, off) for name, _, off in rows)["the NYT's rule"]
+        common.record(f"{policy}.off_pool", int(off_pool))
+        common.record(f"{policy}.changed", int((per_word != 0).sum()))
+        common.record(f"{policy}.better", int((per_word < 0).sum()))
+        common.record(f"{policy}.worse", int((per_word > 0).sum()))
+        common.record(f"{policy}.worth", float(share @ per_word))

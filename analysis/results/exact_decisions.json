@@ -1,0 +1,53 @@
+{
+    "runs": {
+        "exact_decisions.py": {
+            "at": "2026-09-18 01:44",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
+                "repeat1_curation1": "spline 2026-09-17 22:12:11",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+            }
+        },
+        "exact_decisions.py --who-decides": {
+            "at": "2026-09-18 03:08",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        }
+    },
+    "values": {
+        "blended.differ": 37.22881288567526,
+        "blended.positions": 600,
+        "blended.regret": 0.00761007194213727,
+        "blended.rho": 0.7787594787671334,
+        "blended.search_regret": 0.0009651991407389609,
+        "blended.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 134 | 35.4% | 0.0000 | all of them |\n| 5–10 | 219 | 35.5% | 0.0066 | 28.3% |\n| 11–60 | 247 | 39.2% | 0.0113 | 9.9% |",
+        "measured": "2026-09-18",
+        "shipped.differ": 7.5892857142857135,
+        "shipped.positions": 150,
+        "shipped.regret": 0.0003818104984567266,
+        "shipped.rho": 0.9010822510822509,
+        "shipped.search_regret": 2.6032521568293753e-05,
+        "shipped.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 24 | 0.0% | 0.0000 | all of them |\n| 5–10 | 61 | 11.0% | 0.0003 | 7.3% |\n| 11–60 | 65 | 7.2% | 0.0006 | 1.8% |",
+        "who.f_at_four": 97,
+        "who.f_late": 0,
+        "who.late": 1153,
+        "who.table": "| turns left | `f` | exact search | closed form | one candidate |\n| --- | --- | --- | --- | --- |\n| 6 | 1,600 | 0 | 0 | 0 |\n| 5 | 1,298 | 292 | 4 | 6 |\n| 4 | 97 | 1,116 | 128 | 191 |\n| 3 | 0 | 309 | 133 | 449 |\n| 2 | 0 | 37 | 28 | 165 |\n| 1 | 0 | 0 | 0 | 32 |"
+    }
+}

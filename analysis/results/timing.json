@@ -1,0 +1,46 @@
+{
+    "runs": {
+        "timing.py --train": {
+            "at": "2026-09-18 03:32",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        }
+    },
+    "values": {
+        "measured": "2026-09-18",
+        "scan.at100": 2.69,
+        "scan.at198": 2.18,
+        "scan.at20": 1.83,
+        "scan.at401": 1.33,
+        "scan.at582": 1.08,
+        "sweep.entropy.chunking": 1.148471615720524,
+        "sweep.entropy.fused": 1.487012987012987,
+        "sweep.entropy.python": 3.537163400033023,
+        "sweep.entropy.python_over_rust": 1.5446128384423683,
+        "sweep.entropy.rust": 2.29,
+        "sweep.expected.chunking": 1.014516129032258,
+        "sweep.expected.fused": 1.0598290598290598,
+        "sweep.expected.python": 9.089402400015388,
+        "sweep.expected.python_over_rust": 1.4660326451637722,
+        "sweep.expected.rust": 6.2,
+        "train.exact60.chunks1": 17.4,
+        "train.exact60.chunks3": 14.0,
+        "train.exact60.gain": 1.2428571428571427,
+        "train.gain": 1.2089495070514595,
+        "train.python": 40.37823059997754,
+        "train.round.chunks1": 0.846875,
+        "train.round.chunks2": 0.984375,
+        "train.round.chunks3": 1.175,
+        "train.rust": 33.39943510002922
+    }
+}

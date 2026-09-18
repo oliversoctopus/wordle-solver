@@ -51,9 +51,11 @@ def scored(config, params, form):
 
 
 deltas, losses, declined = [], [], 0
+spread = {}      # slug -> how far the same form's fits range across seeds
 for config in common.filter_priors(ALL_CONFIGS, args):
     common.header(config.slug)
     form = estimator.get_form(estimator.load_record(config)["form"])
+    by_seed = []
     for seed in args.seeds:
         arms = {}
         for label, use_rust in (("python", False), ("rust", True)):
@@ -70,11 +72,17 @@ for config in common.filter_priors(ALL_CONFIGS, args):
         if arms is None:
             print(f"  seed {seed}: the native trainer declined; not a pair")
             continue
+        by_seed.append(arms["rust"][1])
         deltas.append(arms["rust"][1] - arms["python"][1])
         losses.append(arms["rust"][2] - arms["python"][2])
         identical = np.array_equal(arms["python"][0], arms["rust"][0])
         print(f"  seed {seed} rust - python {deltas[-1]:+.5f} guesses, "
               f"same parameters: {identical}")
+
+    if len(by_seed) > 1:
+        spread[config.slug] = max(by_seed) - min(by_seed)
+        print(f"  the native fits range over {spread[config.slug]:.5f} guesses "
+              f"across {len(by_seed)} seeds")
 
 common.header("over every (prior, seed)")
 if not deltas:
@@ -93,5 +101,14 @@ if deltas.size > 1:
     half = 1.96 * deltas.std(ddof=1) / np.sqrt(deltas.size)
     print(f"  paired difference {deltas.mean():+.5f} +/- {half:.5f} (95%)")
 print(f"  loss rate {np.mean(losses) * 100:+.4f} pp on average")
+common.record("pairs", int(deltas.size))
+common.record("worse", int((deltas > 1e-9).sum()))
+common.record("better", int((deltas < -1e-9).sum()))
+common.record("level", int((np.abs(deltas) <= 1e-9).sum()))
+common.record("mean_delta", float(deltas.mean()))
+if spread:
+    common.record("seed_spread_max", max(spread.values()))
+    common.record("seed_spread_min", min(spread.values()))
+    common.record("seeds", len(args.seeds))
 print("  a difference with no sign is a different valid fit; one that is worse "
       "on most of the pairs would be a defect, and is what this looks for")

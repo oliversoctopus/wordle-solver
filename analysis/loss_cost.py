@@ -79,7 +79,7 @@ print(f"  {'penalty':>7s} {'prior':>32s} {'losses':>7s} {'loss prob':>10s} "
       f"{'extra':>7s} {'worst':>6s}")
 print("  " + "-" * 76)
 
-blended = {}
+blended, worst = {}, {}
 for penalty in args.penalties:
     rows = []
     for config in configs:
@@ -93,6 +93,7 @@ for penalty in args.penalties:
         rows.append((mass, mean_extra))
         print(f"  {penalty:7.0f} {config.slug:>32s} {len(lost):7d} "
               f"{mass:9.4%} {mean_extra:7.2f} {extra.max():6.0f}")
+        worst[penalty] = max(worst.get(penalty, 0), int(extra.max()) if len(lost) else 0)
     # each arm contributes its own losses, so the blend weights by loss mass
     mass = float(np.mean([m for m, _ in rows]))
     blended[penalty] = sum(m * e for m, e in rows) / sum(m for m, _ in rows)
@@ -104,6 +105,8 @@ print("  What a loss is really worth, in guesses:")
 for penalty, extra in blended.items():
     print(f"    losses under penalty {penalty:g}: L = 6 + {extra:.2f} "
           f"= {6 + extra:.2f}")
+    common.record(f"penalty{penalty:g}.extra", float(extra))
+    common.record(f"penalty{penalty:g}.worst", worst[penalty])
 print()
 print("  Weighted over the losing words only -- what the games that actually")
 print("  lose would have needed, not an average over all answers.")

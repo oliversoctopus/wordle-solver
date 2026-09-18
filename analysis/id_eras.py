@@ -28,7 +28,7 @@ to when `cigar` needed an entry that its spent slot could not give it, which is
 what a repeat is: every one of them carries an era-2 id for that reason alone.
 Everything else is still drawn off the old list.  The five curated first-uses
 that took an era-2 id had a free era-1 slot and took a new number anyway, and
-nothing here separates them from the 159 that did not.
+nothing here separates them from the 172 that did not.
 
 Nothing here feeds the solver, and the answer log moves under it.
 """

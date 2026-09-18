@@ -72,8 +72,16 @@ def search_decides(solver, candidates, turns_left):
     return turns_left >= 3 and MIN_CANDIDATES <= len(candidates) <= solver.exact_max
 
 
-def report(title, rows, weights):
+def report(title, rows, weights, tag=None):
+    """Print one prior's or the blend's report; `tag` says what to record it as."""
+    rec = (lambda key, value: common.record(f"{tag}.{key}", value)) if tag \
+        else (lambda key, value: None)
     common.header(title)
+    rec("positions", len(rows["spread"]))
+    rec("regret", float(common.weighted(rows["heur"], weights)))
+    rec("search_regret", float(common.weighted(rows["exact"], weights)))
+    rec("differ", float(100 * common.weighted(rows["moved"], weights)))
+    rec("rho", float(common.weighted(rows["rho"], weights)))
     print(f"  {len(rows['spread'])} positions, top {args.top} guesses played out "
           f"each, weighted by how often play reaches them\n")
     print(f"  spread of true value, best to worst   "
@@ -90,6 +98,7 @@ def report(title, rows, weights):
     sizes = np.array(rows["size"])
     print(f"  {'candidates':>12} {'positions':>10} {'differ':>9} "
           f"{'estimator regret':>18} {'of which ties':>14}")
+    table = []
     for low, high in BANDS:
         pick = (sizes >= low) & (sizes <= high)
         if not pick.any():
@@ -103,6 +112,14 @@ def report(title, rows, weights):
               f"{100 * common.weighted(moved, band_w):>8.1f}% "
               f"{common.weighted(heur, band_w):>18.4f} "
               f"{100 * common.weighted(ties, band_w):>13.1f}%")
+        differ = 100 * common.weighted(moved, band_w)
+        tied = 100 * common.weighted(ties, band_w)
+        table.append((f"{low}\u2013{high}", str(int(pick.sum())), f"{differ:.1f}%",
+                      f"{common.weighted(heur, band_w):.4f}",
+                      "all of them" if abs(tied - differ) < 0.05 else f"{tied:.1f}%"))
+    rec("table", common.md_table(
+        ["candidates", "positions", "estimator differs", "estimator regret",
+         "of which ties"], table))
     print()
 
 
@@ -151,13 +168,14 @@ def who_decides():
                         counts)
     if len(configs) > 1:
         report_deciders(f"all {len(configs)} priors, {args.games} games each",
-                        total)
+                        total, tag="who")
 
 
-def report_deciders(title, counts):
+def report_deciders(title, counts, tag=None):
     common.header(title)
     print(f"  {'turns left':>10} " + " ".join(f"{d:>13}" for d in DECIDERS)
           + f" {'total':>8}")
+    table = []
     for left in range(MAX_TURNS, 0, -1):
         row = counts[left]
         n = sum(row.values())
@@ -165,10 +183,18 @@ def report_deciders(title, counts):
             continue
         print(f"  {left:>10} " + " ".join(f"{row[d]:>13,}" for d in DECIDERS)
               + f" {n:>8,}")
+        table.append((str(left), *(f"{row[d]:,}" for d in DECIDERS)))
     binding = sum(counts[t]["f"] for t in (1, 2, 3))
     reached = sum(sum(counts[t].values()) for t in (1, 2, 3))
     print(f"\n  with three or fewer turns left, f decides {binding:,} of "
           f"{reached:,} positions\n")
+    if tag:
+        common.record(f"{tag}.table", common.md_table(
+            ["turns left", "`f`", "exact search", "closed form", "one candidate"],
+            table))
+        common.record(f"{tag}.f_late", binding)
+        common.record(f"{tag}.late", reached)
+        common.record(f"{tag}.f_at_four", counts[4]["f"])
 
 
 KEYS = ("spread", "heur", "exact", "moved", "rho", "size")
@@ -220,9 +246,11 @@ for config in configs:
         rows["size"].append(len(candidates))
     print(f"  played out: {time.perf_counter() - start:.0f}s\n")
 
-    report(f"{config.slug}: the search against the estimator", rows, counts)
+    report(f"{config.slug}: the search against the estimator", rows, counts,
+           tag="shipped" if config == PriorConfig() else None)
     for key, values in rows.items():
         pooled[key].extend(values)
 
 if len(configs) > 1:
-    report(f"blended over {len(configs)} priors", pooled, pooled_weights)
+    report(f"blended over {len(configs)} priors", pooled, pooled_weights,
+           tag="blended")

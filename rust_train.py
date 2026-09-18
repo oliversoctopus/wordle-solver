@@ -5,14 +5,14 @@ the Python keeps the reporting, and anything the flags cannot express declines
 rather than quietly fitting something else.  `estimator.save_params` still
 writes the cache, so there is one writer and one format.
 
-It is opt-in, and that is not timidity.  Given the same parameters the two
+It is the default, and adopting it was a decision.  Given the same parameters the two
 implementations play identically, but their least-squares solves differ in the
 last bits -- LAPACK's reduction order is not reproducible, and `core/src/fit.rs`
 says so -- and greedy policy iteration amplifies that: one flipped tie changes a
 rollout, which changes the next fit, and the two walk different paths from
 there.  So the Rust returns a *different valid fit* rather than the Python's,
-and adopting it means refitting everything and rerunning every measurement that
-moves with a fit.  That is a decision, not a detail.
+and adopting it meant refitting everything and rerunning every measurement that
+moves with a fit, which the 2026-09-17 refit did.
 """
 
 import json

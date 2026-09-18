@@ -1,0 +1,33 @@
+{
+    "runs": {
+        "fresh_arm.py": {
+            "at": "2026-09-18 01:02",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
+                "repeat1_curation1": "spline 2026-09-17 22:12:11",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+            }
+        }
+    },
+    "values": {
+        "census": 474,
+        "census_today": "−0.004 ± 0.014",
+        "flat.census": "−0.002 ± 0.011",
+        "flat.gap": 0.06440677966101695,
+        "flat.real": "+0.062 ± 0.027",
+        "own.census": "+0.012 ± 0.014",
+        "own.gap": 0.11807909604519774,
+        "own.real": "+0.130 ± 0.041",
+        "real": 177,
+        "sharp.census": "−0.002 ± 0.006",
+        "sharp.gap": 0.01864406779661017,
+        "sharp.real": "+0.017 ± 0.019"
+    }
+}

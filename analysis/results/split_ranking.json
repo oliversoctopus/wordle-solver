@@ -1,0 +1,31 @@
+{
+    "runs": {
+        "split_ranking.py": {
+            "at": "2026-09-18 03:08",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        }
+    },
+    "values": {
+        "cost.pick.mean_ms": 3.592623498698231,
+        "cost.pick.worst_ms": 141.26140001462772,
+        "cost.positions": 200,
+        "cost.top1.mean_ms": 3.626838498748839,
+        "cost.top1.worst_ms": 143.28519999980927,
+        "cost.top3.mean_ms": 11.813586500065867,
+        "cost.top3.worst_ms": 1088.0960000213236,
+        "cost.top5.mean_ms": 18.20292199990945,
+        "cost.top5.worst_ms": 1107.842100027483,
+        "measured": "2026-09-18"
+    }
+}

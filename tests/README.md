@@ -5,7 +5,7 @@ python tests/run.py           a few seconds, needs nothing loaded
 python tests/run.py --full    also the parts that load the 167 MB table
 ```
 
-Nine files, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, the coloring rule and every copy of it can be wrong together, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
+Ten checks over nine files here and one at the root, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, the coloring rule and every copy of it can be wrong together, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
 
 None of them assert numbers written down by hand. Each has something else to check against — the second implementation, the answer record, or a property that holds of every board there is. Staleness is part of it, a number copied into a test being a fourth place for it to drift when `README.md` § *Numbers in the documents* already has three. The larger part is that a case someone writes covers what they had in mind, which is the part they were least likely to get wrong; an oracle can be run over inputs nobody chose, and that is where the bugs turn out to be.
 
@@ -99,6 +99,12 @@ The headings are the oracle, so nothing here is written down by hand. A referenc
 It resolves pointers at code the same way, against the code. CLAUDE.md's convention is to name a symbol rather than a line — `priors.build_weights`, `WordleSolver.guess_pool`, `source::Columns` — on the grounds that a name outlives an edit above it, which holds until someone renames the thing. So the module has to be a file here and the name has to be something it defines: the Python is read with `ast`, which is what makes a method or an attribute set in `__init__` resolve as readily as a top-level `def`, and the Rust is matched against its item declarations. A name that belongs to neither is reported rather than assumed to be an import, so `EXTERNAL` is the short list of ones that really are.
 
 What it cannot do is tell you a reference points at the *right* section, only that it points at a real one. A pointer that survives a renumbering by landing on the wrong existing section still passes, and so does one naming a symbol that still exists but no longer does what the sentence says.
+
+## `doc_numbers.py` — every figure the documents quote is the one its script recorded
+
+At the repository root rather than here, because it is also the tool that rewrites the documents. Each script in `analysis/` records the figures the documents quote to `analysis/results/<script>.json`, and the documents mark where each one comes from with an HTML comment (`CLAUDE.md` § *Numbers in the documents* has the forms). Run bare it compares every bound figure with its results file and fails on any that differ, which is what `run.py` does; `--write` is the same comparison followed by the rewrite.
+
+The results files are the oracle, so nothing here is written down by hand — and the method checks in `analysis/README.md` § *Rerunning them* are bound like everything else, so a frozen figure that stops reproducing fails here rather than sitting in the prose. What it cannot do is reread the sentence around a number that moved; `--write` prints those, and that list is for a person.
 
 ## `rust_parity.py` — the Rust core agrees with the Python it came from
 

@@ -34,6 +34,11 @@ for n in (18, len(events)):
     print(f"  {n:8d} {rho:+11.2f} {p:7.3f} "
           f"{per_puzzle[0]:+9.2f} +- {per_puzzle[1]:4.2f} "
           f"{per_event[0]:+9.2f} +- {per_event[1]:5.2f}")
+    tag = "first18." if n == 18 else ""
+    common.record(tag + "events", n)
+    common.record(tag + "rho", float(rho))
+    common.record(tag + "p", float(p))
+    common.record(tag + "drift", common.neg(f"{per_puzzle[0]:+.2f} \u00b1 {per_puzzle[1]:.2f}"))
 
 print()
 print("  0.0 = static window, 1.0 = fixed replay lag; an interval covering both")
@@ -45,6 +50,22 @@ print(f"replay lag   mean {gaps.mean():.2f} y, sd {gaps.std(ddof=1):.2f}, "
       f"range {gaps.min():.2f}-{gaps.max():.2f}")
 band = ((gaps >= 4.4) & (gaps <= 5.1)).sum()
 print(f"{band} of {len(gaps)} events sit between 4.4 and 5.1 years")
+common.record("lag_mean", float(gaps.mean()))
+common.record("lag_sd", float(gaps.std(ddof=1)))
+common.record("in_band", int(band))
+latest = events[-2:]
+common.record("latest_two", " and ".join(f"`{w}`" for _, w, _ in latest))
+common.record("latest_two_sources", " and ".join(
+    f"#{common.puzzle_no(sol[f], f)}" for _, _, f in latest))
+# the shape's own summary: how many came from the first three hundred
+early = sum(1 for _, _, f in events if common.puzzle_no(sol[f], f) <= 300)
+common.record("from_first_300", early)
+common.record("median_source", float(np.median(
+    [common.puzzle_no(sol[f], f) for _, _, f in events])))
+common.record("outliers", ", ".join(
+    f"`{w}` (#{common.puzzle_no(sol[f], f)})" for _, w, f in events
+    if common.puzzle_no(sol[f], f) > 300))
+common.record("outlier_rate", 100 * (len(events) - early) / len(events))
 print()
 print("source puzzle numbers, in the order the repeats happened:")
 for t, w, f in events:

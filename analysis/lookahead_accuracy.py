@@ -87,25 +87,47 @@ def errors(estimates, truths, weights):
             np.sqrt(common.weighted(d ** 2, weights)))
 
 
-def report_accuracy(title, arms, weights):
+def report_accuracy(title, arms, weights, tag=None):
     """``arms`` maps a label to its ``(estimates, truths)``."""
     common.header(title)
     count = len(next(iter(arms.values()))[0])
     print(f"  {count} positions, weighted by how often play reaches them\n")
     print(f"  {'valuation':<22} {'true value':>11} {'bias':>9} "
           f"{'mean abs err':>14} {'RMSE':>9}")
-    rmses = {}
+    rmses, table = {}, []
     for label, (estimates, truths) in arms.items():
         bias, mae, rmse = errors(estimates, truths, weights)
         rmses[label] = rmse
         print(f"  {label:<22} {common.weighted(truths, weights):>11.4f} "
               f"{bias:>+9.4f} {mae:>14.4f} {rmse:>9.4f}")
+        shown = ("`min_g E(g, S)` (what the solver scores positions at)"
+                 if label.startswith("min_g") else label)
+        cell = f"{rmse:.4f}"
+        table.append((shown, f"{common.weighted(truths, weights):.4f}",
+                      f"+{bias:.4f}", f"{mae:.4f}",
+                      f"**{cell}**" if label.startswith("one") else cell))
     base, look = rmses["min_g E(g, S)"], rmses["one-ply lookahead"]
     print(f"\n  lookahead is {base / look:.2f}x more accurate by RMSE\n")
+    if tag:
+        common.record(f"{tag}.positions", count)
+        common.record(f"{tag}.table", common.md_table(
+            ["valuation", "true value", "bias", "mean abs error", "RMSE"], table))
+        common.record(f"{tag}.ratio", base / look)
 
 
-def report_decisions(title, rows, weights, k):
+COLUMNS = {}     # decisions per prior, gathered for one table across them
+
+
+def report_decisions(title, rows, weights, k, column=None):
     common.header(title)
+    if column:
+        COLUMNS[column] = (
+            common.weighted(rows["spread"], weights),
+            common.weighted(rows["base"], weights),
+            common.weighted(rows["look"], weights),
+            100 * common.weighted(np.array(rows["base"]) <= 1e-12, weights),
+            100 * common.weighted(rows["moved"], weights),
+            common.weighted(rows["rho"], weights))
     print(f"  {len(rows['spread'])} positions, top {k} guesses played out each, "
           f"weighted by how often play reaches them\n")
     print(f"  spread of true value, best to worst   "
@@ -123,6 +145,9 @@ def report_decisions(title, rows, weights, k):
 
 
 DECISION_KEYS = ("spread", "base", "look", "moved", "rho")
+SHORT = {"repeat0_curation0": "none", "repeat0_curation1_c-wordlebot": "curation",
+         "repeat1_curation0_r-binned": "repeat",
+         "repeat1_curation1_r-binned_c-wordlebot": "default"}
 if args.decisions:
     pooled = {key: [] for key in DECISION_KEYS}
 else:
@@ -169,7 +194,7 @@ for config in configs:
             rows["rho"].append(common.rank_correlation(scores, values)[0])
         print(f"  played out: {time.perf_counter() - start:.0f}s\n")
         report_decisions(f"{config.slug}: what is at stake in the choice",
-                         rows, counts, args.top)
+                         rows, counts, args.top, column=SHORT[config.slug])
         for key, values in rows.items():
             pooled[key].extend(values)
     else:
@@ -184,11 +209,28 @@ for config in configs:
             pooled[label][1].extend(truths)
         print(f"  played out: {time.perf_counter() - start:.0f}s\n")
         report_accuracy(f"{config.slug}: each valuation against its own play",
-                        arms, counts)
+                        arms, counts,
+                        tag="shipped" if config == PriorConfig() else None)
 
 if len(configs) > 1:
     title = f"blended over {len(configs)} priors"
     if args.decisions:
-        report_decisions(title, pooled, pooled_weights, args.top)
+        report_decisions(title, pooled, pooled_weights, args.top, column="blended")
+        order = ["blended"] + [SHORT[c.slug] for c in configs]
+        rows_out = [("spread of true value, best to worst", "{:.4f}"),
+                    ("`min_g E(g, S)` regret", "{:.4f}"),
+                    ("one-ply lookahead regret", "{:.4f}"),
+                    ("the estimator picks the best", "{:.1f}%"),
+                    ("lookahead picks a different guess", "{:.1f}%"),
+                    ("rank correlation with the truth", "{:+.3f}")]
+        common.record("decisions.table", common.md_table(
+            [""] + order,
+            [(name, *(fmt.format(COLUMNS[col][i]) for col in order))
+             for i, (name, fmt) in enumerate(rows_out)]))
+        common.record("decisions.positions", len(pooled["spread"]))
+        for i, key in enumerate(("spread", "base_regret", "look_regret",
+                                 "base_best", "moved", "rho")):
+            common.record(f"decisions.{key}", float(COLUMNS["blended"][i]))
+            common.record(f"decisions.shipped.{key}", float(COLUMNS["default"][i]))
     else:
-        report_accuracy(title, pooled, pooled_weights)
+        report_accuracy(title, pooled, pooled_weights, tag="blended")

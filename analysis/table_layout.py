@@ -572,6 +572,10 @@ whole = np.arange(n_words, dtype=np.int64)
 sweep(fit, table, transposed, whole, rng, "every guess scored", "entropy")
 sizes, ratios = sweep(fit, table, transposed, whole, rng,
                       "every guess scored", "expected")
+# the per-band figures the documents quote, from the shipped mode's grid
+for m, ratio in zip(sizes, ratios):
+    if int(m) in (60, 130, 400):
+        common.record(f"expected.at{int(m)}", float(ratio))
 
 # what exact.py actually asks for: one representative per distinct split, which
 # is a scattered quarter of the list and gives up the contiguous run

@@ -1,0 +1,57 @@
+{
+    "runs": {
+        "lookahead_accuracy.py": {
+            "at": "2026-09-18 02:55",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        },
+        "lookahead_accuracy.py --decisions": {
+            "at": "2026-09-18 03:07",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        }
+    },
+    "values": {
+        "blended.positions": 215,
+        "blended.ratio": 11.492536409093672,
+        "blended.table": "| valuation | true value | bias | mean abs error | RMSE |\n| --- | --- | --- | --- | --- |\n| `min_g E(g, S)` (what the solver scores positions at) | 2.7545 | +0.0981 | 0.1274 | 0.1580 |\n| one-ply lookahead | 2.7454 | +0.0026 | 0.0044 | **0.0138** |",
+        "decisions.base_best": 56.3807772024772,
+        "decisions.base_regret": 0.010240442608213041,
+        "decisions.look_regret": 0.0014617592967514153,
+        "decisions.moved": 42.769364440582315,
+        "decisions.positions": 215,
+        "decisions.rho": 0.5531044034628446,
+        "decisions.shipped.base_best": 80.4733727810651,
+        "decisions.shipped.base_regret": 0.0033968716424078458,
+        "decisions.shipped.look_regret": 0.0001704360772757144,
+        "decisions.shipped.moved": 19.526627218934912,
+        "decisions.shipped.rho": 0.7313968083198852,
+        "decisions.shipped.spread": 0.12801439818470428,
+        "decisions.spread": 0.09886508580657452,
+        "decisions.table": "|  | blended | none | curation | repeat | default |\n| --- | --- | --- | --- | --- | --- |\n| spread of true value, best to worst | 0.0989 | 0.0946 | 0.0779 | 0.0949 | 0.1280 |\n| `min_g E(g, S)` regret | 0.0102 | 0.0146 | 0.0078 | 0.0151 | 0.0034 |\n| one-ply lookahead regret | 0.0015 | 0.0018 | 0.0031 | 0.0008 | 0.0002 |\n| the estimator picks the best | 56.4% | 38.1% | 64.5% | 42.5% | 80.5% |\n| lookahead picks a different guess | 42.8% | 51.1% | 46.3% | 54.1% | 19.5% |\n| rank correlation with the truth | +0.553 | +0.450 | +0.538 | +0.493 | +0.731 |",
+        "measured": "2026-09-18",
+        "shipped.positions": 46,
+        "shipped.ratio": 22.812385716417936,
+        "shipped.table": "| valuation | true value | bias | mean abs error | RMSE |\n| --- | --- | --- | --- | --- |\n| `min_g E(g, S)` (what the solver scores positions at) | 2.1657 | +0.0464 | 0.0498 | 0.0564 |\n| one-ply lookahead | 2.1625 | +0.0012 | 0.0014 | **0.0025** |"
+    }
+}

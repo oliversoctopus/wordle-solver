@@ -1,0 +1,64 @@
+{
+    "runs": {
+        "head_to_head.py": {
+            "at": "2026-09-18 00:43",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
+                "repeat1_curation1": "spline 2026-09-17 22:12:11",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+            }
+        },
+        "head_to_head.py --baseline": {
+            "at": "2026-09-18 00:43",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
+                "repeat1_curation1": "spline 2026-09-17 22:12:11",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+            }
+        }
+    },
+    "values": {
+        "baseline.gap": 0.6927989257625194,
+        "baseline.heaviest.other": "fazed",
+        "baseline.heaviest.other.mass": 6.041704739284139e-05,
+        "baseline.heaviest.shipped": "foggy",
+        "baseline.heaviest.shipped.mass": 0.0008620689655172413,
+        "baseline.loss_ratio": 7.174768017937079,
+        "baseline.lost.other": 73,
+        "baseline.lost.shipped": 313,
+        "baseline.same": 35.141334397560875,
+        "baseline.sooner.other": 4.136645430908019,
+        "baseline.sooner.shipped": 60.7220201715311,
+        "baseline.table": "| guesses | shipped | `greedy entropy` |\n| --- | --- | --- |\n| 2 | **14.32%** | 0.74% |\n| 3 | **67.25%** | 31.78% |\n| 4 | **16.47%** | 58.63% |\n| 5 | **1.63%** | 8.76% |\n| 6 | 0.30% | **0.09%** |\n| lost | 0.0243% | **0.0034%** |",
+        "baseline.two.other": 0.7386417876143982,
+        "baseline.two.shipped": 14.324083681930569,
+        "gap": 0.042593484394350185,
+        "heaviest.other": "candy",
+        "heaviest.other.mass": 0.0025862068965517237,
+        "heaviest.shipped": "foggy",
+        "heaviest.shipped.mass": 0.0008620689655172413,
+        "loss_ratio": 0.6283398616976955,
+        "lost.other": 425,
+        "lost.shipped": 313,
+        "same": 61.26374238105412,
+        "sooner.other": 17.629043626188153,
+        "sooner.shipped": 21.107213992757732,
+        "table": "| guesses | shipped | `IG + 2·p_win` |\n| --- | --- | --- |\n| 2 | **14.32%** | 11.64% |\n| 3 | 67.25% | **68.55%** |\n| 4 | **16.47%** | 17.66% |\n| 5 | **1.63%** | 1.87% |\n| 6 | 0.30% | **0.25%** |\n| lost | **0.0243%** | 0.0387% |",
+        "two.other": 11.636114731583833,
+        "two.shipped": 14.324083681930569
+    }
+}

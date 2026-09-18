@@ -20,6 +20,10 @@ answer_like = common.load("answer_like.json")
 wordlebot = common.load("wordlebot_weights.json")
 snapshot = common.load(os.path.basename(WORDLEBOT_SNAPSHOT_PATH))
 
+# the live scrape has been in the repository since this date, so a word it
+# holds that was first played later was on the list before it was the answer
+LIVE_VENDORED = "2026-08-10"
+
 events = common.offlist_events(words, curated)
 post = [(i, w) for i, w in events if sol[i]["print_date"] > common.SNAPSHOT_DATE]
 # the words the frozen list never had, which are the only ones the hedge covers
@@ -70,11 +74,29 @@ print()
 print(f"  {'shape':36s} {'all events':>12s} {'post-snapshot':>15s} "
       f"{'effective support':>19s}")
 print("  " + "-" * 86)
-for name, fn in SHAPES:
+table, keys = [], ("uniform", "frequency", "wordlebot")
+for (name, fn), key in zip(SHAPES, keys):
     everything = score(fn, set(events)).mean()
     after = score(fn, set(post)).mean()
     support = common.effective_support(fn(list(noncurated)))
     print(f"  {name:36s} {everything:12.2f} {after:15.2f} {support:19,.0f}")
+    common.record(f"{key}.nats", float(everything))
+    common.record(f"{key}.post", float(after))
+    common.record(f"{key}.support", float(support))
+    label = {"uniform": "uniform", "frequency": "answer-like frequency (§5.3)",
+             "wordlebot": f"**WordleBot, {OFFLIST_HEDGE:.0%} hedge**"}[key]
+    cells = (common.neg(f"{everything:.2f}"), f"{support:,.0f}")
+    table.append((label, *((f"**{c}**" for c in cells) if key == "wordlebot"
+                           else cells)))
+common.record("table", common.md_table(
+    ["shape", "nats per event", "effective support"], table))
+common.record("events", len(events))
+common.record("post", len(post))
+common.record("in_snapshot", len(post) - len(missed))
+common.record("forward_pct", 100 * (len(post) - len(missed)) / len(post))
+common.record("misses", ", ".join(f"`{w}`" for w in missed))
+common.record("n_misses", len(missed))
+common.record("listed_offlist", sum(1 for w in noncurated if wordlebot.get(w, 0.0) > 0))
 
 print()
 print("  Restricting to post-snapshot events barely moves WordleBot, so it is")
@@ -86,6 +108,8 @@ print("  good scored against them. Only an old copy predicting later answers")
 print("  separates the two, which is what the frozen scrape is for.\n")
 added = sorted(set(wordlebot) - set(snapshot))
 ever = [w for w in added if w in set(words)]
+common.record("added", len(added))
+common.record("added_ever", len(ever))
 print(f"  off-list answers used after it   {len(post):5d}")
 print(f"    already in the snapshot        {len(post) - len(missed):5d}"
       f"   ({(len(post) - len(missed)) / len(post):.0%})")
@@ -94,10 +118,18 @@ print(f"  words added to the list since    {len(added):5d}")
 print(f"    of those, ever an answer       {len(ever):5d}"
       f"   {', '.join(ever) or ''}")
 print()
-print("  It predicts forward at the rate above. Whether the two it missed were")
-print("  backfilled the archive cannot settle: both are absent on 2025-05-25 and")
-print("  present on 2025-09-16, with no capture in between, and that gap is the")
-print("  window in which both were used.")
+print("  It predicts forward at the rate above. Whether a miss was backfilled")
+print("  turns on whether some copy held it before it was played:")
+played = {w: sol[i]["print_date"] for i, w in post}
+for w in missed:
+    if w in wordlebot and played[w] > LIVE_VENDORED:
+        print(f"    {w:8s} played {played[w]}; the live list vendored on "
+              f"{LIVE_VENDORED} already held it, so it was not backfilled")
+    elif w in ("loris", "kefir"):   # what the Wayback Machine holds for them
+        print(f"    {w:8s} played {played[w]}; absent from the 2025-05-25 "
+              f"capture, present in 2025-09-16's, and nothing archived between")
+    else:
+        print(f"    {w:8s} played {played[w]}; nothing here settles it")
 
 common.header("why the hedge is spread flat")
 unlisted = [w for w in noncurated if wordlebot.get(w, 0.0) <= 0.0]
@@ -114,6 +146,7 @@ def multiple(word):
 
 
 print(f"  The hedge covers the {len(unlisted):,} words the scrape does not have.")
+common.record("unlisted", len(unlisted))
 print(f"  {len(absent)} of the {len(events)} off-list answers are among them, so no "
       f"event that has\n  happened can distinguish one hedge shape from another.")
 print()
@@ -130,9 +163,11 @@ for word in missed:
     pct = (score < answer_like.get(word, -50.0)).mean() * 100
     print(f"    {word}  {m:5.2f}x flat  ({np.log(m):+.2f} nats)   "
           f"answer-likeness percentile {pct:.0f}")
+    common.record(f"hedge.{word}", float(m))
 pair = np.log([multiple(w) for w in missed]).mean()
 print(f"\n  Over the only {len(missed)} events that ever needed it: "
       f"{pair:+.2f} nats/event.")
+common.record("hedge.net", float(pair))
 print("  Flat is what 'no idea which word' should look like, so flat it stays.")
 
 common.header("sensitivity to the two shipped constants")

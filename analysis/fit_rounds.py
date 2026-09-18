@@ -47,6 +47,7 @@ def exact_mean(config, params, form):
 
 
 kept_is_best = 0
+worst_gap = (0.0, "", 0, 0.0, 0.0)
 runs = 0
 penalties = []
 loops = {reach: 0.0 for reach in args.reaches}
@@ -94,6 +95,8 @@ for config in common.filter_priors(ALL_CONFIGS, args):
         kept_is_best += gap < 1e-9
         print(f"  --exact-max {reach:<3} kept {scored[picked[reach]][0]:.5f}, "
               f"best of that run {best:.5f}, given up {gap:.5f}")
+        if gap > worst_gap[0]:
+            worst_gap = (gap, config.slug, reach, scored[picked[reach]][0], best)
 
     if len(args.reaches) == 2:
         wide, narrow = (max(args.reaches), min(args.reaches))
@@ -101,9 +104,22 @@ for config in common.filter_priors(ALL_CONFIGS, args):
 
 common.header("over the priors")
 print(f"the kept fit is the exact best of its own run in {kept_is_best} of {runs} runs")
+common.record("kept_is_best", kept_is_best)
+common.record("runs", runs)
+common.record("worst.gap", float(worst_gap[0]))
+common.record("worst.slug", worst_gap[1])
+common.record("worst.reach", worst_gap[2])
+common.record("worst.kept", float(worst_gap[3]))
+common.record("worst.best", float(worst_gap[4]))
 if penalties:
     wide, narrow = (max(args.reaches), min(args.reaches))
     print(f"fitting at --exact-max {narrow} rather than {wide} costs "
           f"{np.mean(penalties):+.5f} guesses on average, {max(penalties):+.5f} at worst")
     print(f"and the fitting loop takes {loops[wide] / loops[narrow]:.1f}x as long "
           f"({loops[wide]:.1f} s against {loops[narrow]:.1f} s)")
+    # what the search-fitted f is worth: negative where the narrow fit does better
+    common.record("search_fit.mean", float(np.mean(penalties)))
+    common.record("search_fit.worst", float(min(penalties)))
+    common.record("search_fit.identical", int(sum(abs(p) < 1e-9 for p in penalties)))
+    common.record("search_fit.priors", len(penalties))
+    common.record("search_fit.loop_ratio", float(loops[wide] / loops[narrow]))

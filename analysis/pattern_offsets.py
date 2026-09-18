@@ -111,3 +111,5 @@ for config in common.filter_priors(ALL_CONFIGS, args):
         print(f"  {level:>7}{int((greens == level).sum()):>8}"
               f"{alone[k + i]:>11.4f} +-{se_alone[k + i]:.4f}"
               f"{both[k + i]:>14.4f} +-{se_both[k + i]:.4f}")
+        common.record(f"{config.slug}.greens{level}", common.neg(
+            f"{both[k + i]:+.2f} \u00b1 {se_both[k + i]:.2f}"))

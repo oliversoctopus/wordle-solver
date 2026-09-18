@@ -1,0 +1,66 @@
+{
+    "runs": {
+        "hard_mode_rules.py": {
+            "at": "2026-09-18 01:16",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
+                "repeat1_curation1": "spline 2026-09-17 22:12:11",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+            }
+        },
+        "hard_mode_rules.py --no-endgame": {
+            "at": "2026-09-18 01:16",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
+                "repeat1_curation1": "spline 2026-09-17 22:12:11",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+            }
+        },
+        "hard_mode_rules.py --mode entropy": {
+            "at": "2026-09-18 01:16",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
+                "repeat1_curation1": "spline 2026-09-17 22:12:11",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+            }
+        }
+    },
+    "values": {
+        "entropy.better": 302,
+        "entropy.changed": 1100,
+        "entropy.off_pool": 3099,
+        "entropy.worse": 798,
+        "entropy.worth": 0.06313816680045635,
+        "no_endgame.better": 21,
+        "no_endgame.changed": 41,
+        "no_endgame.off_pool": 79,
+        "no_endgame.worse": 20,
+        "no_endgame.worth": -1.3851836650933719e-06,
+        "shipped.better": 0,
+        "shipped.changed": 0,
+        "shipped.off_pool": 0,
+        "shipped.worse": 0,
+        "shipped.worth": 0.0
+    }
+}

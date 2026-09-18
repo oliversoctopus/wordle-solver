@@ -92,15 +92,24 @@ def report(solver, words, scores, means, losses):
     print(f"  regret of the opening: {means[0] - means[best]:+.4f} guesses")
     beat = int((np.asarray(means) < means[0] - 1e-12).sum())
     print(f"  openings beating f's pick: {beat} of {len(words)}")
+    tag = "" if config == PriorConfig() else config.slug + "."
+    common.record(tag + "openings", len(words))
+    common.record(tag + "pick", data.all_words[words[0]])
+    common.record(tag + "best", data.all_words[words[best]])
+    common.record(tag + "regret", float(means[0] - means[best]))
+    common.record(tag + "beating", beat)
 
     rho, p = common.rank_correlation(scores, means)
     print(f"\n  rank correlation, f vs truth: {rho:+.3f} (p={p:.4f})")
+    common.record(tag + "rho", float(rho))
     # the same correlation over the leading band alone: f sorts the field far
     # better than it sorts the top of it, which is the whole of the result
     for head in (12, 25):
         if len(words) > head:
             lead, _ = common.rank_correlation(scores[:head], means[:head])
             print(f"    over the top {head} alone: {lead:+.3f}")
+            common.record(tag + f"rho_top{head}", float(lead))
+    table = []
     print(f"  {'ranks by f':>12} {'openings':>9} {'mean true value':>17} "
           f"{'worst':>9} {'best in band':>20}")
     for low, high in BANDS:
@@ -112,6 +121,11 @@ def report(solver, words, scores, means, losses):
         best_in = f"{data.all_words[words[top]]} {band.min():.4f}"
         print(f"  {f'{low}-{high}':>12} {len(pick):>9} {band.mean():>17.4f} "
               f"{band.max():>9.4f} {best_in:>20}")
+        shown = f"**{best_in}**" if top == best else best_in
+        table.append((f"{low}\u2013{high}", f"{band.mean():.4f}",
+                      f"{band.max():.4f}", shown))
+    common.record(tag + "table", common.md_table(
+        ["ranks by `f`", "mean true value", "worst", "best in band"], table))
 
 
 for config in configs:

@@ -137,11 +137,48 @@ def main():
     print()
     print(f"binned vs uniform : {m:+.3f} +- {se:.3f} nats/event "
           f"({m/se:.1f} sigma), wins {int((d > 0).sum())}/{len(d)}")
-    for label, s in (("age refit", refit), ("age rate=2.0",
-                                            score(age_fixed(2.0), events, words))):
+    age2 = score(age_fixed(2.0), events, words)
+    for label, s in (("age refit", refit), ("age rate=2.0", age2)):
         m2, se2, d2 = common.paired(s, b05)
         print(f"{label:17s} vs binned : {m2:+.3f} +- {se2:.3f} nats/event, "
               f"wins {int((d2 > 0).sum())}/{len(d2)}")
+
+    # a frozen prefix is the method check, so it records under its own prefix
+    tag = f"first{args.events}." if args.events else ""
+    neg = common.neg
+    rec = lambda key, value: common.record(tag + key, value)  # noqa: E731
+    rec("events", len(events))
+    for key, total in (("uniform", u.sum()), ("binned", b05.sum()),
+                       ("binned_a1", b10.sum()), ("window_best", max(wins)),
+                       ("window_worst", min(wins)), ("age_refit", refit.sum()),
+                       ("age_2", age2.sum())):
+        rec(key, float(total))
+        rec(key + ".vs", float(total - u.sum()))
+    rec("gain", float(m))
+    rec("gain_se", float(se))
+    rec("sigma", float(m / se))
+    rec("wins", int((d > 0).sum()))
+    rec("window_behind", float(b05.sum() - max(wins)))
+
+    def cell(total, bold=False):
+        text = f"{neg(f'{total:.1f}')}"
+        vs = neg(f"{total - u.sum():+.1f}")
+        return (f"**{text}**", f"**{vs}**") if bold else (text, vs)
+
+    rec("table", common.md_table(
+        ["model", f"logL over {len(events)} events", "vs. uniform"],
+        [("uniform over used (current)", neg(f"{u.sum():.1f}"), "\u2014"),
+         ("binned, width 200, \u03b1 = 0.5", *cell(b05.sum(), True)),
+         ("binned, width 200, \u03b1 = 1.0", *cell(b10.sum())),
+         ("best of 16 window variants (last K \u2208 3/5/8/all, \u00b125\u2026\u00b1200)",
+          *cell(max(wins)))]))
+    rec("field_table", common.md_table(
+        ["model", "log-likelihood", "vs. a flat spread"],
+        [("flat over the used words", neg(f"{u.sum():.1f}"), "\u2014"),
+         ("**binned by first appearance, \u03b1 = 0.5**", *cell(b05.sum(), True)),
+         ("best of sixteen sliding windows", *cell(max(wins))),
+         ("worst of those same sixteen", *cell(min(wins))),
+         ("a repeat rate refitted as events arrive", *cell(refit.sum()))]))
 
     # in-sample: the same histogram fitted on every event, then scored on them
     all_src = [f // BIN_WIDTH for _, _, f in events]
@@ -153,6 +190,8 @@ def main():
     mi, _, _ = common.paired(ins, u)
     print(f"\nin-sample would claim {mi:+.3f} nats/event, "
           f"inflating the prequential {m:+.3f} by {100*(mi/m-1):.0f}%")
+    rec("insample", float(mi))
+    rec("inflation", float(100 * (mi / m - 1)))
 
 
 if __name__ == "__main__":

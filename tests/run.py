@@ -23,6 +23,8 @@ FAST = [
     ("the fitted f is current", [sys.executable, os.path.join(HERE, "fit_provenance.py")]),
     ("every pointer resolves",
      [sys.executable, os.path.join(HERE, "doc_refs.py")]),
+    ("every bound figure is current",
+     [sys.executable, os.path.join(ROOT, "doc_numbers.py")]),
     ("the facts the rest is measured against",
      [sys.executable, os.path.join(HERE, "anchors.py")]),
 ]

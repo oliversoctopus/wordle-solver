@@ -71,6 +71,7 @@ for config in configs:
     print(f"\n  one ply at branch {args.branch}: {delta:+.4f} +- {se:.4f} guesses")
     print(f"  games changing length: {changed} of {args.games} "
           f"({int((per_game < 0).sum())} better, {int((per_game > 0).sum())} worse)\n")
+    common.record(f"{config.slug}.delta", common.neg(f"{delta:+.4f} \u00b1 {se:.4f}"))
 
 pooled = np.concatenate(diffs)
 se = pooled.std(ddof=1) / np.sqrt(len(pooled))
@@ -79,3 +80,10 @@ print(f"  {len(pooled)} paired games over {len(configs)} prior(s): "
       f"{pooled.mean():+.4f} +- {se:.4f}  ({abs(pooled.mean()) / se:.1f} sigma)")
 print(f"  games changing length: {int((pooled != 0).sum())} "
       f"({int((pooled < 0).sum())} better, {int((pooled > 0).sum())} worse)")
+common.record("games", len(pooled))
+common.record("per_prior", args.games)
+common.record("delta", common.neg(f"{pooled.mean():+.4f} \u00b1 {se:.4f}"))
+common.record("sigma", float(abs(pooled.mean()) / se))
+common.record("better", int((pooled < 0).sum()))
+common.record("worse", int((pooled > 0).sum()))
+common.record("changed_share", 100 * float((pooled != 0).mean()))

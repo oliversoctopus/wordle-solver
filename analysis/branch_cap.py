@@ -136,6 +136,24 @@ ev = np.array(capped.per_node)
 binds = int((ev >= args.cap).sum())
 print(f"    nodes that reached the cap of {args.cap} at all: {binds} "
       f"of {len(ev)}")
+common.record("positions", scored)
+common.record("nodes", capped.total_nodes)
+common.record("same_nodes", capped.total_nodes == full.total_nodes)
+common.record("evaluations.cap", capped.evaluations)
+common.record("evaluations.none", full.evaluations)
+common.record("busiest.cap", int(np.array(capped.per_node).max()))
+common.record("busiest.none", int(np.array(full.per_node).max()))
+common.record("same_guess", same_guess)
+common.record("same_value", same_value)
+common.record("binding_nodes", binds)
+common.record("unbound_nodes", len(ev) - binds)
+common.record("table", common.md_table(
+    [f"over {scored} real positions", f"cap {args.cap}", "no cap"],
+    [("interior nodes searched", f"{capped.total_nodes:,}", f"{full.total_nodes:,}"),
+     ("subtrees evaluated", f"{capped.evaluations:,}", f"{full.evaluations:,}"),
+     ("splits evaluated at the busiest single node",
+      f"{int(np.array(capped.per_node).max()):,}",
+      f"{int(np.array(full.per_node).max()):,}")]))
 print("\n  Where the two node counts agree, the cap pruned no subtree the")
 print("  bound had not already reached; what it removes past that is the")
 print("  tail of leaf evaluations, which are scans and cost nothing here.")

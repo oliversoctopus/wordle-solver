@@ -118,6 +118,11 @@ FORMS = {f.name: f for f in [
 # (analysis/form_default.py)
 DEFAULT_FORM = "saturating"
 
+# what `compare` fits by default: one form per family, each the member that has
+# won a prior; the rest are a `--forms all` away (README *Which form is the
+# default*)
+MAIN_FORMS = ("anchored2", "invonly", "saturating", "spline")
+
 # a rough curve for the modes that never consult f, never played against a real
 # prior: f(2)~1.5, f(100)~2.9, f(1000)~3.5.  A prior with no fit raises instead
 _REFERENCE = (0.188, 0.624)  # slope on x, coefficient on (1 - 1/n), pinned at 1

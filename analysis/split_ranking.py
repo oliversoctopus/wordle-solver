@@ -149,3 +149,8 @@ for label, call in (("the pick", lambda c, t: solver.exact.solve(c, t)),
     total, worst = timed(call)
     print(f"  {label:>9}  {total:>8.2f}s  {total / len(deep) * 1000:>6.0f}ms  "
           f"{worst * 1000:>6.0f}ms")
+    if args.exact_root_branch == DEFAULT_ROOT_BRANCH and not args.all_priors:
+        key = "pick" if label == "the pick" else label.replace(" ", "")
+        common.record(f"cost.{key}.mean_ms", total / len(deep) * 1000)
+        common.record(f"cost.{key}.worst_ms", worst * 1000)
+        common.record("cost.positions", len(deep))

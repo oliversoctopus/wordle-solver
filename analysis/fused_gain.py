@@ -98,6 +98,9 @@ for label, whole, minus in rows:
     a = best["shipped"][minus] if whole == 1 else best["shipped"][0] - best["shipped"][1] * minus
     b = best["fused"][minus] if whole == 1 else best["fused"][0] - best["fused"][1] * minus
     print(f"  {label:<22} {a:>9.2f}s {b:>9.2f}s {a / b:>7.2f}x")
+    key = {"whole games": "whole", "first guesses only": "first",
+           "every guess after": "after"}[label]
+    common.record(f"{args.mode}.{key}", a / b)
 
 turns = best["shipped"][2]
 print(f"\n  {turns} guesses in all, "

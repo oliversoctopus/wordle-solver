@@ -1,0 +1,33 @@
+{
+    "runs": {
+        "lookahead.py": {
+            "at": "2026-09-18 02:48",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        }
+    },
+    "values": {
+        "better": 2446,
+        "changed_share": 23.785,
+        "delta": "−0.0083 ± 0.0039",
+        "games": 20000,
+        "measured": "2026-09-18",
+        "per_prior": 5000,
+        "repeat0_curation0.delta": "−0.0124 ± 0.0068",
+        "repeat0_curation1_c-wordlebot.delta": "+0.0006 ± 0.0108",
+        "repeat1_curation0_r-binned.delta": "−0.0198 ± 0.0082",
+        "repeat1_curation1_r-binned_c-wordlebot.delta": "−0.0014 ± 0.0030",
+        "sigma": 2.138724306619147,
+        "worse": 2311
+    }
+}

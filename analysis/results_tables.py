@@ -48,6 +48,7 @@ if args.part in ("forms", "both"):
     print("  every word as the answer, weighted by this prior; exact\n")
 
     runs, meta, weights = {}, {}, None
+    rmse, expression = {}, {}
     for form in sorted(estimator.FORMS):
         record = archived(config, form)
         if record is None:
@@ -57,6 +58,8 @@ if args.part in ("forms", "both"):
         runs[form] = common.every_answer(solver)
         meta[form] = (f"{record.get('terms_used')}/{len(record.get('terms', []))}",
                       record.get("opening_word", "?"))
+        rmse[form] = record.get("fit_rmse", float("nan"))
+        expression[form] = common.pretty(estimator.FORMS[form].description)
 
     greedy = WordleSolver(config=config, mode=ENTROPY)
     runs["greedy entropy"] = common.every_answer(greedy)
@@ -78,6 +81,73 @@ if args.part in ("forms", "both"):
               f"{mean:8.4f} {mean - scored[best][0]:+9.4f} {loss * 100:9.4f}%")
     print(f"\n  best: {best}")
 
+    order = sorted(scored, key=lambda f: scored[f][0])
+    table = []
+    for form in order:
+        mean, loss = scored[form]
+        gap = mean - scored[best][0]
+        table.append((common.pretty(form), expression.get(form, "\u2014"),
+                      meta[form][0].replace("--", "\u2014"), meta[form][1],
+                      f"{mean:.4f}", f"+{gap:.4f}" if form != best else "\u2014",
+                      f"{loss * 100:.4f}%"))
+    common.record("forms_table", common.md_table(
+        ["form", "expression", "terms", "opening", "mean", "vs. best",
+         "loss probability"], table))
+    common.record("best_form", best)
+    fitted = [f for f in order if f in rmse]
+    same = [f for f in fitted if meta[f][1] == meta[best][1]]
+    others = [f for f in fitted if f not in same]
+    common.record("same_opening", len(same))
+    common.record("same_opening_spread", scored[same[-1]][0] - scored[best][0])
+    common.record("cliff", scored[others[0]][0] - scored[same[-1]][0])
+    entropy = scored["greedy entropy"]
+    common.record("ig_over_entropy", entropy[0] - scored[label][0])
+    common.record("ig_loss_ratio", scored[label][1] / entropy[1])
+    common.record("entropy_gap", entropy[0] - scored[best][0])
+    common.record("rmse_line", rmse[others[0]])
+    common.record("rmse_lo", min(rmse[f] for f in same))
+    common.record("rmse_hi", max(rmse[f] for f in same))
+    common.record("invonly_gap", scored["invonly"][0] - scored[best][0])
+
+    # the fitted curve SOLVER_EXPLAINED section 6 reads: the spline under the
+    # shipped shapes, and the same form under flat shapes beside it
+    sizes = (2, 4, 16, 100, 1000, 12947)
+    rows = []
+    for label, cfg in (("shipped shapes", PriorConfig()),
+                       ("flat shapes", PriorConfig(repeat_shape="uniform",
+                                                   curation_shape="uniform"))):
+        record = archived(cfg, "spline")
+        if record is None:
+            continue
+        params = np.array(record["params"])
+        values = [float(estimator.f_value(np.array([n]), params, "spline")[0])
+                  for n in sizes]
+        cells = [f"{v:.2f}" for v in values]
+        if label == "shipped shapes":
+            cells = [f"**{c}**" for c in cells]
+            terms = [f"{params[0]:.3f}", f"{params[1]:.3f}\u00b7x"]
+            slopes, slope = [params[1]], params[1]
+            for knot, coef in zip((2, 4, 6, 8), params[2:]):
+                if coef != 0.0:
+                    sign = "\u2212" if coef < 0 else "+"
+                    terms.append(f"{sign} {abs(coef):.3f}\u00b7(x\u2212{knot})\u208a")
+                    slope += coef
+                    slopes.append(slope)
+            common.record("spline.equation", " ".join(
+                [terms[0], "+", terms[1]] + terms[2:]))
+            common.record("spline.bends", len(slopes) - 1)
+            common.record("spline.slopes", ", ".join(f"{x:.3f}" for x in slopes))
+            common.record("spline.final_slope", float(slopes[-1]))
+            common.record("spline.last_knot", max(
+                k for k, c in zip((2, 4, 6, 8), params[2:]) if c != 0.0))
+        else:
+            common.record("flat_spline.f1000", values[4])
+            common.record("flat_spline.f16", values[2])
+            common.record("flat_spline.top_hinge", float(params[-1]))
+        rows.append((f"`f(n)`, {label}", *cells))
+    common.record("fn_table", common.md_table(
+        ["n"] + [f"{n:,}" for n in sizes], rows))
+
 if args.part in ("priors", "both"):
     common.header("prior combinations, both modes")
     print("  every word as the answer, weighted by that row's own prior, so the "
@@ -85,7 +155,7 @@ if args.part in ("priors", "both"):
           "exact under it\n")
     print(f"  {'priors':14s} {'opening':>8s} {'entropy':>9s} {'expected':>9s} "
           f"{'solved':>8s} {'form':>11s}")
-    rows = []
+    rows, table = [], []
     for label, config in common.filter_priors([
         ("none", PriorConfig(repeat=False, curation=False)),
         ("curation only", PriorConfig(repeat=False)),
@@ -107,6 +177,16 @@ if args.part in ("priors", "both"):
         straight = common.exact_stats(common.every_answer(linear),
                                       linear.weights)[0]
         rows.append((label, means[ENTROPY][0], straight, means[EXPECTED][0]))
+        shown = f"**{label} (the default)**" if label == "both" else label
+        table.append((shown, form, opening, f"{means[ENTROPY][0]:.4f}",
+                      f"{means[EXPECTED][0]:.4f}",
+                      f"{(1 - means[EXPECTED][1]) * 100:.2f}%"))
+        key = label.replace(" ", "_")
+        common.record(f"{key}.gain", means[ENTROPY][0] - means[EXPECTED][0])
+        common.record(f"{key}.opening", opening)
+        common.record(f"{key}.form", form)
+        common.record(f"{key}.expected", means[EXPECTED][0])
+        common.record(f"{key}.entropy", means[ENTROPY][0])
         print(f"  {label:14s} {opening:>8s} {means[ENTROPY][0]:9.4f} "
               f"{means[EXPECTED][0]:9.4f} {(1 - means[EXPECTED][1]) * 100:7.2f}% "
               f"{form:>11s}")
@@ -116,6 +196,33 @@ if args.part in ("priors", "both"):
           "(section 13),\n  so what it leaves is curvature\n")
     print(f"  {'priors':14s} {'entropy':>9s} {'loglinear':>10s} {'best':>9s} "
           f"{'bonus':>9s} {'curvature':>10s}")
+    split = []
     for label, entropy, straight, best in rows:
         print(f"  {label:14s} {entropy:9.4f} {straight:10.4f} {best:9.4f} "
               f"{entropy - straight:+9.4f} {straight - best:+10.4f}")
+        split.append((label, f"{entropy:.4f}", f"{straight:.4f}", f"{best:.4f}",
+                      f"+{entropy - straight:.4f}", f"+{straight - best:.4f}"))
+        key = label.replace(" ", "_")
+        common.record(f"{key}.bonus", entropy - straight)
+        common.record(f"{key}.curvature", straight - best)
+    common.record("priors_table", common.md_table(
+        ["priors", "form", "opening", "entropy mean", "expected mean",
+         "solve rate"], table))
+    common.record("split_table", common.md_table(
+        ["priors", "entropy", "linear", "best", "bonus", "curvature"], split))
+    # the same rows as SOLVER_EXPLAINED sections 4 and 6 lay them out
+    order = ["none", "repeat only", "curation only", "both"]
+    by_label = {label: (e, l, b) for label, e, l, b in rows}
+    bold = lambda label, cells: (  # noqa: E731
+        (f"**{label} (the default)**", *(f"**{c}**" for c in cells))
+        if label == "both" else (label, *cells))
+    common.record("entropy_table", common.md_table(
+        ["priors on", "greedy entropy"],
+        [(label, f"{by_label[label][0]:.2f}") for label in order if label in by_label]))
+    common.record("bonus_table", common.md_table(
+        ["priors on", "possible-answer bonus", "curvature in `f`"],
+        [bold(label, (f"+{by_label[label][0] - by_label[label][1]:.3f}",
+                      f"+{by_label[label][1] - by_label[label][2]:.3f}"))
+         for label in order if label in by_label]))
+    common.record("bonus_ratio", (by_label["both"][0] - by_label["both"][1])
+                  / (by_label["none"][0] - by_label["none"][1]))

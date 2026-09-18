@@ -125,23 +125,38 @@ def policies():
 
     common.header("Policies, over every word as the answer")
     print(f"  {'policy':<44} {'mean':>8} {'loss prob':>10} {'solve rate':>11}")
-    played = {}
+    played, table, losses = {}, [], {}
     for label, solver in rows.items():
         lengths, weights = play_all(solver)
         played[label] = lengths
         row = stats(lengths, weights)
         print(f"  {label:<44} {row['mean_penalized']:8.4f} "
               f"{row['loss_prob'] * 100:9.4f}% {(1 - row['loss_prob']) * 100:10.4f}%")
+        losses[label] = row["loss_prob"] * 100
+        cells = (label, f"{row['mean_penalized']:.4f}",
+                 f"{row['loss_prob'] * 100:.4f}%", f"{(1 - row['loss_prob']) * 100:.4f}%")
+        table.append(tuple(f"**{c}**" for c in cells) if "default" in label else cells)
+    common.record("policies.table", common.md_table(
+        ["policy", "mean", "loss probability", "solve rate"], table))
+    common.record("policies.loss_ratio", losses[list(rows)[-1]] / losses[list(rows)[0]])
+    # what a 200-game benchmark sees: the chance it meets no loss at all
+    for key, label in (("entropy", list(rows)[0]), ("default", list(rows)[-1])):
+        common.record(f"policies.benchmark_clean.{key}",
+                      100 * (1 - losses[label] / 100) ** 200)
 
     labels = list(rows)
     entropy = played[labels[0]] > MAX_GUESSES
     default = played[labels[-1]] > MAX_GUESSES
     print(f"\n  entropy loses {int(entropy.sum())} words, the default "
           f"{int(default.sum())}, sharing {int((entropy & default).sum())}")
+    common.record("policies.default_lost", int(default.sum()))
+    never = np.array([w not in curated for w in data.all_words])
+    common.record("policies.default_lost_uncurated", int((default & never).sum()))
 
     curated_idx = np.array([i for i, word in enumerate(data.all_words)
                             if word in curated])
     print(f"\n  all {len(curated_idx)} curated words as the answer, unweighted:")
+    table = []
     for label, lengths in played.items():
         sub = lengths[curated_idx]
         lost = [data.all_words[curated_idx[i]] for i in np.where(sub > MAX_GUESSES)[0]]
@@ -149,6 +164,17 @@ def policies():
               f"losses {len(lost)} / {len(curated_idx)}")
         if lost:
             print(f"      {' '.join(sorted(lost))}")
+        if label in (labels[0], labels[-1]):
+            shown = "greedy entropy" if label == labels[0] else "expected (defaults)"
+            table.append((shown, f"{sub.mean():.4f}", str(int(sub.max())),
+                          f"{len(lost)} / {len(curated_idx)}"))
+        if label == labels[-1]:
+            common.record("curated.losses", len(lost))
+            common.record("curated.lost_words", ", ".join(f"`{w}`" for w in sorted(lost)))
+            used = {r["solution"] for r in common.solutions()}
+            common.record("curated.lost_used", sum(1 for w in lost if w in used))
+    common.record("curated.table", common.md_table(
+        ["policy", "mean", "worst", "losses"], table))
 
 
 def search():
@@ -178,6 +204,7 @@ def search():
     common.header("What the endgame search is worth, over every word as the answer")
     print(f"  {'policy':<38} {'mean':>8} {'loss prob':>10} "
           f"{'solve rate':>11} {'wall':>7}")
+    table, losses = [], {}
     for label, solver in rows.items():
         start = time.perf_counter()
         lengths, weights = play_all(solver)
@@ -186,6 +213,23 @@ def search():
         print(f"  {label:<38} {row['mean_penalized']:8.4f} "
               f"{row['loss_prob'] * 100:9.4f}% {(1 - row['loss_prob']) * 100:10.4f}% "
               f"{elapsed:6.0f}s")
+        losses[label] = row["loss_prob"] * 100
+        shown = label.replace("expected, ", "").replace("<=", "\u2264")
+        cells = (shown, f"{row['mean_penalized']:.4f}",
+                 f"{row['loss_prob'] * 100:.4f}%",
+                 f"{(1 - row['loss_prob']) * 100:.4f}%", f"{elapsed:.0f} s")
+        if "default" in label:
+            cells = tuple(f"**{c}**" for c in cells)
+        table.append(cells)
+    common.record("search.table", common.md_table(
+        ["policy", "mean", "loss probability", "solve rate", "wall clock"], table))
+    none, two, full = (losses["expected, no exact search"],
+                       losses["expected, exact for t <= 2 only"],
+                       losses["expected, exact for m <= 60 (default)"])
+    common.record("search.loss_none", none)
+    common.record("search.loss_two", two)
+    common.record("search.loss_full", full)
+    common.record("search.two_share", (none - two) / (none - full))
 
 
 def costs():
@@ -221,13 +265,22 @@ def costs():
         for cap in caps:
             seconds, bailouts = timings[cap]
             print(f"  {cap:>10} {seconds:>9.1f} {seconds / base:>10.2f}x {bailouts:>9}")
+            common.record(f"cost.{label}.{cap}.ratio", seconds / base)
+            common.record(f"cost.{label}.{cap}.bailouts", int(bailouts))
+        first_bailout = next((cap for cap in caps if timings[cap][1]), None)
+        common.record(f"cost.{label}.first_bailout", first_bailout or 0)
 
         print(f"\n  and whether the penalty moves it:")
         print(f"  {'exact-max':>10} {'penalty':>8} {'seconds':>9} {'bailouts':>9}")
+        spread = 0.0
         for cap in (DEFAULT_EXACT_MAX, 100):
+            runs = {}
             for penalty in (1.0, 5.0, 30.0):
                 seconds, bailouts = timed(cap, penalty)
+                runs[penalty] = seconds
                 print(f"  {cap:>10} {penalty:>8g} {seconds:>9.1f} {bailouts:>9}")
+            spread = max(spread, max(runs.values()) / min(runs.values()) - 1)
+        common.record(f"cost.{label}.penalty_spread", 100 * spread)
         print()
 
 
@@ -253,6 +306,7 @@ def bound():
                            for i, p in zip(candidates, share)))
     turns = (2, 3, 4)
     print(f"\n  {'penalty':>8} " + " ".join(f"{'t=' + str(t):>8}" for t in turns))
+    by_penalty = {}
     for penalty in (1.0, DEFAULT_LOSS_PENALTY):
         # uncapped, so the t=2 column is the bound the search would use if
         # `bound_penalty` did not exist
@@ -263,7 +317,20 @@ def bound():
         print(f"  {penalty:>8g} " + " ".join(f"{v:>8.4f}" for v in values)
               + ("   rising, so admissible" if rising
                  else "   falls: the two-turn value is not a bound"))
+        by_penalty[penalty] = values
     print()
+    if args.bound_family == "atch":
+        shown = {1.0: "value at penalty 1", DEFAULT_LOSS_PENALTY: "value at penalty 5"}
+        rows_out = []
+        for penalty in (DEFAULT_LOSS_PENALTY, 1.0):
+            cells = [f"{v:.2f}" for v in by_penalty[penalty]]
+            if penalty != 1.0:
+                cells[0] = f"**{cells[0]}**"
+            rows_out.append((shown[penalty], *cells))
+        common.record("bound.table", common.md_table(
+            ["turns in hand `t`"] + [str(t) for t in turns], rows_out))
+        common.record("bound.two_turn_at5", by_penalty[DEFAULT_LOSS_PENALTY][0])
+        common.record("bound.three_turn_at5", by_penalty[DEFAULT_LOSS_PENALTY][1])
 
 
 def crossovers(grid, settings):
@@ -280,6 +347,7 @@ def crossovers(grid, settings):
              for row in [blend([grid[s, c.slug] for c in configs])]}
 
     print("  crossovers, in guesses per loss:")
+    edges = []
     for low, high in zip(settings, settings[1:]):
         (i_low, p_low), (i_high, p_high) = lines[low], lines[high]
         if p_low <= p_high:  # the higher penalty loses no less often: never worth it
@@ -287,6 +355,19 @@ def crossovers(grid, settings):
             continue
         print(f"    penalty {low:>4} gives way to {high:<5} at L = "
               f"{(i_high - i_low) / (p_low - p_high):6.2f}")
+        edges.append((low, high, (i_high - i_low) / (p_low - p_high)))
+    rows_out = []
+    for k, (low, high, at) in enumerate(edges):
+        if k == 0:
+            rows_out.append((f"under {at:.1f}", str(low)))
+        else:
+            rows_out.append((f"{edges[k - 1][2]:.1f} \u2013 {at:.1f}", str(low)))
+        if k == len(edges) - 1:
+            rows_out.append((f"over {at:.1f}", str(high)))
+    rows_out = [tuple(f"**{c}**" for c in r) if r[1] == f"{DEFAULT_LOSS_PENALTY:g}"
+                else r for r in rows_out]
+    common.record("crossover.table", common.md_table(
+        ["a loss is worth", "best penalty"], rows_out))
 
     print("\n  best penalty by what a loss costs, and by how much:")
     for price in (7, 8, 9, 10, 12, 15, 20, 25, 40):
@@ -318,12 +399,41 @@ def sweep(label, settings, run, baseline_key):
     print(f"  {'setting':>8} {'loss prob':>10} {'words':>7} {'mean solved':>12} "
           f"{'mean (loss=7)':>14}")
     have_baseline = any(setting == baseline_key for setting in settings)
+    tag = "penalty" if label.startswith("The penalty") else "reach"
+    table, blended = [], {}
     for setting in settings:
         row = blend([grid[setting, c.slug] for c in configs])
+        blended[setting] = row
         marker = " *" if setting == baseline_key else "  "
         print(f"  {setting:>8}{marker}{row['loss_prob'] * 100:9.4f}% "
               f"{row['losing_words']:7.1f} {row['mean_solved']:12.4f} "
               f"{row['mean_penalized']:14.4f}")
+        key = f"{tag}.{setting:g}."
+        common.record(key + "loss", row["loss_prob"] * 100)
+        common.record(key + "mean", row["mean_penalized"])
+        common.record(key + "solved", row["mean_solved"])
+        cells = [f"{setting:g}", f"{row['loss_prob'] * 100:.4f}%"]
+        if tag == "penalty":
+            cells.append(f"{row['mean_solved']:.4f}")
+        cells.append(f"{row['mean_penalized']:.4f}")
+        if setting == baseline_key:
+            cells = [f"**{cells[0]} (default)**"] + [f"**{c}**" for c in cells[1:]]
+        table.append(tuple(cells))
+    head = ["`--loss-penalty`", "loss probability", "mean (solved)", "mean (loss = 7)"] \
+        if tag == "penalty" else ["`--exact-max`", "loss probability", "mean (loss = 7)"]
+    common.record(f"{tag}.table", common.md_table(head, table))
+    if have_baseline:
+        first = blended[settings[0]]
+        last = blended[settings[-1]]
+        base_row = blended[baseline_key]
+        common.record(f"{tag}.default_to_last.loss_share",
+                      (base_row["loss_prob"] - last["loss_prob"]) / first["loss_prob"])
+        common.record(f"{tag}.default_to_last.mean",
+                      base_row["mean_penalized"] - last["mean_penalized"])
+        common.record(f"{tag}.first_to_default.loss_drop",
+                      100 * (1 - base_row["loss_prob"] / first["loss_prob"]))
+        common.record(f"{tag}.first_to_default.mean",
+                      base_row["mean_penalized"] - first["mean_penalized"])
     print(f"\n  blended equally over {len(configs)} prior(s); "
           f"* is the shipped default")
 
@@ -337,6 +447,15 @@ def sweep(label, settings, run, baseline_key):
             print(f"    {setting:>6}: {row['loss_prob'] * 100:8.4f}% over "
                   f"{row['losing_words']:>4} words, mean {row['mean_penalized']:.4f}, "
                   f"{len(cur):>3} curated")
+            if config == PriorConfig():
+                common.record(f"{tag}.shipped.{setting:g}.loss", row["loss_prob"] * 100)
+                common.record(f"{tag}.shipped.{setting:g}.mean", row["mean_penalized"])
+                common.record(f"{tag}.shipped.{setting:g}.words", int(row["losing_words"]))
+                common.record(f"{tag}.shipped.{setting:g}.curated", len(cur))
+                if setting == settings[-1] and have_baseline:
+                    common.record(f"{tag}.shipped.rescued",
+                                  int(grid[baseline_key, config.slug]["losing_words"]
+                                      - row["losing_words"]))
             if base is not None and setting != baseline_key:
                 fixed, broken = flips(base, row["lost_mask"])
                 print(f"            vs default: fixes {len(fixed)}, breaks {len(broken)}")
@@ -369,3 +488,18 @@ else:
               args.exact_max,
               lambda config, cap: outcomes(config, args.at_penalty, cap),
               DEFAULT_EXACT_MAX)
+        # the corner the two sweeps share nothing with: the lowest penalty at
+        # the shortest reach, against the shipped pair
+        lowest, shortest = min(args.penalties), min(args.exact_max)
+        corner = blend([stats(*outcomes(c, lowest, shortest)) for c in configs])
+        shipped = blend([stats(*outcomes(c, DEFAULT_LOSS_PENALTY, DEFAULT_EXACT_MAX))
+                         for c in configs])
+        common.record("corner.loss", corner["loss_prob"] * 100)
+        common.record("corner.loss_drop",
+                      100 * (1 - shipped["loss_prob"] / corner["loss_prob"]))
+        common.record("corner.mean_gain",
+                      corner["mean_penalized"] - shipped["mean_penalized"])
+        print(f"\n  from penalty {lowest:g} at reach {shortest} to the shipped pair: "
+              f"loss {corner['loss_prob'] * 100:.4f}% -> "
+              f"{shipped['loss_prob'] * 100:.4f}%, mean "
+              f"{corner['mean_penalized']:.4f} -> {shipped['mean_penalized']:.4f}")

@@ -117,15 +117,23 @@ HEAD = (f"  {'setting':>16s} {'mean':>8s} {'vs shipped':>17s} "
 
 
 def row(label, run, base):
+    """Print one setting's row; returns (whole, repeat, offlist, fresh) pairs."""
     mean, se, _ = common.paired(run, base)
-    cells = ""
+    cells, out = "", [(mean, se)]
     for name in ("repeat", "offlist", "fresh"):
         mask = klass == name
         a, b, _ = common.paired(run[mask], base[mask])
         cells += f" {a:+9.3f}+-{b:.3f}"
+        out.append((a, b))
     print(f"  {label:>16s} {run.mean():8.4f} {mean:+9.4f}+-{se:.4f}{cells}")
+    return out
 
 
+def pm(cell):
+    return common.neg(f"{cell[0]:+.3f} \u00b1 {cell[1]:.3f}")
+
+
+curation_span = []
 if args.part in ("shapes", "both"):
     # t=0 has to rebuild the uniform shapes exactly, or the knob is not the knob
     with tempered(0.0, 0.0):
@@ -144,8 +152,16 @@ if args.part in ("shapes", "both"):
                 runs[point] = regime(SHIPPED, params, form)
         print(f"{HEAD}\n")
         for point in grid:
-            row(f"t={point[0]:.2f}/{point[1]:.2f}", runs[point], runs[(1.0, 1.0)])
+            got = row(f"t={point[0]:.2f}/{point[1]:.2f}", runs[point], runs[(1.0, 1.0)])
+            if slug == FITS[0]:
+                if point == (0.0, 1.0):
+                    common.record("repeat_flattened", pm(got[0]))
+                if point == (1.0, 0.0):
+                    common.record("curation_flattened", pm(got[0]))
+                if point[0] == 1.0 and 0.0 < point[1] < 1.0:
+                    curation_span.append(abs(got[0][0]))
         print()
+    common.record("curation_span", max(curation_span))
 
 if args.part in ("groups", "both"):
     for name in ("repeat_prob", "noncurated_prob"):
@@ -156,13 +172,37 @@ if args.part in ("groups", "both"):
                           params, form)
                 for p in LEVELS}
         print(f"{HEAD}\n")
+        got = {}
         for p in LEVELS:
-            row(f"{name.split('_')[0]}={p:.2f}", runs[p], runs[BASE_PROB])
+            got[p] = row(f"{name.split('_')[0]}={p:.2f}", runs[p], runs[BASE_PROB])
         print()
+        # the basin: every level whose whole-regime gap is inside a few
+        # hundredths, and the four beyond it
+        flat = [p for p in LEVELS if abs(got[p][0][0]) < 0.03]
+        edge = [p for p in LEVELS if p > max(flat)]
+        key = name.split("_")[0]
+        common.record(f"{key}.flat_to", max(flat))
+        common.record(f"{key}.flat_within", max(abs(got[p][0][0]) for p in flat))
+        common.record(f"{key}.fresh_within", max(abs(got[p][3][0]) for p in flat))
+        common.record(f"{key}.beyond", ", ".join(
+            common.neg(f"{got[p][0][0]:+.3f}") for p in edge))
+        common.record(f"{key}.repeat_lo", common.neg(f"{got[LEVELS[0]][1][0]:+.3f}"))
+        common.record(f"{key}.repeat_hi", common.neg(f"{got[max(flat)][1][0]:+.3f}"))
+        if key == "repeat":
+            head = [f"`repeat_prob`", f"{LEVELS[0]:.2f}\u2013{max(flat):.2f}"] + \
+                   [f"{p:.2f}" for p in edge]
+            common.record("table", common.md_table(head, [
+                (f"all {END - START}", f"within \u00b1{max(abs(got[p][0][0]) for p in flat):.2f}",
+                 *(common.neg(f"{got[p][0][0]:+.3f}") for p in edge)),
+                (f"the {int((klass == 'fresh').sum())} fresh",
+                 f"within \u00b1{max(abs(got[p][3][0]) for p in flat):.2f}",
+                 *(common.neg(f"{got[p][3][0]:+.3f}") for p in edge))]))
 
     rates = priors.regime_stats(data)["regime"]
     print(f"  the rates the regime really shows: repeat {rates['repeat']:.3f}, "
           f"off-list given not a repeat {rates['noncurated']:.3f}")
+    common.record("puzzles", END - START)
+    common.record("regime_repeat", float(rates["repeat"]))
 
 print(f"\n  Every point plays the same {END - START} real answers, paired on each.  A")
 print("  setting far from the one f was fitted for carries a borrowed f as")

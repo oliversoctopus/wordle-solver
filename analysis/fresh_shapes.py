@@ -199,6 +199,13 @@ def group(name, pool_words, events, words, tables, shapes, limit):
     base = score(uniform(pool_words, tables), pools, picks)
     print(f"\n  {name}: {len(events):,} events, "
           f"pool {len(pools[0]):,} -> {len(pools[-1]):,}")
+    # a frozen prefix is the method check, so it records under its own prefix
+    tag = (f"first{limit}." if limit else "") + name.replace(" ", "_") + "."
+    rec = lambda key, value: common.record(tag + key, value)  # noqa: E731
+    rec("events", len(events))
+    rec("pool_from", len(pools[0]))
+    rec("pool_to", len(pools[-1]))
+    table, positions = [], []
     print(f"    {'shape':34s} {'nats/event':>11s} {'vs uniform':>12s} "
           f"{'support':>10s}")
     print("    " + "-" * 70)
@@ -212,10 +219,36 @@ def group(name, pool_words, events, words, tables, shapes, limit):
         # group ever held: what the shape would spread today's mass across
         print(f"    {label:34s} {s.mean():11.4f} {vs:>12s} "
               f"{common.effective_support(weight[pools[-1]]):10,.0f}")
+        key = ("uniform" if first else "hedge" if "hedge" in label
+               else "wordlebot" if label.startswith("WordleBot")
+               else "position_" + label.split("= ")[-1])
+        support = common.effective_support(weight[pools[-1]])
+        rec(f"{key}.nats", float(s.mean()))
+        rec(f"{key}.support", float(support))
         if not first:
             wins = int((d > 0).sum())
             print(f"    {'':34s} {'':11s} {'+- ' + format(se, '.4f'):>12s}"
                   f"   {mean / se:.1f} sigma, wins {wins}/{len(d)}")
+            rec(f"{key}.gain", float(mean))
+            rec(f"{key}.se", float(se))
+            rec(f"{key}.sigma", float(mean / se))
+            rec(f"{key}.wins", wins)
+        cells = (common.neg(f"{s.mean():.4f}"),
+                 "\u2014" if first else common.neg(f"{mean:+.4f}"),
+                 f"{support:,.0f}")
+        # the one list-position row README carries is the best of the widths
+        if label.startswith("list position"):
+            positions.append((float(s.mean()), cells))
+            continue
+        if label.startswith("WordleBot weight"):
+            cells = (cells[0], f"**{cells[1]} ± {se:.4f}**", cells[2])
+        table.append((label.replace("(as shipped)", "(as shipped off-list)"),
+                      *cells))
+    if positions:
+        table.append(("list position, binned " + "/".join(map(str, BIN_WIDTHS)),
+                      *max(positions)[1]))
+    rec("table", common.md_table(
+        ["shape", "nats/event", "vs. uniform", "effective support"], table))
     return pools, picks, base
 
 
@@ -272,13 +305,21 @@ def main():
     x, names = features(curated, tables)
     base = score(np.ones(len(curated)), pools, picks).mean()
     full, dead, at = design_matrix(x, pools, picks)
+    singles = {}
     for k, name in enumerate(names):
         beta, ll, _ = fit_logit(full, dead, at, [k])
         print(f"    {name:22s} alone   {ll:9.4f}   gain {ll - base:+.4f}   "
               f"b = {beta[0]:+.3f}")
+        singles[name] = ll - base
     beta, ll, resid = fit_logit(full, dead, at, list(range(len(names))))
     print(f"\n    {f'all {len(names)} together':22s}         {ll:9.4f}   "
           f"CEILING {ll - base:+.4f} nats/event")
+    tag = f"first{args.events}." if args.events else ""
+    common.record(tag + "ceiling", float(ll - base))
+    best_single = max(singles, key=singles.get)
+    common.record(tag + "best_feature", best_single)
+    common.record(tag + "best_feature_gain", float(singles[best_single]))
+    common.record(tag + "features", len(names))
     print(f"    {'':22s}         (max |gradient| {resid:.2e})")
     print("    " + ", ".join(f"{n} {b:+.3f}" for n, b in zip(names, beta)))
 
@@ -304,10 +345,18 @@ def main():
     off, fresh_n = offlist_rate(words, set(curated), common.regime_start(sol))
     print(f"\n    pooled and weighted by WordleBot -> off-list rate "
           f"{share / total:6.1%}")
+    common.record("pool.fresh_words", len(unused))
+    common.record("pool.fresh_listed", int((fw > 0).sum()))
+    common.record("pool.fresh_unlisted", int((fw == 0).sum()))
+    common.record("pool.offlist_listed", int((ow > 0).sum()))
+    common.record("pool.offlist_unlisted", int((ow == 0).sum()))
+    common.record("pool.offlist_words", len(offlist_pool))
+    common.record("pool.pooled_rate", 100 * share / total)
     print(f"    the shipped split                -> off-list rate "
           f"{DEFAULT_NONCURATED_PROB:6.1%}")
     print(f"    the regime actually ran at          {off / fresh_n:6.1%}"
           f"   ({off} of {fresh_n} non-repeats)")
+    common.record("pool.regime_rate", 100 * off / fresh_n)
     print("\n  Pooling misprices the rate by six times, which is the same "
           "failure the `curation\n  only` arm makes on repeats.  Keeping the "
           "rate and shaping inside the group is\n  what the table above "

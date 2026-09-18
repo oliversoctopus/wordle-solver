@@ -230,9 +230,14 @@ def timed(fn, repeat=3):
     return best, out
 
 
-def row(label, seconds, base, extra=""):
+RATIOS = {}
+
+
+def row(label, seconds, base, extra="", key=None):
     factor = f"{seconds / base:>9.1f}x" if base else " " * 10
     print(f"  {label:<46s} {seconds:>9.3f}s {factor}  {extra}")
+    if key and base:
+        RATIOS[key] = common.record(key, seconds / base)
 
 
 data = load_data()
@@ -272,16 +277,18 @@ def scan_level(candidates, name):
     t_base, ref = timed(shipped)
     row("shipped", t_base, t_base)
 
-    for label, fn in (("no w-log-w precompute (a log per pair)", no_pre),
-                      ("no table (the rule applied per pair)", no_tab)):
+    tag = "opening" if len(candidates) == data.n_words else "midgame"
+    for label, fn, key in (("no w-log-w precompute (a log per pair)", no_pre, "wlogw"),
+                           ("no table (the rule applied per pair)", no_tab, "table")):
         t, got = timed(fn)
         diff = f"max diff {np.abs(got - ref).max():.1e}" if args.check else ""
-        row(label, t, t_base, diff)
+        row(label, t, t_base, diff, key=f"{tag}.{key}")
 
     set_num_threads(1)
     t, _ = timed(shipped)
     set_num_threads(DEFAULT_THREADS)
-    row(f"single-threaded (of {DEFAULT_THREADS} cores)", t, t_base)
+    row(f"single-threaded (of {DEFAULT_THREADS} cores)", t, t_base,
+        key=f"{tag}.threads")
 
     # the pure-Python reading, timed on a slice and scaled: the loop is uniform
     # in the pool, so this stretches one measurement rather than composing two
@@ -295,7 +302,7 @@ def scan_level(candidates, name):
             buckets[r] = buckets.get(r, 0.0) + w[idx]
     t_py = (time.perf_counter() - t0) * data.n_words / len(pool)
     row("pure Python, no table, no kernels", t_py, t_base,
-        f"(scaled from {len(pool)} guesses)")
+        f"(scaled from {len(pool)} guesses)", key=f"{tag}.python")
     return t_base, t_py
 
 
@@ -311,6 +318,15 @@ answer = data.word2ind["month"]
 mid = solver.filter(opening, solver.feedback(opening, answer),
                     data.all_candidates())
 scan_level(mid, f"after salet against {data.all_words[answer]}")
+common.record("table", common.md_table(
+    ["taking one idea back out", "at the opening", "at a mid-game position"],
+    [(label, f"{RATIOS['opening.' + key]:,.{digits}f}×",
+      f"{RATIOS['midgame.' + key]:,.{digits}f}×")
+     for label, key, digits in (
+         ("`w log w` back inside the inner loop", "wlogw", 1),
+         ("no table — the coloring rule applied per pair", "table", 0),
+         (f"one core instead of {DEFAULT_THREADS}", "threads", 1),
+         ("**all three at once, in plain Python**", "python", 0))]))
 
 
 # ------------------------------------------------------- the endgame search
@@ -355,7 +371,8 @@ def sweep_search(branch):
 t_ship = sweep_search(50)
 row("shipped (cap 50)", t_ship, t_ship)
 row("no branch cap", sweep_search(None), t_ship,
-    "branch_cap.py counts the same thing")
+    "branch_cap.py counts the same thing", key="branch_cap")
+common.record("search_positions", len(positions))
 
 
 # --------------------------------------------------------------- the sweep
@@ -381,7 +398,7 @@ t_warm, _ = timed(sweep(None), repeat=1)
 row("shipped", t_warm, t_warm)
 t_cold, _ = timed(sweep(1), repeat=1)
 row("no memo (all three caches held to one entry)", t_cold, t_warm,
-    "grows with --sweep-games")
+    "grows with --sweep-games", key=f"memo.at{args.sweep_games}")
 
 
 # ---------------------------------------------------- what none of it finishes
@@ -399,6 +416,17 @@ def train_games():
         total += ((len(fit["history"]) + 1) * fit["n_games"]
                   + fit.get("holdout", {}).get("games", 0))
     return total
+
+
+def spelled(seconds):
+    """A duration the way the documents write one."""
+    if seconds >= 86400:
+        return f"{seconds / 86400:,.0f} days"
+    if seconds >= 60:
+        return f"{seconds / 60:.1f} minutes"
+    if seconds >= 1:
+        return f"{seconds:.1f} s"
+    return f"{seconds * 1e3:.0f} ms"
 
 
 def duration(seconds):
@@ -430,7 +458,14 @@ if args.projection:
         have = f"{duration(shipped):>16s}" if shipped else f"{'--':>16s}"
         ratio = f"{naive / shipped:>9,.0f}x" if shipped else " " * 10
         print(f"  {label:<34s} {have} {duration(naive):>16s} {ratio}")
+        key = {"choose the opening guess": "opening", "play every answer once": "sweep"}.get(label, "train")
+        common.record(f"projection.{key}.naive", spelled(naive))
+        if shipped:
+            common.record(f"projection.{key}.shipped", spelled(shipped))
 
+    common.record("projection.pairs", int(pairs))
+    common.record("projection.ns_per_pair", T_OPENING / pairs * 1e9)
+    common.record("projection.us_per_pair_python", T_OPENING_NAIVE / pairs * 1e6)
     print(f"\n  per (guess, answer) pair, at the opening:")
     print(f"    shipped     {T_OPENING / pairs * 1e9:>8.2f} ns "
           f"across {DEFAULT_THREADS} cores")

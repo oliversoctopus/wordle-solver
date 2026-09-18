@@ -1,0 +1,31 @@
+{
+    "runs": {
+        "opening.py": {
+            "at": "2026-09-18 02:37",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        }
+    },
+    "values": {
+        "beating": 0,
+        "best": "salet",
+        "measured": "2026-09-18",
+        "openings": 200,
+        "pick": "salet",
+        "regret": 0.0,
+        "rho": 0.6787564689117228,
+        "rho_top12": 0.44755244755244755,
+        "rho_top25": 0.43076923076923074,
+        "table": "| ranks by `f` | mean true value | worst | best in band |\n| --- | --- | --- | --- |\n| 1–10 | 3.0897 | 3.1057 | **salet 3.0641** |\n| 11–25 | 3.1059 | 3.1317 | slate 3.0916 |\n| 26–50 | 3.1197 | 3.1365 | carle 3.1037 |\n| 51–100 | 3.1239 | 3.1530 | trine 3.0923 |\n| 101–200 | 3.1354 | 3.1689 | sient 3.1093 |"
+    }
+}

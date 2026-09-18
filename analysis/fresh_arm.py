@@ -101,6 +101,10 @@ at_end = np.array([length(built[SHARP.slug], w) - length(built[FLAT.slug], w)
                    for w in census])
 print(f"  {len(census)} census words, each prior its own f   "
       f"{at_end.mean():+.4f} +- {at_end.std(ddof=1) / np.sqrt(len(at_end)):.4f}")
+common.record("census", len(census))
+common.record("real", len(days))
+common.record("census_today", common.neg(
+    f"{at_end.mean():+.3f} \u00b1 {at_end.std(ddof=1) / np.sqrt(len(at_end)):.3f}"))
 
 rng = np.random.default_rng(0)
 got = {label: {"real": [], "census": []} for label, _, _ in PAIRINGS}
@@ -127,13 +131,18 @@ for i, (t, answer) in enumerate(days):
 common.header("the same days for both, so only the words differ")
 print(f"  {'':>28s} {f'{len(days)} real':>18s} "
       f"{f'{len(days) * args.per_day} census':>18s} {'gap':>10s}\n")
+KEYS = {"each prior its own f": "own", "both on the flat prior's f": "flat",
+        "both on the sharp prior's f": "sharp"}
 for label, _, _ in PAIRINGS:
     cells, means = "", []
     for key in ("real", "census"):
         arr = np.array(got[label][key])
         means.append(arr.mean())
         cells += f" {arr.mean():+10.4f}+-{arr.std(ddof=1)/np.sqrt(len(arr)):.4f}"
+        common.record(f"{KEYS[label]}.{key}", common.neg(
+            f"{arr.mean():+.3f} \u00b1 {arr.std(ddof=1)/np.sqrt(len(arr)):.3f}"))
     print(f"  {label:>28s}{cells} {means[0] - means[1]:+10.4f}")
+    common.record(f"{KEYS[label]}.gap", float(means[0] - means[1]))
 
 print("\n  Sharpening the repeat shape, against the same prior with the shape")
 print("  left flat.  Holding f equal is not a configuration anyone ships -- a")

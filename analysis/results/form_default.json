@@ -1,0 +1,73 @@
+{
+    "runs": {
+        "form_default.py --shapes --promote": {
+            "at": "2026-09-18 02:07",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        },
+        "form_default.py --shapes": {
+            "at": "2026-09-18 03:59",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        }
+    },
+    "values": {
+        "aggregate_table": "| form | terms | mean gap to the prior's best | worst gap | worst rank of 9 |\n| --- | --- | --- | --- | --- |\n| invonly | 2 | +0.0011 | +0.0031 | 7 |\n| anchored2 | 2 | +0.0012 | +0.0043 | 6 |\n| anchored | 2–3 | +0.0018 | +0.0049 | 8 |\n| **saturating** | 3 | +0.0018 | +0.0045 | 9 |\n| sqrt | 3 | +0.0020 | +0.0042 | 10 |\n| spline | 4–6 | +0.0026 | +0.0043 | 9 |\n| cubic | 2–4 | +0.0096 | +0.0407 | 8 |\n| quadratic | 2–3 | +0.0244 | +0.0407 | 10 |\n| loglinear | 2 | +0.0247 | +0.0407 | 10 |",
+        "anchored.mean_gap": 0.0017791011191204298,
+        "anchored.worst_gap": 0.004944646263868702,
+        "anchored.worst_rank": 8,
+        "anchored2.mean_gap": 0.0011979285017625686,
+        "anchored2.worst_gap": 0.00429040716471718,
+        "anchored2.worst_rank": 6,
+        "cubic.mean_gap": 0.00961112610582413,
+        "cubic.worst_gap": 0.04069788909527894,
+        "cubic.worst_rank": 8,
+        "invonly.mean_gap": 0.0011471330533016299,
+        "invonly.worst_gap": 0.0030526261102363783,
+        "invonly.worst_rank": 7,
+        "loglinear.mean_gap": 0.024678449026442718,
+        "loglinear.worst_gap": 0.04069788909527894,
+        "loglinear.worst_rank": 10,
+        "main_forms": "`anchored2`, `invonly`, `saturating`, `spline`",
+        "main_forms_gap": 0.0,
+        "measured": "2026-09-18",
+        "quadratic.mean_gap": 0.024371680558910657,
+        "quadratic.worst_gap": 0.04069788909527894,
+        "quadratic.worst_rank": 10,
+        "saturating.mean_gap": 0.0018090852696967196,
+        "saturating.worst_gap": 0.004453973379501264,
+        "saturating.worst_rank": 9,
+        "shape_winners": "`spline`, `saturating`, `anchored2`",
+        "spline.mean_gap": 0.0026298918488637745,
+        "spline.worst_gap": 0.004269501274801968,
+        "spline.worst_rank": 9,
+        "sqrt.mean_gap": 0.0020088354302629343,
+        "sqrt.worst_gap": 0.004214778818973475,
+        "sqrt.worst_rank": 10,
+        "straight_line_gap": 0.04069788909527894,
+        "top_group": 6,
+        "top_group_spread_mean": 0.0014827587955621446,
+        "top_group_spread_worst": 0.0018920201536323233,
+        "winners": "`anchored2` ×4, `invonly` ×2, `spline`, `saturating`"
+    }
+}
