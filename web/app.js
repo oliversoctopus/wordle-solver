@@ -1495,6 +1495,12 @@ async function start() {
   const status = await waitForSolver();
   if (!status) return;
 
+  // the day the answer record was last brought up to date
+  if (status.record_through) {
+    $("updated").textContent = `Answers through ${status.record_through}`;
+    $("updated").hidden = false;
+  }
+
   const forms = $("opt-form");
   for (const name of status.forms) {
     const option = document.createElement("option");

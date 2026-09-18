@@ -50,7 +50,7 @@ from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
 # the same answers and print the same thing at the end
 from wordle_game import TILE_BLOCK, pick_random_answer
 from wordle_data import (FEEDBACK_TABLE_PATH, WIN_PATTERN, load_data,
-                         num_to_feedback, score_guess)
+                         num_to_feedback, record_through, score_guess)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "web")
@@ -625,6 +625,7 @@ class Handler(BaseHTTPRequestHandler):
                 "modes": list(MODES),
                 "max_guesses": MAX_GUESSES,
                 "sorts": list(FINDER_SORTS),
+                "record_through": record_through(),
             })
         return self.serve_static(path)
 

@@ -74,6 +74,7 @@ fn status() -> String {
     } else {
         "Fetching the word lists."
     };
+    let record_through = state::loaded().map_or("", |l| l.data.record_through.as_str());
 
     let mut out = String::new();
     let mut object = Object::new(&mut out);
@@ -84,7 +85,8 @@ fn status() -> String {
         .strings("forms", names)
         .strings("modes", ["entropy", "expected"])
         .int("max_guesses", MAX_GUESSES as i64)
-        .strings("sorts", ["left", "bits", "weight", "alpha"]);
+        .strings("sorts", ["left", "bits", "weight", "alpha"])
+        .str("record_through", record_through);
     object.end();
     out
 }

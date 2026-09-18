@@ -19,6 +19,9 @@ pub struct WordleData {
     pub past_solutions: Vec<String>,
     /// Wordle's own number for each of those, in step.
     pub puzzle_numbers: Vec<i64>,
+    /// The `print_date` of the record's last entry, masked or not: the day the
+    /// solver was last brought up to date, which the page shows.
+    pub record_through: String,
 }
 
 impl WordleData {
@@ -65,6 +68,12 @@ impl WordleData {
             .as_array()
             .ok_or("solutions.json is not an array")?;
         let keep = rows.len().saturating_sub(mask_last);
+        let record_through = rows
+            .last()
+            .and_then(|row| row.get("print_date"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
 
         let mut past_solutions = Vec::with_capacity(keep);
         let mut puzzle_numbers = Vec::with_capacity(keep);
@@ -88,6 +97,7 @@ impl WordleData {
             curated,
             past_solutions,
             puzzle_numbers,
+            record_through,
         })
     }
 }

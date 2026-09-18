@@ -1,6 +1,7 @@
 """Loading of the static word / feedback data used by every other module, and
 the one JSON writer everything else goes through."""
 
+import functools
 import json
 import os
 from collections import Counter
@@ -112,6 +113,14 @@ class WordleData:
 
 
 _CACHE = {}
+
+
+@functools.lru_cache(maxsize=None)
+def record_through():
+    """The print date of the record's last entry, masked or not: the day the
+    solver was last brought up to date, which the page shows."""
+    with open(SOLUTIONS_PATH, "r") as file:
+        return json.load(file)[-1].get("print_date", "")
 
 
 def load_data(mask_last=1, use_cache=True, with_feedback_table=True):

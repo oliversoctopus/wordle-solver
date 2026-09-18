@@ -68,6 +68,8 @@ h1 {
 
 h1 span { color: var(--ink-dim); font-weight: 400; }
 
+.updated { margin: 2px 0 0; font-size: 12px; color: var(--ink-dim); }
+
 .head-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
 /* the three things the page does.  One control rather than three buttons, so
