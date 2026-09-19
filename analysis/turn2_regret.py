@@ -301,10 +301,12 @@ common.record("net_fraction", abs(float(weights @ delta)) / float(delta[churn].s
 flat = uniform_over(curated)
 print("\n  blending the prior toward uniform-over-curated:\n")
 print(f"  {'blend':>7} {'delta':>10}")
-crossed = None
 for t in args.blend:
-    mixed = (1 - t) * weights + t * flat
+    mixed = (1 - t) * solver.weights + t * flat
     print(f"  {t:>7.2f} {float(mixed @ delta):>+10.5f}")
-    if crossed is None and float(mixed @ delta) >= 0:
-        crossed = t
-common.record("blend_crossing", crossed if crossed is not None else 1.0)
+# the blended delta is linear in t, so the crossing is exact; past 1 it never
+# crosses and the sign holds all the way to flat
+own, cur = float(solver.weights @ delta), float(flat @ delta)
+crossed = own / (own - cur) if own < 0 < cur else 1.0
+print(f"  the sign turns {crossed:.2f} of the way")
+common.record("blend_crossing", crossed)

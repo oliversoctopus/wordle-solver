@@ -674,7 +674,7 @@ Every figure below is a difference from that baseline, in guesses, so negative i
 | `binned` + `wordlebot` | −0.417 ± 0.158 | −0.862 ± 0.117 | +0.090 ± 0.040 | −0.076 ± 0.038 |
 <!--/table-->
 
-The result is clean and only a little less deflating than it was. Each shape moves the arm it was built for, and moves it a long way — a third of a guess when the answer really is a repeat, most of one when it is off-list. Each then pays some of it back across the three quarters of answers that are neither. The two nearly cancel: the shipped pair nets **<!--n replay.shapes.together.blend-->−0.076 ± 0.038** blended, <!--n replay.shapes.together.blend_sigma .1f-->2.0 standard errors from zero, and every other blend in the last column is inside its own.
+The result is clean. Each shape moves the arm it was built for, and moves it a long way — a third of a guess when the answer really is a repeat, most of one when it is off-list. Each then pays some of it back across the three quarters of answers that are neither, and most of the gain goes in the paying: the shipped pair nets **<!--n replay.shapes.together.blend-->−0.076 ± 0.038** blended, <!--n replay.shapes.together.blend_sigma .1f-->2.0 standard errors from zero. Small as that is, it is the shapes showing in guesses and not only in nats, and it is the one blend in the last column that stands outside its own error.
 
 Unlike §4's table, these columns *are* comparable between rows, because every row is scored on the same real answers rather than on a world of its own devising. The table is comparable to nothing outside itself, though. Each row carries the `f` fitted for its own shapes, as §7 says it must, so a refit moves the whole table and the rows have to be refitted together or not at all.
 
@@ -686,7 +686,7 @@ What makes that dangerous is not that it favors one arm's words over another's. 
 
 `analysis/fresh_arm.py` prices what was being concealed: sharpening the repeat shape reads as costing essentially nothing on the census (<!--n fresh_arm.census_today-->−0.004 ± 0.014) and about a tenth of a guess on the answers that really happened (<!--n fresh_arm.own.real-->+0.130 ± 0.041). Playing the census on those same days does not close the gap, and forcing both arms onto a single `f` mostly does — which is how you can tell it was the fit that differed and not the words.
 
-The arm is <!--n replay.shapes.arms.fresh-->177 real answers now. That costs precision exactly where the variance lives, and what it keeps is the only advantage this evaluation has over a plain replay: <!--n replay.shapes.arms.offlist-->58 off-list events instead of the <!--n replay.shapes.n_offlist-->27 that fall inside the regime. The two agree now, as they should: the plain replay puts the shipped pair at <!--n replay.shapes.together.vs-->−0.0789 ± 0.0462, the blend at <!--n replay.shapes.together.blend-->−0.076 ± 0.038, both a small gain at the edge of what a season of puzzles can resolve.
+The arm is the <!--n replay.shapes.arms.fresh-->177 real answers. That costs precision exactly where the variance lives, and what it keeps is the only advantage this evaluation has over a plain replay: <!--n replay.shapes.arms.offlist-->58 off-list events instead of the <!--n replay.shapes.n_offlist-->27 that fall inside the regime. The two agree, as they should: the plain replay puts the shipped pair at <!--n replay.shapes.together.vs-->−0.0789 ± 0.0462, the blend at <!--n replay.shapes.together.blend-->−0.076 ± 0.038, both a small gain at the edge of what a season of puzzles can resolve.
 
 The census was the evaluation being kinder to itself than reality. The opposite worry is that it is stricter, and it is worth settling too. Every arm here is replayed with the prior rebuilt from strictly earlier puzzles one day at a time, as the prequential scores in §5.1 and §5.2 are, and the shipped solver is nowhere near that current: `data/solutions.json` is refreshed by hand, and the page masks one further day on top of whatever that leaves. The table therefore describes a solver whose record is fresher than the one anybody plays against.
 
@@ -696,7 +696,7 @@ It describes it closely enough. `analysis/refit_lag.py` replays the regime with 
 
 The guesses cannot say. Read the blended column of §14.1's table as though it added up and the pair does better than the two apart would predict — <!--n replay.shapes.together.blend_delta +.3f-->−0.076 against a sum of <!--n replay.shapes.apart +.3f-->+0.043 — but that margin is a tenth against an error of about half of it, and two of the three figures behind it are inside their own error of zero to begin with. Adding up numbers that are individually indistinguishable from nothing settles nothing.
 
-What each shape does have is a margin the prequential scoring *can* resolve at its own job, and both ship on that modeling evidence: the histogram's <!--n repeat_shapes.gain +.2f-->+1.13 ± <!--n repeat_shapes.gain_se .2f-->0.20 nats per event in §5.1, WordleBot's list against a flat spread in §5.2. WordleBot's has begun to show in guesses as well (§14.1); the histogram's has not, together or apart.
+What each shape does have is a margin the prequential scoring *can* resolve at its own job, and both ship on that modeling evidence: the histogram's <!--n repeat_shapes.gain +.2f-->+1.13 ± <!--n repeat_shapes.gain_se .2f-->0.20 nats per event in §5.1, WordleBot's list against a flat spread in §5.2. WordleBot's shows in guesses as well (§14.1); the histogram's does not, together or apart.
 
 There is a mechanism that predicts they should interfere, and it is worth knowing about even though these events cannot see it. Sharpening one side makes the other side's flatness the larger error in the weights. Concentrate the off-list mass onto its thousand-odd effective words and each of them ends up heavier than a used word does under a flat repeat spread — so the curation shape, on its own, promotes every off-list word above every past answer. When the answer turns out to be a `cigar`, that costs.
 
@@ -754,7 +754,7 @@ That is the thread running through the whole project, and it is the most interes
 | the endgame search | exact — the true value, not a better estimate | under a hundredth of a guess, over the positions it reaches |
 | the opening word | `f` ranks the top twelve at **+0.35** against truth, the full two hundred at **+0.74** | nothing left to buy: `salet` is already optimal, at zero regret |
 | turn-conditioned `f` | — | nothing: `f` is never consulted where the deadline binds |
-| the second guess | true values for all 51 positions `f` still decides | **0.0022** guesses, and the sign flips under a slightly different prior |
+| the second guess | true values for all <!--n turn2_regret.decided-->51 positions `f` still decides | **<!--n turn2_regret.paid .4f-->0.0034** guesses, and the sign flips under a flat weighting of the curated list |
 
 Read the middle column against the right one and the whole section is there. Every row buys a real improvement in valuation and none of them buys a score. The rest of this section is why.
 
@@ -774,16 +774,20 @@ What is true instead is that the top of the ranking is a **plateau**. Those ten 
 
 **The second guess** puts a number on the ceiling. Behind a fixed opening, the whole of turn 2 is one decision per feedback pattern — <!--n turn2_regret.positions-->193 reachable positions, of which the endgame search already solves <!--n turn2_regret.solved-->142 outright, leaving <!--n turn2_regret.decided-->51 that `f` decides alone. Play out the true value of the fifty best guesses at each, weight each position by the probability play reaches it, and the estimator gives up **<!--n turn2_regret.census .4f-->0.0034 guesses**. That is not an estimate: substituting the <!--n turn2_regret.moved-->11 decisions it gets wrong and sweeping every answer moves the mean by exactly that. Since turn 1 is already optimal and the search owns everything from turn 4, that <!--n turn2_regret.paid .4f-->0.0034 is not one more example of the plateau. It is the *whole* of what any valuation improvement could ever be worth, anywhere in the game.
 
-Then the number is asked to hold up somewhere else, and it does not. Score those same ten substitutions against a differently weighted field:
+Then the number is asked to hold up somewhere else, and it does not. Score those same <!--n turn2_regret.moved-->11 substitutions against differently weighted fields — the four enumerated ones exactly, and the real answers as a sample:
 
-| weighted by | what the ten substitutions do |
-| --- | --- |
-| the default prior | save **0.0022** guesses |
-| a flat weighting of the curated list | **cost** about ten times that |
-| a flat weighting of all 12,947 | cost a few thousandths |
-| the still-unused curated words | save again |
+<!--table turn2_regret.table-->
+| distribution | shipped | turn-2 optimum | delta |
+| --- | --- | --- | --- |
+| the default prior (what chose them) | 3.0641 | 3.0607 | **−0.0034** |
+| uniform over all 12,947 | 4.4877 | 4.4835 | **−0.0042** |
+| uniform over the curated list | 3.7731 | 3.7809 | **+0.0078** |
+| uniform over the still unused | 2.9368 | 2.9305 | **−0.0063** |
+| the 228 real regime answers | 4.0658 | 4.0614 | −0.0044 ± 0.0211 |
+| all 1,917 real answers ever | 3.9854 | 3.9969 | +0.0115 ± 0.0074 |
+<!--/table-->
 
-Blending the default prior a *tenth* of the way toward a flat one is enough to turn the sign.
+Read the real-answer rows as differences and not as levels: both arms replay them under today's prior, which prices every one of them as a word already used, so the level is that handicap and the delta is the comparison. The enumerated rows disagree among themselves, which is the finding: a flat weighting of the curated list charges for what the default prior pays for. The real answers are too few to settle it either way. And the reversal does not need the whole distance: blend the default prior toward that flat weighting and the substitution has stopped paying <!--n turn2_regret.blend_crossing .2f-->0.30 of the way there.
 
 The reason is that the gain was never an improvement so much as the residue of a reshuffle. Over a thousand answers change length; slightly more of the prior's mass improves than worsens; and <!--n turn2_regret.paid .4f-->0.0034 is what is left standing after that near-cancellation, a couple of thousandths of the standard deviation of the changes it rides on. Which side wins is decided by weights that are a *model* of the editor rather than the editor.
 
@@ -795,7 +799,7 @@ Improving how well the solver values its options, then, is worth almost nothing 
 
 The exceptions sharpen the rule, and every one of them changes *what the solver is choosing between* rather than how well it scores the choices.
 
-**The shapes of §5** are the first. Together they are worth about five hundredths of a guess — small in itself, and still more than deeper search and better lookahead managed between them. A prior changes the quantity being optimized, which words are plausible answers at all, so it is a decision-side change wearing valuation-side clothes.
+**The shapes of §5** are the first. Together they are worth **<!--n replay.shapes.together.blend-->−0.076 ± 0.038** guesses blended (§14.1) — small in itself, and still more than deeper search and better lookahead managed between them. A prior changes the quantity being optimized, which words are plausible answers at all, so it is a decision-side change wearing valuation-side clothes.
 
 **The sharpened repeat prior** belongs here rather than among the five, and on real answers it reads as a small *cost* despite being enormously better as a model of the editor. The two figures are not in competition: changing the weights changes what a position is *worth*, so the two arms share no ground truth on which one guess is better than the other. §14.1 is where that is taken apart.
 

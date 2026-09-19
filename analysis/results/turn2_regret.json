@@ -1,7 +1,7 @@
 {
     "runs": {
         "turn2_regret.py": {
-            "at": "2026-09-18 02:42",
+            "at": "2026-09-18 16:54",
             "solutions": 1917,
             "through": "2026-09-17",
             "fits": {
@@ -20,7 +20,7 @@
         "alltime.delta": "+0.0115 ± 0.0074",
         "alltime.n": 1917,
         "alltime.sigma": 1.5562117010234708,
-        "blend_crossing": 0.5,
+        "blend_crossing": 0.3021970817393935,
         "census": 0.003356424245070493,
         "churn": 1365,
         "churn_mass": 4.168467249932804,
