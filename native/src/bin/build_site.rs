@@ -1,21 +1,10 @@
 //! Assembles everything the static page needs that is not already a file.
 //!
-//! Two things: every fit in `estimator_cache/`, gathered into one object, and
-//! the rankings for the positions a browser should not be working out itself.
-//! The opening is one -- 12,947 guesses against 12,947 candidates is 167
-//! million scorings, which no tab can afford live -- and it is a constant per
-//! setting, so it is computed here once for every set of switches.
-//!
-//! Turn two is the other, and for the four the prior switches reach. A tab
-//! can afford it, but visibly: an opening splits the list into ~190 buckets and
-//! most are small enough to engage the exact endgame, which is about a second
-//! of sitting still. The other two menus stay at their defaults, expected mode
-//! and whichever form each prior was fitted in, because doing all 180 settings
-//! would take an hour here and several megabytes there.
-//!
-//! The *Shape of f* menu is why there are 180 of those rather than 20: a form
-//! is a different `f`, which is what expected mode ranks by. Entropy consults
-//! no `f` at all, so its half is 10 rankings written out under 9 names each.
+//! Every fit in `estimator_cache/`, gathered into one object, and the
+//! rankings for the positions a browser should not work out itself: the
+//! opening for every set of switches, and turn two behind each prior's
+//! opening under the page's other defaults. README *Without a server* has
+//! what that costs and why nothing deeper is precomputed.
 //!
 //!     build_site <repo root> <output directory>
 
@@ -113,8 +102,8 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
         let (active, active_params) = load_fit(root, &slug)?;
 
         // Every fit the page's *Shape of f* menu can name, not just the active
-        // one: choosing a form there is choosing a different f, which is what
-        // expected mode ranks by.
+        // one: choosing a form there is choosing a different f, and expected
+        // mode ranks by f.
         let mut archive: Vec<(Form, Vec<f64>)> = Vec::new();
         for form in forms() {
             match load_form_fit(root, &slug, form.name) {

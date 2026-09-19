@@ -1,14 +1,8 @@
 //! Playing games out, and the sweep over every possible answer.
 //!
-//! This is the piece that decides whether the port is worth anything for the
-//! analysis scripts. `analysis/common.py`'s `every_answer` loops 12,947 answers
-//! and calls into the solver once per *position*, so with Python driving that
-//! loop the interpreter sits in the innermost place it can. Here the whole
-//! sweep happens on this side of the boundary and Python calls once.
-//!
-//! The solver is deterministic, so a game's outcome is a pure function of the
-//! answer: `every_answer` is the entire sample space rather than a draw from
-//! it, and the mean it feeds is computed rather than estimated.
+//! The whole sweep happens on this side of the boundary and Python calls
+//! once. The solver is deterministic, so `every_answer` is the entire sample
+//! space and the mean it feeds is computed, not estimated.
 
 use crate::solver::Solver;
 use crate::source::Source;

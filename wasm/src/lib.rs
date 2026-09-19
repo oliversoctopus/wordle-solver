@@ -1,15 +1,11 @@
 //! The browser's side of the solver: one JSON request in, one JSON reply out.
 //!
-//! The page already speaks to the solver over `/api/*` with a JSON body, and
-//! sends the whole board on every submit rather than a delta, so that boundary
-//! is already a pure function of (path, body). This exposes exactly that, and
-//! `web/wasm-api.js` routes `fetch` into it -- which is why `web/app.js` needs
-//! no changes at all and its tests keep loading it unmodified.
-//!
-//! Memory is marshalled by hand. JS calls `alloc` for a buffer, writes UTF-8
-//! into it, calls `handle`, reads the reply out of linear memory, and calls
-//! `dealloc` on both. That is the one unsafe pattern here and it is confined to
-//! this file.
+//! The page speaks to the solver over `/api/*` with a JSON body and sends the
+//! whole board every submit, so that boundary is a pure function of (path,
+//! body). This exposes exactly that, and `web/wasm-api.js` routes `fetch`
+//! into it. Memory is marshalled by hand: JS calls `alloc`, writes UTF-8,
+//! calls `handle`, reads the reply out of linear memory, and calls `dealloc`
+//! on both. That is the one unsafe pattern here, confined to this file.
 
 use std::alloc::{alloc as raw_alloc, dealloc as raw_dealloc, Layout};
 use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};

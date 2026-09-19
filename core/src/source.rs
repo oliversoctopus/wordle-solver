@@ -1,13 +1,11 @@
 //! Where a kernel gets `feedback[guess, candidate]` from.
 //!
-//! Two answers, and the difference is the whole reason this port can be hosted
-//! for free. The native build fills the 167 MB table once and reads it; the
-//! WASM build has no table and scores the pair on the spot. `README.md`
-//! § *Without a server* has what live scoring costs and why it is affordable.
+//! Two answers: the native build fills the table once and reads it; the WASM
+//! build has no table and scores the pair on the spot. `README.md`
+//! § *Without a server* has what live scoring costs.
 //!
-//! This is a generic parameter rather than a trait object on purpose. The inner
-//! loop runs up to 167 million times, and a vtable lookup there would cost more
-//! than the work it dispatches.
+//! A generic parameter and not a trait object: the inner loop runs up to 167
+//! million times, and a vtable lookup there would cost more than the work.
 
 use crate::feedback::score_guess;
 use crate::words::WordList;
@@ -21,8 +19,8 @@ pub trait Source: Sync {
     fn n_guesses(&self) -> usize;
 }
 
-/// Scores on demand. No memory beyond the word list, which is what the browser
-/// build wants.
+/// Scores on demand. No memory beyond the word list, as the browser build
+/// wants.
 pub struct Live<'a> {
     words: &'a WordList,
 }
@@ -74,9 +72,8 @@ impl Table {
 
     /// Reads `feedback_table.npy` where `feedback_table.py` has left one.
     ///
-    /// Warm, that is 0.03 s against the two seconds `build` takes, which is
-    /// worth having whenever a process is short enough for the difference to
-    /// show -- an analysis script shelling out per sweep, above all. The
+    /// Faster than `build` by enough to matter for a process short enough to
+    /// show it, an analysis script shelling out per sweep above all. The
     /// on-disk form is numpy's: a magic string, a header naming dtype and
     /// shape, then the bytes in C order.
     #[cfg(not(target_arch = "wasm32"))]
@@ -116,7 +113,7 @@ impl Source for Table {
 
 /// The same table indexed the other way round, `tt[answer, guess]`.
 ///
-/// A second 168 MB and no file, since transposing the one already held is
+/// A second copy and no file, since transposing the one already held is
 /// cheaper than reading another. Only `fused` reads it, and only where a
 /// position is wide enough for the layout to pay; `README.md` § *Without a
 /// server* and SOLVER_EXPLAINED §8 have the band and why it ends where it does.

@@ -1,9 +1,9 @@
 //! The static data every other module reads: word lists, the curated answer
 //! list, and the answer record.
 //!
-//! Mirrors `wordle_data.load_data`. The feedback table is deliberately absent
-//! -- the native build fills one from `feedback::score_guess` and the WASM
-//! build does without, so nothing here reads the 167 MB file.
+//! Mirrors `wordle_data.load_data`. The feedback table is absent: the native
+//! build fills one from `feedback::score_guess` and the WASM build does
+//! without.
 
 use std::collections::HashMap;
 use std::error::Error;

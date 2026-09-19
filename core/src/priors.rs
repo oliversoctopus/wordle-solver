@@ -27,8 +27,7 @@ pub const BIN_ALPHA: f64 = 0.5;
 /// optimum is flat between 0.2 and 0.5; this is the middle of it.
 pub const FREQ_TEMPERATURE: f64 = 0.35;
 
-/// 'wordlebot': mass kept outside the list, since the 2023 snapshot missed 2 of
-/// the 41 off-list answers that followed it.
+/// 'wordlebot': mass kept outside the list, for the answers the list misses.
 pub const OFFLIST_HEDGE: f64 = 0.05;
 
 /// Score given to a word the answer-like table does not mention.
@@ -296,7 +295,7 @@ fn curation_shape(
 
     // 'wordlebot': the mass goes to the words WordleBot considers answerable,
     // in proportion to its weight, less a hedge spread over everything else.
-    // The hedge stays flat on purpose -- see analysis/curation_shapes.py.
+    // The hedge stays flat; analysis/curation_shapes.py has why.
     let listed: Vec<f64> = words
         .iter()
         .map(|w| tables.wordlebot.get(*w).copied().unwrap_or(0.0))
@@ -418,7 +417,7 @@ pub fn build_weights(
         *w /= total;
     }
     // phrased as the Python's `not np.all(weights > 0.0)`, which also rejects a
-    // NaN rather than letting it through as merely "not less than zero"
+    // NaN
     if !weights.iter().all(|&w| w > 0.0) {
         return Err("prior assigns zero weight to some word".into());
     }

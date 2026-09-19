@@ -3,8 +3,8 @@
 //!
 //! The shapes are `web.py`'s, field for field, because the page is unchanged:
 //! whatever it read off a JSON body before, it reads off the same body now. An
-//! error comes back as `{"error": "..."}` with the same wording, which is what
-//! the page shows the user.
+//! error comes back as `{"error": "..."}` with the same wording, and the page
+//! shows it to the user.
 
 use crate::feedback::{pattern_text, N_PATTERNS, WIN_PATTERN};
 use crate::json::{self, Object, Value};
@@ -482,8 +482,8 @@ fn build_state(
         );
         entry
             .bool("exact", exact)
-            // a guess that cannot be the answer is still often the right one:
-            // worth saying which it is
+            // a guess that cannot be the answer is still often the right one;
+            // say which it is
             .bool("possible", candidates.contains(&pick))
             .num("win_probability", solver.win_probability(&candidates, pick));
         entry.end();
@@ -729,7 +729,7 @@ const TILE_BLOCK: [&str; 3] = ["\u{2B1B}", "\u{1F7E8}", "\u{1F7E9}"];
 /// The Python keeps the answer on the server so that no reply can spoil it.
 /// There is no server here, so that property is gone -- a determined player
 /// can read the answer out of memory. It is still not in any reply until the
-/// game is over, which is what the page itself relies on.
+/// game is over, and the page relies on that.
 fn game_new(body: &Value) -> Result<String, String> {
     let loaded = state::loaded().ok_or("The word lists have not loaded yet")?;
     let config = parse_config(body);
@@ -1118,11 +1118,10 @@ fn find(body: &Value) -> Result<String, String> {
         .filter(|&guess| words.score(guess, answer) == pattern)
         .collect();
 
-    // `left` is the size of one bucket and `bits` is the entropy over all of
-    // them, so both come out of a single sweep per match; the Python needs two
-    // because numpy gives it the second one whole. The guess's own letters are
-    // hoisted for the same reason the kernels hoist theirs -- fetching them per
-    // candidate costs more than the scoring does.
+    // `left` is the size of one bucket and `bits` the entropy over all of them,
+    // so both come out of one sweep per match. The guess's letters are hoisted
+    // as the kernels hoist theirs; fetching them per candidate costs more than
+    // the scoring.
     let mut measured: Vec<(usize, f64, usize)> = Vec::with_capacity(matches.len());
     // the sweep below stands in for `kernels.ig_all`, so the mass is summed the
     // way that kernel sums it -- left to right, not through `sum::pairwise`

@@ -1,16 +1,13 @@
 //! Asks the solver for a guess at the positions Python handed over.
 //!
-//! What matters here is not one number but which *branch* answered. The
-//! dispatch has five ways out -- a closed form at one or two candidates, the
-//! exact search, the heaviest candidate on the last turn, one-ply lookahead,
-//! and the heuristic scorer -- so the arms below turn each of them on and the
-//! positions range from 1 candidate to the whole word list.
+//! What matters is which *branch* answered: the dispatch has five ways out,
+//! and the arms turn each of them on over positions from one candidate to
+//! the whole word list.
 //!
 //!     parity_solver <repo root> <sets file> <output directory> [arm masks]
 //!
 //! The masks are one comma-separated bitmask per set, saying which arms visit
-//! it -- Python decides that and this obeys, so the rule lives in one place.
-//! Absent, every arm visits every set.
+//! it; Python decides and this obeys. Absent, every arm visits every set.
 
 use std::env;
 use std::fs;

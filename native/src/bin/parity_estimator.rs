@@ -2,7 +2,7 @@
 //!
 //! `f` is exercised twice per form: once on a synthetic parameter vector, which
 //! covers bases no fit happens to use, and once on the fit the repository
-//! actually cached, which is what really gets played.
+//! actually cached, the one that gets played.
 //!
 //!     parity_estimator <repo root> <output directory>
 

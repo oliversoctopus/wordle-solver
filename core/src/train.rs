@@ -124,10 +124,8 @@ pub fn collect_rollouts<S: Source>(solver: &mut Solver<S>, answers: &[usize]) ->
 /// never a behaviour one.
 ///
 /// Unlike the sweep it is off by default, because training turns the endgame
-/// search off and the search is what leaves a core anywhere to go. Measured
-/// over the five priors at 2,000 games, one chunk takes 0.790 s a round against
-/// 0.939 at two and 1.125 at three; with `--exact-max 60` it reverses, and the
-/// default prior's loop goes 17.4 s to 14.6 s at three.
+/// search off and the search is what leaves a core anywhere to go; README
+/// *Fitting in Rust* has the measurement.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn collect_rollouts_across_cores<'a, S, F>(
     answers: &[usize],

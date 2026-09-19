@@ -34,7 +34,7 @@ pub fn read_sets(path: &str) -> Result<Vec<Vec<usize>>, Box<dyn std::error::Erro
     Ok(sets)
 }
 
-/// Little-endian f64 and i64 streams, which is what `np.fromfile` wants.
+/// Little-endian f64 and i64 streams, as `np.fromfile` reads them.
 pub struct Sink {
     pub floats: BufWriter<File>,
     pub ints: BufWriter<File>,

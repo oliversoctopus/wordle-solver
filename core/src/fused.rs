@@ -1,28 +1,12 @@
 //! The same three scores, read out of an answer-major copy of the table.
 //!
-//! `kernels` fixes a guess and walks the candidates, which `feedback[guess,
-//! answer]` makes a row: contiguous for a whole candidate set, and a cache line
-//! fetched per candidate for a scattered handful. That is the bill at every
-//! mid-sized position, and an answer-major copy is what pays it off.
-//!
-//! Reading that way alone is not enough, because the reduce is per guess and
-//! walking guesses in the inner loop leaves all of them accumulating at once,
-//! which puts the accumulator out of L1 and costs more than the reads save.
-//! These kernels dodge the trade instead of taking it. For a block of G guesses
-//! they read the G x m tile out of the answer-major table -- contiguous, G
-//! bytes per candidate -- transposing it into a small buffer on the way in.
-//! Each guess's feedback vector is then a contiguous row of that tile, so the
-//! reduce is the one in `kernels`, over one accumulator that stays in L1.
-//!
-//! Ported from `fused_kernels.py`, band and block rule included. Everything
-//! here falls back to `kernels` when there is no transposed table or the
-//! position sits outside the band, and the accumulation order is the shipped
-//! order throughout, so a score is bit-identical rather than merely close.
-//!
-//! Native only. A tab holds a word list and colors pairs on the spot, so there
-//! is no table for it to turn over and a second 168 MB is not something it
-//! could be lent; under WASM these entry points forward to `kernels` and none
-//! of the layout below reaches the module.
+//! For a block of guesses the tile is read contiguously out of the
+//! answer-major table and transposed into a small buffer, so the reduce is
+//! the one in `kernels` over one accumulator that stays in L1. Ported from
+//! `fused_kernels.py`, band and block rule included; everything falls back to
+//! `kernels` with no transposed table or outside the band, and the
+//! accumulation order is the shipped one, so a score is bit-identical.
+//! Native only: under WASM these entry points forward to `kernels`.
 
 /// Candidate counts the fused path is used for. Below the floor a position is
 /// too cheap for the dispatch to be worth taking; above the ceiling the tile

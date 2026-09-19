@@ -209,8 +209,8 @@ pub fn effective_size(weights: &[f64]) -> f64 {
     pairwise(&terms).exp2()
 }
 
-/// The Python's archived fit for one (prior, form) pair, which is what the
-/// page's *Shape of f* menu selects between.
+/// The Python's archived fit for one (prior, form) pair, the one the page's
+/// *Shape of f* menu selects between.
 pub fn load_form_fit(root: &str, slug: &str, form: &str) -> Result<Vec<f64>, Box<dyn Error>> {
     let path = format!("{root}/estimator_cache/forms/{slug}__{form}.json");
     let value = json::parse_file(&path)?;

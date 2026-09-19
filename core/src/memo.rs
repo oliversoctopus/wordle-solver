@@ -1,15 +1,9 @@
-//! A bounded memo that evicts, rather than one that jams when it fills.
+//! A bounded memo that evicts its least recently used entries when full.
 //!
-//! A map guarded by "insert only while under the limit" stops accepting once
-//! full, so it keeps whatever it happened to see first and refuses everything
-//! after. That is the wrong way round: what it then declines to cache are the
-//! positions the run in front of it is about to reuse, and the loss is not
-//! gradual. Playing every answer behind one fixed opening reaches at most 243
-//! distinct positions, so the memo is collapsing a 12,947-wide computation to a
-//! 240-wide one -- and a full memo gives that factor back all at once.
-//!
-//! What is cached are pure functions of a position, so eviction policy only
-//! ever changes how long a run takes, never what it answers.
+//! A map that refuses new entries once full keeps whatever it saw first and
+//! declines the positions the run in front of it is about to reuse. What is
+//! cached is a pure function of a position, so eviction changes how long a
+//! run takes and never what it answers.
 
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -22,9 +16,8 @@ const EVICT_FRACTION: usize = 8;
 
 /// A map with a cap, dropping the least recently used entries when full.
 ///
-/// `get` counts as a use, which is what separates this from insertion order and
-/// is the whole point: a position looked up constantly stays resident however
-/// long ago it was first computed.
+/// `get` counts as a use, so a position looked up constantly stays resident
+/// however long ago it was first computed.
 pub struct Memo<K, V> {
     limit: usize,
     clock: u64,

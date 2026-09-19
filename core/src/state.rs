@@ -1,16 +1,10 @@
 //! What the module holds between requests.
 //!
 //! The page fetches the data files once and posts them to `/api/init`; after
-//! that everything lives here. Weights are cached per prior, since building one
-//! walks the whole word list and the switches change priors far more often than
-//! they change anything else.
-//!
-//! A `Solver` borrows its source and weights, so one cannot be kept in a static
-//! without a self-referential struct, and is built per request instead. What it
-//! caches is kept here and lent back to it, because the memo pays across
-//! requests and not only inside one: the page re-sends the whole board on every
-//! submit, so a board that has been solved once arrives again on the next
-//! keystroke, on the next tile recolored, and on every switch flipped.
+//! that everything lives here. Weights are cached per prior. A `Solver`
+//! borrows its source and weights and is built per request; what it caches
+//! is kept here and lent back, since the page re-sends the whole board on
+//! every submit and a board solved once arrives again on the next keystroke.
 
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
@@ -22,8 +16,8 @@ use crate::solver::Memos;
 use crate::source::Live;
 use crate::WordleData;
 
-/// Every fit the Python cached for one prior: the active one, which is what
-/// *Whatever is cached* means, and the archive it keeps per form.
+/// Every fit the Python cached for one prior: the active one, the meaning of
+/// *Whatever is cached*, and the archive it keeps per form.
 pub struct Fits {
     pub active: (Form, Vec<f64>),
     pub by_form: HashMap<String, Vec<f64>>,
@@ -82,7 +76,7 @@ impl Loaded {
         Ok((shape, params.clone()))
     }
 
-    /// The name of the fit `form` selects, which is what keys the openings.
+    /// The name of the fit `form` selects, the key the openings are stored under.
     pub fn form_name(&self, config: &PriorConfig, form: Option<&str>) -> Result<String, String> {
         match form {
             Some(name) => Ok(name.to_string()),

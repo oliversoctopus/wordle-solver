@@ -1,15 +1,12 @@
 //! Fits `f` by policy iteration and writes the outcome as JSON.
 //!
-//! The work is here and the reporting is not: what comes out is one object per
-//! prior, which `train.py` hands to `estimator.save_params` so the cache keeps
-//! a single writer. Progress goes to stderr, the JSON to stdout, so a caller
-//! can read one without parsing around the other.
+//! One object per prior on stdout, which `train.py` hands to
+//! `estimator.save_params`; progress goes to stderr.
 //!
 //!     train <repo root> [--prior <slug>] [--form <name>] [--games <n>]
-//!                       [--seed <n>] [--max-iters <n>] [--tol <x>]
-//!                       [--patience <n>] [--holdout-games <n>]
-//!                       [--exact-max <n>] [--no-exact] [--loss-penalty <x>]
-//!                       [--chunks <n>]
+//!         [--seed <n>] [--max-iters <n>] [--tol <x>] [--patience <n>]
+//!         [--holdout-games <n>] [--exact-max <n>] [--no-exact]
+//!         [--loss-penalty <x>] [--chunks <n>]
 
 use std::env;
 use std::process::ExitCode;

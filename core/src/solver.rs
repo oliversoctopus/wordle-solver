@@ -1,15 +1,10 @@
 //! Choosing a guess: the dispatch that decides which valuation answers.
 //!
-//! Four things can settle a position, in falling order of how much they know:
-//! a closed form when one or two candidates remain, the exact search where it
-//! can reach, the heaviest candidate on the last turn, and otherwise the
-//! heuristic scorer. The heuristic is genuinely the fallback -- it runs only
-//! where the game is too wide to solve outright.
-//!
-//! Ported from `solver.py`, the fused answer-major dispatch included: lend the
-//! solver a `Transposed` and mid-sized positions go to `fused` instead. It
-//! scores identically either way, so it is a speed knob and never a behavior
-//! one.
+//! Four things can settle a position: a closed form at one or two candidates,
+//! the exact search where it reaches, the heaviest candidate on the last turn,
+//! and otherwise the heuristic scorer. Ported from `solver.py`, the fused
+//! answer-major dispatch included: lend the solver a `Transposed` and
+//! mid-sized positions go to `fused`, with identical scores.
 
 use crate::estimator::{effective_size, Form};
 use crate::exact::{BudgetExceeded, ExactEndgame, Solved, MAX_TURNS, SPLIT_TIE_TOL};
@@ -133,7 +128,8 @@ impl<'a, S: Source> Solver<'a, S> {
 
     /// Lends the solver an answer-major copy of the table, which `fused`
     /// dispatches mid-sized positions to. Off unless asked for: it is a second
-    /// 168 MB, and it wins nothing at the widest positions or the smallest.
+    /// copy of the table, and it wins nothing at the widest positions or the
+    /// smallest.
     pub fn with_fused(mut self, fused: Option<&'a Transposed>) -> Self {
         self.fused = fused;
         self.exact = self.exact.with_fused(fused);
@@ -279,7 +275,7 @@ impl<'a, S: Source> Solver<'a, S> {
     ///
     /// `guesses_left` counts this turn; at 1 the guess must be a possible
     /// answer. It is part of the memo key rather than reduced to "is this the
-    /// last turn", because the exact search's answer genuinely depends on how
+    /// last turn", because the exact search's answer depends on how
     /// many turns are really left.
     pub fn best_guess(
         &mut self,

@@ -20,7 +20,7 @@ const SAMPLES: usize = 900;
 const N_MAX: f64 = 12947.0;
 
 /// Deterministic stand-ins for rollouts. Integer arithmetic picks the points so
-/// that Python lands on the same doubles rather than merely nearby ones.
+/// that Python lands on the same doubles.
 fn dataset(kind: usize) -> (Vec<f64>, Vec<f64>) {
     let mut n_eff = Vec::with_capacity(SAMPLES);
     let mut targets = Vec::with_capacity(SAMPLES);

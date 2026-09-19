@@ -1,9 +1,8 @@
 //! Scores the candidate sets Python handed over, for Python to diff.
 //!
-//! The sets come from the Python side rather than being generated here, so that
-//! a disagreement is always about the kernels and never about the inputs. They
-//! straddle both thresholds that change how a kernel behaves: `RESCAN_MAX`,
-//! where the reduce switches from walking candidates to sweeping patterns, and
+//! The sets come from the Python side, so a disagreement is always about the
+//! kernels and never about the inputs. They straddle `RESCAN_MAX`, where the
+//! reduce switches from walking candidates to sweeping patterns, and
 //! `MAX_PACKED`, where a signature stops being the partition itself.
 //!
 //!     parity_kernels <repo root> <sets file> <output directory>

@@ -1,17 +1,11 @@
 //! One float reduction, shared with the Python.
 //!
-//! `np.sum` adds pairwise rather than left to right, which makes it both the
-//! more accurate of the two -- error grows as log n rather than n -- and the
-//! harder to reproduce. Reproducing it is what keeps the two implementations
-//! bit-identical wherever they reduce a vector, so this is a transcription of
-//! numpy's `pairwise_sum_DOUBLE` rather than something merely equivalent to it.
-//!
-//! `kernels.rs` is the exception and stays naive: the numba kernels accumulate
-//! in an explicit left-to-right loop, so a naive sum is what matches there.
-//!
-//! numpy's BLAS dot products are a second exception, and one nothing can fix.
-//! `analysis/common.py`'s `weights @ lengths` reduces in whatever order the
-//! shipped BLAS chooses, which is not written down and varies by build.
+//! `np.sum` adds pairwise, which is both more accurate than left to right and
+//! harder to reproduce; this transcribes numpy's `pairwise_sum_DOUBLE` so the
+//! two implementations reduce a vector to the same float. `kernels.rs` is the
+//! exception and stays naive, matching the numba loop. numpy's BLAS dot
+//! products cannot be matched: `weights @ lengths` reduces in whatever order
+//! the shipped BLAS chooses.
 
 /// Naive under eight elements, eight independent accumulators up to 128, and
 /// recursive halving on a multiple of eight above that.

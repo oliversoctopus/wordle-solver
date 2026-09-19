@@ -1,21 +1,13 @@
-//! Exact endgame search.
+//! Exact endgame search, ported from `exact.py`.
 //!
-//! Once the candidate set is small the value function can be computed outright
-//! instead of estimated:
+//! Once the candidate set is small the value function is computed outright:
 //!
 //! ```text
 //! V(S, t) = min over g of [ 1 + sum_{r != GGGGG} p_r * V(S_r, t-1) ]
 //! V(S, 0) = loss_penalty
 //! ```
 //!
-//! with `t` the guesses left including this one. Four things keep it tractable:
-//! partition dedupe, closed-form leaves at one or two turns, branch and bound
-//! on the two-turn value, and a cap on how many splits a node may try at all.
-//!
-//! The cap is what makes the returned value an upper bound on the true one
-//! rather than the true one -- branch and bound finds the best guess early and
-//! then spends nearly all its time proving nothing beats it, so the cap buys
-//! the answer and skips the proof. Ported from `exact.py`.
+//! with `t` the guesses left. README *The exact endgame* has the rest.
 
 use crate::fused;
 use crate::kernels::{distinct_partitions, signature_keys, MAX_PACKED};
@@ -25,8 +17,8 @@ use crate::sum::pairwise_of;
 
 pub const MAX_TURNS: usize = 6;
 
-/// How many splits a node may try, best-bound first. Over 1,275 real positions
-/// a cap of 25 or 50 picks the uncapped-optimal guess every time.
+/// How many splits a node may try, best-bound first. README *The exact
+/// endgame* has what the cap costs.
 pub const DEFAULT_MAX_BRANCH: usize = 50;
 
 /// How many splits the node being *ranked* may try. Only that node ranks, and
@@ -68,9 +60,7 @@ pub const SPLIT_TIE_TOL: f64 = 0.0;
 
 /// The branch cap orders on the bound rounded to this, so two bounds within a
 /// float's noise of each other tie and the lower word index decides. `exact.py`
-/// rounds the same way, which is what lets the two agree without agreeing
-/// bitwise: the ordering stops turning on a last bit that no reduction order
-/// reproduces.
+/// rounds the same way, so the two agree without agreeing bitwise.
 pub const BRANCH_TIE_TOL: f64 = 1e-11;
 
 /// The search visited more nodes than allowed; the caller falls back to the

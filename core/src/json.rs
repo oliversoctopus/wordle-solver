@@ -2,9 +2,8 @@
 //!
 //! Everything it parses is machine-written by this repository -- the word
 //! lists, the answer record, the two weight tables -- so it aims at being
-//! correct on that rather than at being a general library. It does handle the
-//! standard escapes, because being quietly wrong about a string is worse than
-//! being slow.
+//! correct on that rather than at being a general library. It handles the
+//! standard escapes, since a wrong string is worse than a slow parse.
 
 use std::collections::HashMap;
 use std::fmt;

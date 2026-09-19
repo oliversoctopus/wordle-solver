@@ -1,9 +1,7 @@
 //! Where a sweep's time goes, when built with `--features profile`.
 //!
-//! Guessing at this has been wrong twice: once about the split between kernel
-//! and non-kernel time, once about which kernels mattered. One instrumented run
-//! settles it, so the instrumentation lives here rather than being pasted in
-//! and deleted each time.
+//! One instrumented run settles where the time goes, so the instrumentation
+//! lives here instead of being pasted in and deleted each time.
 
 /// The entry points worth timing separately.
 pub const NAMES: [&str; 8] = [

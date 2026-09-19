@@ -1,17 +1,13 @@
 //! Plays every word in the list as the answer, and reports what it cost.
 //!
-//! This is the acceptance test for the whole port, and the sharpest one
-//! available: the solver is deterministic, so playing all 12,947 words once and
-//! weighting by the prior *computes* the mean rather than estimating it. There
-//! is no sampling error to hide behind, and README's *Results* table is the
-//! number to hit.
+//! The acceptance test for the port: the solver is deterministic, so playing
+//! all 12,947 words once and weighting by the prior computes the mean, and
+//! README's *Results* table is the number to hit.
 //!
-//!     every_answer <repo root> [--mode entropy|expected] [--hard]
-//!                              [--fused] [--serial] [--form <name>]
-//!                              [--params a,b,c] [--win-bonus <x>]
-//!                              [--exact-max <n>] [--loss-penalty <x>]
-//!                              [--no-exact] [--prior <slug>] [--json]
-//!                              [--dump <path>]
+//!     every_answer <repo root> [--mode entropy|expected] [--hard] [--fused]
+//!         [--serial] [--form <name>] [--params a,b,c] [--win-bonus <x>]
+//!         [--exact-max <n>] [--loss-penalty <x>] [--no-exact] [--prior <slug>]
+//!         [--json] [--dump <path>]
 
 use std::env;
 use std::process::ExitCode;
@@ -171,7 +167,7 @@ fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
     };
     let build_secs = built.elapsed().as_secs_f64();
 
-    // the answer-major twin, only where it was asked for: another 168 MB
+    // the answer-major twin, only where it was asked for: a second table
     let turned = Instant::now();
     let transposed = table
         .as_ref()

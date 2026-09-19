@@ -1,28 +1,13 @@
 //! Scoring every guess against a candidate set.
 //!
-//! All three scorers share one shape: for each guessable word, bucket the
-//! candidates by the feedback pattern they would produce, then reduce those 243
-//! buckets to a single number. Entropy reduces them to bits gained, the
-//! expected guess count reduces them through the fitted `f`, and the two-turn
-//! value reduces them to the exact score when two guesses remain.
-//!
-//! Ported from `kernels.py`, arithmetic order included, so a score here is the
-//! same float the numba kernel produces rather than merely a close one.
-//!
-//! Nothing here reduces through `sum::pairwise`, and that is the shape of the
-//! work rather than deference to numba. Filling a bucket means scattering each
-//! candidate into whichever of 243 slots its pattern names, which is no
-//! reduction a pairwise routine could be handed. The candidate weights are then
-//! totalled left to right so the total comes out the very float those buckets
-//! add up to: without that, a guess leaving every candidate in one bucket gives
-//! a share a hair off 1.0 and stops scoring exactly zero bits. Draining the
-//! buckets afterwards walks candidate order below `RESCAN_MAX` and pattern
-//! order above it, so that sum has no canonical order to be accurate about even
-//! within the one function.
-//!
-//! Every kernel takes a `pool` of guess indices, standing in for all of them
-//! when `None`. That parameter is what keeps a deeper search affordable, and it
-//! is also how hard mode works: the pool becomes the candidate set itself.
+//! Each scorer buckets the candidates by the pattern a guess would produce
+//! and reduces the buckets to one number: bits gained, expected guesses
+//! through `f`, or the exact two-turn value. Ported from `kernels.py`,
+//! arithmetic order included, so a score is the same float. Nothing here
+//! reduces through `sum::pairwise`: a bucket is filled by scattering, and the
+//! weight total is accumulated left to right to match the buckets exactly.
+//! Every kernel takes a `pool` of guess indices, all of them when `None`,
+//! and hard mode passes the candidate set as the pool.
 
 use crate::estimator::{f_eval_x, Form};
 use crate::feedback::{N_PATTERNS, WIN_PATTERN};
@@ -79,8 +64,8 @@ const PARALLEL_MIN_WORK: usize = 1 << 12;
 /// Runs `fill` over the pool, writing one score per entry.
 ///
 /// Natively this spreads the pool across rayon's standing thread pool when
-/// there is enough work to pay for it, which is what the numba kernels do with
-/// `prange`; each chunk keeps accumulators of its own. Under WASM it runs
+/// there is enough work to pay for it, as the numba kernels do with `prange`;
+/// each chunk keeps accumulators of its own. Under WASM it runs
 /// straight through, threads there needing SharedArrayBuffer and headers a
 /// static host does not set.
 #[cfg(not(target_arch = "wasm32"))]
@@ -222,9 +207,8 @@ pub(crate) fn bucket_guesses(
 /// E(g, S) = 1 + sum over r != GGGGG of p_r * f(n_r)
 /// ```
 ///
-/// The `GGGGG` bucket contributes nothing, which is what makes a guess that
-/// could itself be the answer come out ahead of an equally informative one that
-/// could not.
+/// The `GGGGG` bucket contributes nothing, so a guess that could itself be the
+/// answer comes out ahead of an equally informative one that could not.
 pub fn expected_guesses_all(
     source: &impl Source,
     candidates: &[usize],
@@ -343,8 +327,8 @@ impl Buckets {
 ///
 /// with `A` the mass and `B` the sum of bucket maxima over the non-winning
 /// buckets. Called with `penalty = min(loss_penalty, 1)` this is also a valid
-/// lower bound on the value at any larger number of turns, which is what the
-/// exact search prunes with.
+/// lower bound on the value at any larger number of turns, and the exact
+/// search prunes with it.
 pub fn two_turn_scores(
     source: &impl Source,
     candidates: &[usize],
