@@ -1,16 +1,10 @@
 // Routes the page's /api/* calls into the WASM solver instead of a server.
 //
-// `app.js` reaches the solver through exactly two fetch calls, and sends the
-// whole board on every submit rather than a delta, so that boundary is already
-// a pure function of (path, body).  Intercepting fetch here means app.js needs
-// no changes at all -- which matters, since tests/board.test.js loads it
-// unmodified and would otherwise be testing a different file from the one that
-// ships.
-//
-// The solver runs in `solver-worker.js`, so a request is a message rather than
-// a call.  That costs a round trip of a fraction of a millisecond and buys a
-// page that keeps repainting through a turn that takes 150.  `fetch` is
-// asynchronous anyway, which is what makes the swap invisible to app.js.
+// `app.js` sends the whole board on every submit, so that boundary is a pure
+// function of (path, body); intercepting fetch here means app.js needs no
+// changes, and tests/board.test.js keeps loading the file that ships.  The
+// solver runs in `solver-worker.js`, so a request is a message and a reply,
+// and `fetch` was asynchronous already.
 
 const wasmApi = (() => {
   const worker = new Worker("solver-worker.js");
@@ -53,15 +47,10 @@ const wasmApi = (() => {
     return JSON.stringify({ ...parsed, seed: Math.random() });
   }
 
-  // Whether a reply is a refusal, which has to reach the page as a status and
-  // not just a field: `app.js` throws on a reply that is not ok and renders the
-  // board on one that is, so an error arriving as 200 gets applied as though it
-  // were a board and takes the page down with it.  `web.py` answers 400 here.
-  //
-  // Which of 400, 404 and 503 it would have been is not reconstructed. Nothing
-  // on the page tells them apart -- it shows the message either way -- and the
-  // only way to tell from here is to match on the message text, which the
-  // editor is free to rewrite.
+  // Whether a reply is a refusal, which has to reach the page as a status:
+  // `app.js` throws on a reply that is not ok and renders a board on one that
+  // is, so an error arriving as 200 would be applied as a board.  Which of
+  // 400, 404 and 503 it would have been is not reconstructed.
   function refused(text) {
     try {
       return JSON.parse(text).error !== undefined;

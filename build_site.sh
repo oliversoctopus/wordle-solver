@@ -3,7 +3,7 @@
 #
 #     ./build_site.sh [output directory]     default: site/
 #
-# Everything in it is a file: no server, no session, no 167 MB table. The page
+# Everything in it is a file: no server, no session, no table. The page
 # is web/'s own, unmodified -- web/wasm-api.js routes its /api/* calls into the
 # WASM module instead of over the network.
 

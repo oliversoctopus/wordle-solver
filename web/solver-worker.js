@@ -1,9 +1,8 @@
 // The solver itself, off the page's thread.
 //
-// A wide position costs upwards of 150 ms, and run on the main thread that is
-// 150 ms in which the page cannot repaint, scroll or accept a keystroke.  The
-// work is the same length here; what changes is that the page stays alive
-// through it.
+// A wide position costs long enough that, run on the main thread, the page
+// cannot repaint, scroll or accept a keystroke through it.  The work is the
+// same length here; what changes is that the page stays alive through it.
 //
 // Marshalling is by hand because the module has no wasm-bindgen: ask it for a
 // buffer, write UTF-8 in, call handle, read the reply out, free both.
@@ -16,8 +15,8 @@ let waiting = [];
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-// The data the solver needs, which the server used to hold.  686 KB in all,
-// and the browser caches it like any other static file.
+// The data the solver needs, which the server holds in the other build.  The
+// browser caches it like any other static file.
 const DATA_FILES = {
   ind2word: "data/derived/ind2word.json",
   wordles: "data/wordles.json",

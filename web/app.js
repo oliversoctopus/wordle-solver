@@ -773,7 +773,7 @@ function fillLetters(kind, entries) {
     tile.textContent = entry.letter;
     const chance = document.createElement("span");
     chance.className = "letter-chance";
-    // "0.0%" would read as impossible when the letter is merely a long shot
+    // "0.0%" would read as impossible when the letter is only a long shot
     chance.textContent = entry.chance < 0.001 ? "<0.1%" : RATE(entry.chance);
     item.append(tile, chance);
     list.appendChild(item);

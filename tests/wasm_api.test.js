@@ -1,21 +1,11 @@
 /* The static build's fetch shim keeps the contract the page was written to.
  *
+ * `api()` throws on a reply that is not ok and renders a board on one that
+ * is, so a refusal arriving as 200 would be applied as a board.  The status
+ * is the shim's own invention, which no Python test can see, so
+ * `web/wasm-api.js` is loaded unmodified through `vm` against a fake Worker.
+ *
  *     node tests/wasm_api.test.js
- *
- * `app.js` speaks to a server, and `web/wasm-api.js` stands in for that server
- * without the page knowing.  Standing in means more than returning the right
- * JSON: `api()` throws on a reply that is not ok and renders a board on one
- * that is, so a refusal arriving as 200 gets applied as though it were a board.
- * That is not a graceful failure -- `applyState` reads `state.rows.map` off a
- * payload that has no rows, and the page dies where it stands.
- *
- * It is worth a test of its own because nothing else can see it.
- * `rust_parity.py` compares the two implementations' replies and their wording,
- * but the status is the shim's own invention on the way past, and the shim is
- * JavaScript that no Python test loads.  This was live on the deployed site.
- *
- * `web/wasm-api.js` is loaded unmodified through `vm`, against a fake Worker
- * that answers with whatever the case wants.
  */
 
 const assert = require("assert");

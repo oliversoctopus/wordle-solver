@@ -177,12 +177,14 @@ def scan_slashed(text, header_marker, doc_marker=None):
                 lines[header_end].strip().startswith(header_marker):
             header_end += 1
 
-    in_block = False
+    in_block = in_doc = False
     for number, line in enumerate(lines, start=1):
         stripped = line.strip()
         if in_block or stripped.startswith("/*"):
             prose.append((number, stripped.strip("/* ")))
-            if number > header_end:
+            if not in_block:
+                in_doc = stripped.startswith("/**")   # documents an item
+            if number > header_end and not in_doc:
                 comment_lines.add(number)
             in_block = "*/" not in stripped
             continue
@@ -204,7 +206,7 @@ def scan_slashed(text, header_marker, doc_marker=None):
 
 def scan_shell(text):
     hits, prose, comment_lines = [], [], set()
-    header_end, in_header = 0, True
+    header_end, header_lines, in_header = 0, 0, True
     for number, line in enumerate(text.split("\n"), start=1):
         stripped = line.strip()
         if number == 1 and stripped.startswith("#!"):
@@ -213,12 +215,13 @@ def scan_shell(text):
             prose.append((number, stripped.lstrip("#")))
             if in_header:
                 header_end = number
+                header_lines += 1
             else:
                 comment_lines.add(number)
             continue
         in_header = False
-    if header_end > HEADER_LINES:
-        hits.append(Hit(1, f"header of {header_end} lines, limit {HEADER_LINES}", ""))
+    if header_lines > HEADER_LINES:
+        hits.append(Hit(1, f"header of {header_lines} lines, limit {HEADER_LINES}", ""))
     hits += voice_hits(prose, source=True)
     hits += block_hits(comment_lines, header_end)
     return hits

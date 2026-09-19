@@ -4,13 +4,11 @@
 #     ./deploy.sh              to the live URL
 #     ./deploy.sh --preview    to a throwaway URL, to look at before promoting
 #
-# One step rather than two, so there is no gap between building and deploying
-# for a rebuild to be forgotten in.  The project link lives in site/.vercel/,
-# which build_site.sh carries across a rebuild; `vercel link` writes it once.
-#
-# The Vercel project's Root Directory has to be "." for this, since the CLI
-# uploads site/ itself -- the git integration used to be pointed inside the
-# repo instead, and has to be off now that site/ is not committed.
+# One step, so a rebuild cannot be forgotten between building and deploying.
+# The project link lives in site/.vercel/, which build_site.sh carries across
+# a rebuild; `vercel link` writes it once.  The Vercel project's Root
+# Directory has to be "." and its git integration off, since the CLI uploads
+# site/ itself.
 
 set -e
 cd "$(dirname "$0")"

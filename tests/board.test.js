@@ -1,15 +1,11 @@
 /* The solve board's editing rules, over a fake DOM and a fake server.
  *
- * Two halves.  The anchors below name particular sequences and say what the
- * board should look like afterwards; the properties are things that have to be
- * true of every board, checked after every operation of a random walk.  The
- * anchors say what was meant, and the walk finds the sequences nobody thought
- * to write down.
+ * The anchors name particular sequences and say what the board should look
+ * like afterwards; the properties hold of every board and are checked after
+ * every operation of a random walk.  ``web/app.js`` is loaded unmodified
+ * through ``vm``, with a getter object appended to reach its variables.
  *
  *     node tests/board.test.js [seeds] [steps]
- *
- * ``web/app.js`` is loaded unmodified through ``vm``, with a getter object
- * appended to reach the module's own variables.
  */
 
 const fs = require("fs");
@@ -298,11 +294,9 @@ function rng(seed) {
 
 const LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
-/* What a person can do, rather than what a keyboard can send.  A walk over bare
-   keystrokes never gets anywhere interesting: clearing a row by hand takes six
-   particular presses in a row, so uniform noise effectively never does it, and
-   the states behind it go unvisited.  These are whole intentions, and each one
-   is spent one keystroke at a time so that the properties are judged in
+/* What a person can do, not what a keyboard can send: clearing a row by hand
+   takes six particular presses, which uniform noise never produces.  Each
+   intention is spent one keystroke at a time so the properties are judged in
    between. */
 const MOVES = [
   ["a letter", 4, (r) => [["type", LETTERS[Math.floor(r() * 26)]]]],
