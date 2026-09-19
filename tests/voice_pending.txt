@@ -1,9 +1,7 @@
 # files the voice check has not yet been applied to; tests/voice.py fails once one is clean
 ABOUT_SOLVER_EXPLAINED.md
-CLAUDE.md
 README.md
 SOLVER_EXPLAINED.md
-analysis/README.md
 analysis/ablations.py
 analysis/branch_cap.py
 analysis/branch_tie.py
@@ -74,7 +72,6 @@ native/src/lib.rs
 priors.py
 rust_train.py
 solutions.py
-tests/README.md
 tests/anchors.py
 tests/board.test.js
 tests/doc_refs.py

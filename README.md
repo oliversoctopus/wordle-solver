@@ -433,6 +433,31 @@ What it buys is **<!--n timing.train.gain .2f-->1.21×** over a whole `train` �
 
 The sweep's other trick does not carry over at all. Playing several games at once is worth <!--n timing.sweep.expected.chunking .2f-->1.01× there and *costs* here — <!--n timing.train.round.chunks1 .3f-->0.847 s a round serially against <!--n timing.train.round.chunks2 .3f-->0.984 at two chunks and <!--n timing.train.round.chunks3 .3f-->1.175 at three, over the five priors at 2,000 games. Training turns the endgame search off, and the search is what leaves a core somewhere to go while a game is between scans; with nothing but scans left, splitting the memo three ways only makes each copy refill. Under `--exact-max 60` it reverses, three chunks taking the default prior's loop from <!--n timing.train.exact60.chunks1 .1f-->17.4 s to <!--n timing.train.exact60.chunks3 .1f-->14.0 s, so `train --chunks` follows `--exact-max` unless it is set outright.
 
+### Keeping the port in step
+
+The Python is the oracle and `tests/rust_parity.py` diffs every ported piece against it. Four rules keep the two in agreement.
+
+**Reduce float vectors through `sum::pairwise`.** `np.sum` adds pairwise, so its error grows as log n where a left-to-right loop grows as n. `core/src/sum.rs` transcribes numpy's order, and every place the Python spells `.sum()` on floats uses it. Two places accumulate left to right instead: `kernels.rs`, because a bucket is filled by scattering candidates into 243 slots and the weight total has to match those buckets exactly, or a guess leaving every candidate in one bucket stops scoring exactly zero bits; and `api::find`, which stands in for `kernels.ig_all`. A numpy `@` cannot be matched at all, since BLAS reduces in an order that is neither documented nor stable across builds. The letter odds and the fit are the two fields compared on a tolerance for that reason.
+
+**Break a tie by word index, over a key rounded to `BRANCH_TIE_TOL`.** The endgame's branch cap keeps the best fifty splits and the bounds tie in bulk. Sorting them unstably made each side search a different fifty and return runners-up 0.02 guesses apart. Both now sort stably over the rounded bound, so two bounds a last bit apart land in one bucket and the index decides. *The exact endgame* has the tolerance and why it is centred. A cap, a threshold or a top-k over a key that ties in bulk is brittle whoever evaluates it: a compiler, a numpy version or a machine can move the answer as easily as a second implementation can. The fix is to make the comparison as coarse as the quantity is meaningful and let a stated rule take it from there.
+
+**Bit-exactness is a means, never the goal.** Where two outputs are compared on a tolerance, the Rust is free to choose its own algorithm: `core/src/fit.rs` solves by Householder QR where `np.linalg.lstsq` uses an SVD, and agrees to 6e-13. What is not free is an order some exactness property rests on, like the kernel totals above, or a discrete cliff that turns a last bit into a different answer, like the branch cap before it was rounded. Transcribing numpy where neither applies costs code for nothing. `core/src/rng.rs` reproduces `SeedSequence` and PCG64 so one parity check can hand both sides the same rollouts, and passing the drawn answers in would have bought the same check for none of it.
+
+**Port the optimizations with the algorithms.** `kernels.py` declares every kernel `parallel=True` and caches the all-rows pool; leaving either out of the Rust made a whole sweep slower than the Python. `cargo build --release --features wordle_core/profile` times every kernel entry point, and `api_probe` prints those totals for one request. Measuring settled where the time went on each occasion that guessing had it wrong, including one loop outside the kernels that fetched a guess's letters once per candidate instead of once per guess. The browser also needs `source::Columns`, which the Python has no use for; *Without a server* has it.
+
+No fast math is enabled on either side. `rustc` exposes no such flag and release-mode LLVM does not reassociate a float sum. `SOLVER_EXPLAINED.md` *The optimization that had to be taken back out* has what it did to the Python kernels.
+
+What the native side is worth over a sweep, measured on an idle machine (`analysis/timing.py`):
+
+| | expected | entropy |
+| --- | --- | --- |
+| Python, `common.every_answer` | <!--n timing.sweep.expected.python .1f-->9.1 s | |
+| Rust, `every_answer` | <!--n timing.sweep.expected.rust .1f-->6.2 s | |
+| keeping `game::SWEEP_CHUNKS` games in flight | <!--n timing.sweep.expected.chunking .2f-->1.01× | <!--n timing.sweep.entropy.chunking .2f-->1.15× |
+| the answer-major dispatch, `--fused` | <!--n timing.sweep.expected.fused .2f-->1.06× | <!--n timing.sweep.entropy.fused .2f-->1.49× |
+
+Two thirds of the Python's sweep is outside the kernels, and that part is about twice as fast in Rust; the kernels are memory-bound in both. Three games in flight is where chunking measured best, and one chunk per core runs half as fast again as serial. Per scan the fused dispatch is worth <!--n timing.scan.at100 .1f-->2.7× at 100 candidates and <!--n timing.scan.at198 .1f-->2.2× at 200, against the Python's <!--n table_layout.expected.at130 .1f-->1.6× at 130 and <!--n table_layout.expected.at400 .1f-->1.0× at 400; over whole games the Python gets <!--n fused_gain.expected.whole .2f-->1.04× in expected mode and <!--n fused_gain.entropy.whole .2f-->1.58× in entropy. `source::Columns` already hands the endgame a compact table over most of the band the fused layout rescues, so what is left for `fused` is the heuristic scans. `bench_position` prints the per-scan figures.
+
 ## The exact endgame
 
 Once the candidate set is small, or few turns remain, `exact.py` computes the value outright:
