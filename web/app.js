@@ -1537,7 +1537,7 @@ async function start() {
 
   // the day the answer record was last brought up to date
   if (status.record_through) {
-    $("updated").textContent = `Answers through ${status.record_through}`;
+    $("updated").textContent = `Answer record updated ${status.record_through}`;
     $("updated").hidden = false;
   }
 
