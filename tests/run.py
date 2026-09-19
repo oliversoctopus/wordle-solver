@@ -27,6 +27,8 @@ FAST = [
      [sys.executable, os.path.join(ROOT, "doc_numbers.py")]),
     ("the facts the rest is measured against",
      [sys.executable, os.path.join(HERE, "anchors.py")]),
+    ("the voice and comment rules hold",
+     [sys.executable, os.path.join(HERE, "voice.py")]),
 ]
 
 SLOW = [

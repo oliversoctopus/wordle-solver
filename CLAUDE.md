@@ -23,7 +23,7 @@ The rules that stop it:
 
 ## Conventions
 
-**Comments stay to a line or two.** No multi-paragraph blocks justifying a change, no measurement tables in source. The reasoning and the numbers go in `README.md`; the comment says what the line does. File headers explaining what a module is are the exception and are welcome.
+**Comments stay to a line or two.** No multi-paragraph blocks justifying a change, no measurement tables in source. The reasoning and the numbers go in `README.md`; the comment says what the line does. A file header says what the module is in a few lines, and is held to the same rule: no measurements, no rationale essays, no history. If a decision needs defending, one line names the README section that defends it.
 
 **Point at code by name, never by line number.** `priors.build_weights` for the Python and `source::Columns` for the Rust, not `priors.py:221`. Line references go stale on the next edit and nothing resolves them; a single pass over `SOLVER_EXPLAINED.md` found seven that had drifted. A name survives every edit but a rename, and a rename is greppable — `tests/doc_refs.py` resolves every pointer against the module, class or crate module it names, so a renamed symbol fails a test instead of sitting there. The rule is about text that outlives the edit it describes: the documents, the comments, and commit messages. A message in the terminal is read in the minute it was written, so it can point wherever is most clickable.
 
@@ -32,6 +32,20 @@ The rules that stop it:
 Write JSON through `wordle_data.write_json`, which handles this. Anything else that rewrites a file must pass `newline=""` to `open` — Python's text mode writes CRLF on Windows, so without it every line of the file changes and the real edit disappears into a whole-file diff.
 
 **Markdown is one line per paragraph. Python is hard-wrapped.** Markdown here is written unwrapped, because it is always read through something that wraps it for you: a browser, a gist, VS Code's preview, and VS Code's editor too, which ships `editor.wordWrap: on` for Markdown. The source width therefore reaches no reader, while hard wrapping costs a reflow on every edit, hides phrases that straddle a line break from `grep`, and turns a one-word change into four lines of diff. Python keeps its ~80 columns, where source *is* what gets read and a 200-character line is genuinely worse. Every Markdown file in the repo is converted, so a wrapped paragraph in one is a regression rather than a local style — `python unwrap_md.py` says so and exits non-zero, and `--write` fixes it. Converting a file is a whole-file diff, so it goes in its own commit touching nothing else.
+
+## Voice
+
+Every sentence in this repo, in docs, comments, commit messages and memories: state the fact and stop. These patterns are banned.
+
+* A trailing justification: "…, which is what lets X", "…, and that is deliberate", "…, which is the whole point", "…, and it was not a small one".
+* Evaluative filler: "worth knowing", "worth stating", "genuinely", "honest", "quietly", "merely".
+* "X rather than Y" when Y was never an option.
+* Rhetorical reversal: "Not X. Y." and "It is not X but Y."
+* Narrated history in current text: "used to", "until now", "has since", "was tried", dates of edits.
+
+The test: delete every clause after a comma. If the reader lost nothing, the clause goes. A rule is one line. A comment is one or two. A section that argues belongs in `README.md`, not here.
+
+Before finishing any change that touched prose or comments, reread the diff against this section and *Conventions* as a separate pass.
 
 ## Running it
 
@@ -184,7 +198,7 @@ Say which kind of claim a sentence is. Measured, follows from the code, and gues
 
 ## Testing
 
-`tests/` holds ten checks and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, whether the coloring rule, the pattern encoding, information gain and the endgame's values are the ones their definitions call for, whether every pointer into the documents and the code still resolves, whether the static build's shim refuses in a way the page survives, and whether the Rust core agrees with the Python it was ported from.
+`tests/` holds eleven checks and `tests/README.md` describes them; `python tests/run.py` runs the lot in a few seconds, and `--full` adds what needs the table. They are deliberately narrow — the board's editing rules, the two front ends agreeing on how the solver is asked, whether the cached `f` is a fit of the answer record we have, whether the guesses a ranking names really are distinct splits, whether each scoring rule is the policy the documents describe, whether the coloring rule, the pattern encoding, information gain and the endgame's values are the ones their definitions call for, whether every pointer into the documents and the code still resolves, whether the static build's shim refuses in a way the page survives, whether the Rust core agrees with the Python it was ported from, and whether every document and comment keeps to *Voice* and *Conventions*.
 
 **Nothing there asserts a number written down by hand, and nothing new should.** The reason is not that the number goes stale, which is the smaller cost. It is that a case you write covers what you had in mind, and what you had in mind is the part you were least likely to get wrong; the bugs are in what nobody pictured. So every check gets something that can be run over inputs nobody chose — a property that holds of every board, the answer record, or a second implementation to diff against. The phantom free row was found by the random walk, and no case anyone sat down to write would have reached it.
 

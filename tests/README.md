@@ -5,7 +5,7 @@ python tests/run.py           a few seconds, needs nothing loaded
 python tests/run.py --full    also the parts that load the 167 MB table
 ```
 
-Ten checks over nine files here and one at the root, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, the coloring rule and every copy of it can be wrong together, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
+Eleven checks over ten files here and one at the root, and each says what it is for at the top. They cover the places where being wrong is *quiet*: the board can be left in a state that looks plausible, the solver can answer under a prior nobody chose, a list of words can be five spellings of one guess, a scoring rule can stop being the policy the documents describe, the coloring rule and every copy of it can be wrong together, and a pointer into the documents can stop pointing anywhere — all without anything looking wrong. Nothing here tests whether the page looks right, and nothing here can.
 
 None of them assert numbers written down by hand. Each has something else to check against — the second implementation, the answer record, or a property that holds of every board there is. Staleness is part of it, a number copied into a test being a fourth place for it to drift when `README.md` § *Numbers in the documents* already has three. The larger part is that a case someone writes covers what they had in mind, which is the part they were least likely to get wrong; an oracle can be run over inputs nobody chose, and that is where the bugs turn out to be.
 
@@ -159,3 +159,12 @@ It is an absolute *and* relative tolerance, which matters more than it sounds. A
 Nothing else could see it. `rust_parity.py` compares the two implementations' replies field by field and their refusals word for word, but the HTTP status is the shim's own invention on the way past, and the shim is JavaScript that no Python test loads.
 
 So the shim is loaded unmodified through `vm` against a fake worker that answers with whatever the case wants, and the checks are about the contract rather than the content: a board arrives ok, a refusal arrives not-ok and carries its message through what `api()` does with it, a reply that is not JSON at all counts as a refusal, anything outside `/api/` is passed to the real `fetch` untouched, and `/api/game/new` picks up the seed the module has no way to generate.
+
+## `voice.py` — the voice and comment rules
+
+`CLAUDE.md` § *Voice* and § *Conventions* are checked here. The script scans every document, comment and docstring for the banned phrases, flags a file header over ten lines, a run of plain comment lines over four, a measurement or an edit date in a source comment, and a `CLAUDE.md` over 1,500 words. A quoted phrase does not count, so a rule may name what it bans. Files not yet cleaned are listed in `voice_pending.txt`: each reports a count instead of failing, and fails once it is clean so the list shrinks with the cleanup. `--write-pending` regenerates the list and `--verbose` prints the pending hits.
+
+```
+python tests/voice.py                  the repo
+python tests/voice.py PATH...          these files or directories
+```
