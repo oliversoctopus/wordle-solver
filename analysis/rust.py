@@ -1,18 +1,10 @@
 """Handing a whole workload to the native binaries, where they can take it.
 
-The analysis scripts drive the Python solver a position at a time, which puts
-the interpreter in the innermost place it can be.  The Rust plays the same
-games about 1.7x faster and needs telling once, so the boundary that pays is a
-whole sweep rather than a single call: one subprocess, settings on the command
-line, lengths back as a little-endian f64 file.
-
-Every entry point here answers ``None`` rather than guessing.  A binary that
-was never built, a setting the flags cannot express, a run that fails -- all of
-them fall back to the Python, which is still the oracle.  The alternative is a
-script that quietly measures a policy nobody asked for, and the whole point of
-`analysis/` is that its numbers are trustworthy.
-
-``WORDLE_NO_RUST=1`` turns the dispatch off, which is how the two are compared.
+The boundary that pays is a whole sweep: one subprocess, settings on the
+command line, lengths back as a little-endian f64 file.  Every entry point
+answers ``None`` where a binary is not built, a setting has no flag, or a run
+fails, and the Python plays instead.  ``WORDLE_NO_RUST=1`` turns the dispatch
+off, and the two are compared under it.
 """
 
 import os
@@ -37,7 +29,7 @@ def binary(name):
 def _settings(solver, max_guesses):
     """Flags reproducing this solver, or None where they cannot.
 
-    Deliberately strict: anything not listed here is a setting the binary has
+    Strict: anything not listed here is a setting the binary has
     no flag for, and a sweep run without it would answer a different question.
     """
     from exact import DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH

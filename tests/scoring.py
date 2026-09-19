@@ -1,22 +1,11 @@
 """What each scoring rule claims to be, checked against what it is.
 
-Three rules share one code path: information gain, expected guesses under `f`,
-and information gain with a price on being a possible answer.  The last is new
-machinery bolted to the first, and the failure it invites is silent -- a bonus
-paid to the wrong words, or paid twice, still produces a ranking that looks
-perfectly reasonable and quietly stops being the policy the documents describe.
-
-So each claim is checked against something other than itself.  The bonus is
-recomputed from the weights with numpy, which owes nothing to the kernels.  The
-rules are compared to a solver built without the bonus, which is the same code
-with the term switched off.  And the ranking's first entry is checked against
-`best_guess`, the other route to the same decision -- the two disagreed until
-the entropy tie-break came out, and the page shows one while the terminal plays
-the other.
-
-    python tests/scoring.py
-
-Loads the 167 MB table and compiles the kernels, so it is one of the slow ones.
+Information gain, expected guesses under `f`, and information gain with a
+price on being a possible answer share one code path.  The price is
+recomputed from the weights with numpy; the rules are compared to a solver
+with the bonus switched off; and the ranking's first entry is checked against
+`best_guess`, the other route to the same decision.  Loads the table, so it
+is one of the slow ones.
 """
 
 import argparse

@@ -1,31 +1,12 @@
 """Finds every string the site says, so that all of it can be rewritten.
 
-Nothing here is a list of strings to maintain.  The site's own source is read
-and the user-visible text picked out of it by how it is *used* -- text between
-tags, ``textContent = ...``, ``say(...)``, ``SolverError(...)``, ``Err(...)``
-and so on.  A string written the ordinary way is therefore editable the moment
-it exists, with no step in between.
-
-The messages exist twice, once in ``web.py`` and once in the Rust the static
-build says them from, so both are scanned and both are listed.  Carrying an
-edit from one to the other automatically was tried and does not work: the two
-write their placeholders differently, and ``{index + 1}`` is not a name Rust
-can have.  ``tests/rust_parity.py`` compares what the two actually say, which
-catches an edit made to only one of them.
-
-Each occurrence is found at a character offset, so two identical strings in two
-places stay two separate things to edit.  Rewriting therefore happens
-to the served bytes of ``index.html`` and ``app.js`` and not to the rendered
-page: by the time text reaches the DOM there is no telling the two apart.
-
-An occurrence's id is ``<file>:<hash of the text>:<n>``, where n counts from 0
-among identical strings *in that file*.  Line numbers and offsets both move
-whenever anything above them is edited, so neither can key an override meant to
-survive the code being worked on; this survives everything short of reordering
-two identical strings within one file.
-
-Values baked into a string -- ``${count}`` in the script, ``{row}`` in the
-server -- are held to be part of it: an edit may move one but not drop it.
+The site's own source is read and the user-visible text picked out by how it
+is used: text between tags, ``textContent = ...``, ``say(...)``,
+``SolverError(...)``, ``Err(...)``.  ``web.py`` and the Rust say the same
+messages and both are listed.  An occurrence is keyed by
+``<file>:<hash of the text>:<n>``, which survives the code around it being
+edited.  A value baked into a string, ``${count}`` or ``{row}``, is part of it:
+an edit may move it but not drop it.
 """
 
 import hashlib
@@ -560,8 +541,8 @@ class Wording:
         return {
             "entries": [o.as_dict(overrides.get(o.id)) for o in found],
             "files": [name for name, _, _ in SOURCES],
-            # edits whose string has since been rewritten or removed in the
-            # source, so they no longer apply to anything
+            # edits keyed to wording the source does not hold now, so they
+            # apply to nothing
             "orphans": sorted(key for key in overrides if key not in known),
             "count": len(overrides),
         }

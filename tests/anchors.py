@@ -1,38 +1,11 @@
 """The facts everything else here is measured against.
 
-Every other check in this directory compares one part of the repository with
-another: the Rust against the Python, the page against the terminal, a kernel
-against numpy, a ranking against `best_guess`.  That is the right way to get
-coverage, since an oracle can be run over inputs nobody chose and a case you
-write only covers what you had in mind.  What it cannot do is establish
-anything.  Two transcriptions of a wrong rule agree perfectly.
-
-So this file is the other end.  Each claim here is worked out by hand from a
-definition that lives outside the repository -- Wordle's coloring rule,
-Shannon's entropy, and what optimal play is worth in a position small enough
-to reason about -- and none of it is captured from a run, which is the whole
-point: a captured value asserts only that today's behavior is today's.
-
-None of these are numbers that go stale.  Wordle's rule has not moved since
-2021, a uniform choice between four things is two bits in any year, and a
-position of two equally likely words costs one and a half guesses whatever
-this code does.  They are specifications, not measurements.
-
-The two scoring sections run on a miniature game -- six words, and a 6x6
-feedback table built by `score_guess` -- so the shipped 167 MB table is not
-needed and the position is small enough to solve on paper.  Each one asserts
-the structure it depends on before it asserts the value, because "this guess
-separates all three candidates" is what makes 5/3 the right answer, and a
-word list that quietly stopped having that property would otherwise turn a
-real check into a vacuous one.
-
-    python tests/anchors.py
-    python tests/anchors.py --full     also scores against the shipped table
-
-`--full` adds the one differential check that belongs here: `score_guess`
-against `feedback_table.npy`.  Those are two hand-written copies of one
-algorithm living in different files, and nothing else compares them, though
-everything here trusts both.
+Each claim is worked out by hand from a definition outside the repository:
+Wordle's coloring rule, the base-3 pattern encoding, Shannon's entropy, and
+what optimal play is worth in a position small enough to settle on paper.
+The scoring sections run on a six-word game whose table `score_guess` builds,
+and each asserts the structure it rests on before the value.  `--full` adds
+`score_guess` against `feedback_table.npy`, which nothing else compares.
 """
 
 import argparse

@@ -1,15 +1,10 @@
 """What the loss penalty and the endgame search's reach are worth, exactly.
 
-The solver is deterministic, so a game's outcome is a pure function of the
-answer.  Playing all 12,947 words once and weighting by the prior therefore
-computes the mean and the loss probability rather than estimating them: no
-sampling error, no error bars, and "which games changed" is a word list instead
-of a count.  It is also faster than sampling, because the memos in
-`solver.WordleSolver` and `exact.ExactEndgame` saturate after a few thousand
-games and the rest of the sweep runs out of cache.
-
-Backs the whole of README *Losing less*, and SOLVER_EXPLAINED
-*The deadline, and what losing costs* and *Why the penalty is 5 and not 1*.
+The solver is deterministic, so playing all 12,947 words once and weighting
+by the prior computes the mean and the loss probability, and "which games
+changed" is a word list.  Backs the whole of README *Losing less*, and
+SOLVER_EXPLAINED *The deadline, and what losing costs* and *Why the penalty
+is 5 and not 1*.
 """
 
 import argparse
@@ -287,7 +282,7 @@ def costs():
 
     Wall clock does not travel between machines, so what this reports is the
     ratio to the shipped reach.  A sampled set of answers rather than all of
-    them: the point is the shape of the curve, and the memos would otherwise
+    them: what is wanted is the shape of the curve, and the memos would otherwise
     flatten it by saturating partway through.
     """
     for label, config in (("flat", PriorConfig(repeat=False, curation=False)),

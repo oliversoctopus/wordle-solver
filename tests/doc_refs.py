@@ -1,33 +1,12 @@
 """Every pointer into the documents and into the code resolves to something.
 
-The documents cross-reference each other, `analysis/README.md` pairs each
-script with the claim it backs, and the scripts say the same in their
-docstrings.  None of that is checked by anything else, and all of it drifts:
-a heading gets reworded and the pointers to it quietly stop pointing.
-
-So collect every reference and resolve it against the headings themselves.
-The oracle is the documents and the code, so nothing here is a figure written
-down by hand.
-
-Two forms point at a section.  A *named* one quotes the heading in italics --
-``README *Results*``, ``SOLVER_EXPLAINED *A better map, and next to no*`` -- and
-matches on a prefix, since a reference often names a heading's opening words
-rather than all of it.  A *numbered* one is SOLVER_EXPLAINED's ``§12`` or
-``section 12`` or ``6.4``, which resolves against that document's numbering.
-
-A third points at code.  CLAUDE.md's convention is to name a symbol rather
-than a line -- ``priors.build_weights``, ``WordleSolver.guess_pool``,
-``source::Columns`` -- on the grounds that a name outlives an edit above it.
-It outlives a *rename* only if something looks, which is what this does: the
-owner has to be a module or a class here, and the name has to be something it
-defines.  The Python is read with ``ast``, so a method or an attribute set in
-``__init__`` resolves as readily as a top-level ``def``; the Rust is matched
-against its item declarations.  An owner that is neither is reported rather
-than assumed to be an import, and ``EXTERNAL`` is the list of ones that are.
-
-Whitespace is collapsed before matching.  Python is hard-wrapped, so a title
-inside a docstring is routinely split across a line break, and a check that
-read one line at a time would miss exactly the references hardest to grep for.
+A named reference quotes a heading in italics, ``README *Results*``, and
+matches on a prefix; a numbered one, ``§12`` or ``section 12`` or ``6.4``,
+resolves against SOLVER_EXPLAINED's numbering.  A reference to code names a
+symbol, ``priors.build_weights`` or ``source::Columns``: the Python is read
+with ``ast`` and the Rust matched against its item declarations, and
+``EXTERNAL`` lists the names that belong to neither.  Whitespace is collapsed
+first, so a title split across a docstring's line break still matches.
 """
 
 import ast

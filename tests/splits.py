@@ -1,21 +1,12 @@
 """One word per split in the ranking, and the words it stands for.
 
-``top_guesses`` names one word per distinct split of the candidates, and
-``split_siblings`` names the rest of that split -- the words giving the same
-feedback against every candidate still standing, which therefore play the same
-game from here on.  Both are answered by numba kernels over the feedback table,
-where being wrong looks like a plausible list rather than a crash.
+``top_guesses`` names one word per distinct split of the candidates and
+``split_siblings`` the rest of it.  Whether two words split alike is settled
+by comparing their table columns with numpy; whether the ranking is worth what
+it says by scoring a split again, or by asking the exact search for the pick.
+Loads the table, so it is one of the slow ones.
 
-Every oracle here is in the table itself.  Whether two words split the
-candidates alike is settled by comparing their columns with numpy, which is the
-slow way to ask and owes nothing to the kernels.  Whether the ranking is worth
-what it says is settled by scoring a split again, or, where the position is one
-the solver settles outright, by asking the exact search for the pick alone.
-
-    python tests/splits.py             four games per mode
-    python tests/splits.py --games 8   more of them
-
-Loads the 167 MB table and compiles the kernels, so it is one of the slow ones.
+    python tests/splits.py --games 8
 """
 
 import argparse

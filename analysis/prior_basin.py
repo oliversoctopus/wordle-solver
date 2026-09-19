@@ -1,26 +1,10 @@
-"""How much of the prior's setting actually reaches the board.
+"""How much of the prior's setting reaches the board.
 
-Two sweeps over the shipped prior, both replaying every real regime puzzle
-with the prior rebuilt from strictly earlier puzzles each day:
-
-1. `--part shapes` tempers each shape inside its own group, raising its relative
-   weights to a power t and renormalizing.  t=0 is the uniform shape exactly and
-   t=1 is what ships, so the sweep asks whether a partial sharpening plays
-   better than a full one.
-2. `--part groups` moves the mass *between* groups instead, sweeping
-   `repeat_prob` and `noncurated_prob` from far below the regime's real rates to
-   far above them.
-
-`f` is held FIXED across every point, so a difference is the prior's doing and
-not the fit's.  That is what makes the points comparable to each other, and it
-is also why the far ends read pessimistically: a prior nothing was fitted for
-carries a borrowed `f` as well as its own miscalibration.  The shapes sweep is
-run under two different `f` for the same reason -- if the ranking held only
-under the one the shipped prior was fitted for, it would be the fit talking.
-
-Neither sweep finds anything to win, which is the point: the prior sits in a
-basin far wider than the distance between its shipped setting and the truth.
-Backs README *The prior sits in a flat basin*.
+Two sweeps over the real regime puzzles with `f` held fixed: `--part shapes`
+tempers each shape inside its group from uniform to what ships, and `--part
+groups` moves the mass between groups by sweeping `repeat_prob` and
+`noncurated_prob`.  The far ends read pessimistically, carrying a borrowed
+`f`.  Backs README *The prior sits in a flat basin*.
 """
 
 import argparse

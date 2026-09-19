@@ -185,6 +185,21 @@ Both defaults of 0.10 are right for the current regime and roughly 9× and 4× t
 
 The two moves started together because the curated pool is running out: <!--n regime.curated_used-->1,835 of the 2,309 curated words are used, <!--n regime.curated_unused-->474 remain, and fresh ones are consumed at ~<!--n regime.fresh_per_year .0f-->328/year — about <!--n regime.years_left .1f-->1.4 years left. Going off-list and recycling old answers are the same editorial response to the same constraint. Extrapolating both upward is defensible on that basis, and 0.10 is a forward-looking number rather than a historical one.
 
+### What the id field indexes
+
+`solutions.json` carries the NYT's own `id` per puzzle. It is not the puzzle number and it is not stable per word: it is a position in one list that has only ever been appended to, and reading it that way accounts for every id in the record (`analysis/id_eras.py`).
+
+| ids | what they index |
+| --- | --- |
+| 1 to 2287 | the curated words in the order they were first scheduled, which is the order `wordles.json` is stored in, with 22 slots skipped |
+| 2288 to 2309 | where the words displaced by that skip came back |
+| 2310 to 2397 | off-list words, appended in alphabetically sorted batches |
+| 2398 on | the list re-sorted alphabetically, from the regime boundary |
+
+The skip is one edit. Twenty-two slots between positions 285 and 526 are never reached, and the words in them, `fanny`, `vomit`, `bobby`, `harry` and the rest, are a content purge, which dates it to the NYT's acquisition. Eighteen were dropped outright, `hasty` and `unlit` were requeued past the end, and `shine` and `gecko` were pulled forward from positions 2265 and 2266 to fill two of the holes. Twenty-two out and twenty-two back in is why the curated region is still exactly 2,309 wide and the off-list appends start at 2310.
+
+Nothing was chosen about 2398 either. It is where the end of the list had got to when `cigar` needed an entry its spent slot could not give it, and every repeat carries an era-2 id for that reason. Everything else is still drawn off the old list. The five curated first-uses that took an era-2 id had a free era-1 slot and took a new number anyway, and nothing separates them from the 172 that did not.
+
 ### What each prior is worth on real answers
 
 Everything above argues the two priors *from* the answer record; this measures them against it. `analysis/replay.py --all-priors` replays the <!--n replay.priors.puzzles-->228 real puzzles of the current regime under all four combinations, rebuilding each prior from strictly earlier puzzles each day, and pairs every arm on the same answer. The pairing is the whole point: the tables in *Results* weight each row by the prior being judged, so a prior that concentrates on words it happens to solve quickly scores well by construction, whereas here the yardstick is the sequence the NYT actually published and no arm gets a say in it.

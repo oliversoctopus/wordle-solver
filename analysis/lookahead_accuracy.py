@@ -1,43 +1,12 @@
 """How accurately the two valuations price a position, and whether it matters.
 
-`min_g E(g, S)` is what the solver scores a position at; one-ply lookahead is
-what sits above it.  Neither is checkable from a game's outcome, so this computes
-the truth directly, by the argument `common.position_value` rests on.
-
-The default run scores each valuation against what its *own* play achieves.  A
-valuation's job is to predict what it will get, and the two disagree about the
-guess in a fair share of positions, so holding both to the base policy's line
-would charge lookahead for the disagreement rather than for any error in its
-estimate.
-
-`--decisions` measures the quantity that actually drives play, which the accuracy
-table does not: an ordering of the guesses *within* one position.  A valuation
-wrong by a constant at a position ranks perfectly and costs nothing, so accuracy
-in the level says little about accuracy in the choice.  It plays out the true
-value of each of the top `--top` guesses and reports what separates them, and
-what each policy's pick gives up against the best of them.
-`exact_decisions.py` asks the same question of the endgame search.
-
-Positions come from real games, and only those where the heuristic actually
-decides are kept: where the exact search reaches, both valuations return the same
-true value and there is nothing left to measure.  In practice that is turns two
-and three -- by the fourth the candidate set is under `--exact-max`.
-
-A position is scored once and weighted by how many of the sampled games reach it,
-so the averages are per game rather than per distinct position.  Every
-per-position value is exact; it is the weighting that is sampled, so these means
-carry the sampling error of `--games` and the enumerated scripts' do not.  Priors
-are normalized to weigh equally in the blended row.
-
-Value is deadline-free throughout.  That is the convention `f` is fitted under
-(`solver.WordleSolver.play` with no deadline) and the only one `min_g E(g, S)`
-can be estimating, since it is handed no turn count at all.  It also means a
-playout always ends in a win, so no loss convention or penalty enters.
-
-Backs the accuracy and decision tables in README *Lookahead* and
-SOLVER_EXPLAINED *A better map, and next to no better score*.  Both move
-with the fit -- a refit of `f` changes the base valuation directly -- so
-read this against a run of its own vintage.
+`min_g E(g, S)` and one-ply lookahead are scored against the truth computed by
+`common.position_value`, each against its own play.  `--decisions` measures
+the ordering within a position instead: the true value of the top `--top`
+guesses, and what each policy's pick gives up.  Positions come from real games
+where the heuristic decides, weighted by how many games reach them, and value
+is deadline-free throughout.  Backs README *Lookahead* and SOLVER_EXPLAINED
+*A better map, and next to no better score*; moves with the fit.
 """
 
 import argparse

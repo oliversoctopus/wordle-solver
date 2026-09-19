@@ -1,24 +1,12 @@
 """How much of a ranking of words is one guess spelled several ways.
 
-A guess *is* its split of the candidate set: two words giving identical feedback
-against every candidate still standing play the same game from here on.  So a
-list of the five best-scoring *words* can be fewer than five guesses, and the
-ones it leaves out are the ones a reader would find interesting -- a different
-guess, not a different spelling of the one above.  `WordleSolver.top_guesses`
-therefore ranks splits, and `WordleSolver.split_siblings` names the rest of each.
-
-This measures both halves of that.  How often a word ranking would have doubled
-up, by candidate count, and how large the groups are; then what the exact
-search's `top` costs over `solve`, since asking it for runners-up loosens the
-cutoff that prunes the search and so is not free.
-
-Backs the *Alternatives* card under README *In a browser*, and the closing
-paragraph of README *The exact endgame*.  The timings are a probe rather
-than a measurement: they move with the machine, so read the ratio.
-
-    python analysis/split_ranking.py                     both, shipped prior
-    python analysis/split_ranking.py --all-priors        all four
-    python analysis/split_ranking.py --exact-root-branch 50   the narrow cap
+Two words giving identical feedback against every candidate play the same
+game from here on, so `WordleSolver.top_guesses` ranks splits and
+`WordleSolver.split_siblings` names the rest of each.  This measures how often
+a word ranking would have doubled up, by candidate count, and what the exact
+search's `top` costs over `solve`.  `--all-priors` runs all four and
+`--exact-root-branch 50` the narrow cap.  Backs README *In a browser* and
+*The exact endgame*; the timings are a probe and move with the machine.
 """
 
 import argparse
@@ -63,7 +51,7 @@ def band_of(size):
 
 
 def words_ranking(solver, candidates, k):
-    """The k best *words*, which is what a ranking without the dedupe is."""
+    """The k best *words*: a ranking without the dedupe."""
     pool = solver.guess_pool(candidates)
     scores = solver.score_all(candidates, pool=pool)
     order = np.argsort(scores)

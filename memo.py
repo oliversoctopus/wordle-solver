@@ -1,19 +1,10 @@
-"""A bounded memo that evicts, rather than one that jams when it fills.
+"""A bounded memo that evicts its least recently used entry when full.
 
-A plain dict guarded by ``if len(memo) < limit`` stops accepting once it is full,
-so it keeps whatever it happened to see first and refuses everything after.  That
-is the wrong way round: what it then declines to cache are the positions the run
-in front of it is about to reuse, and the loss is not gradual.  Playing every
-answer behind one fixed opening reaches at most 243 distinct positions, so at
-turn two alone the memo collapses a 12,947-wide computation to a 240-wide one;
-the deeper turns and the endgame search collapse further again, and measured
-over a whole sweep the three caches together are worth ~100x
-(``analysis/ablations.py``).  A full memo gives all of it back at once.
-
-Least-recently-used is worth its read-side bookkeeping here.  Relinking costs
-~100 ns against a miss that costs a scoring pass over ~13k guesses, and these
-tables memoize pure functions of a position, so what is cached only ever changes
-how long a run takes and never what it answers.
+A dict that refuses new entries once full keeps whatever it saw first and
+declines the positions the run in front of it is about to reuse.  Every table
+here memoizes a pure function of a position, so eviction changes how long a
+run takes and never what it answers.  analysis/README.md has what the memos
+are worth.
 """
 
 from collections import OrderedDict
@@ -22,7 +13,7 @@ from collections import OrderedDict
 class Memo:
     """A mapping with a cap, dropping the least recently used entry when full.
 
-    ``get`` counts as a use, which is what separates this from insertion order.
+    ``get`` counts as a use, so a hot entry stays resident.
     """
 
     def __init__(self, limit):

@@ -1,24 +1,11 @@
-"""f(n): a fitted estimate of how many guesses are still needed.
+"""f(n): a fitted estimate of how many guesses are still needed from a state
+whose candidate set has effective size n = 2 ** H, with H the entropy of the
+candidates' normalized weights.
 
-``f(n)`` estimates the expected number of guesses (including the winning one)
-still required from a state whose candidate set has *effective size* n, where
-
-    n_eff = 2 ** H,   H = entropy in bits of the candidates' normalized weights
-
-so n_eff is the plain candidate count when the prior is uniform over them, and
-shrinks toward 1 as the prior concentrates on a few candidates.
-
-Several functional *forms* are available (see ``FORMS``).  All of them are
-linear in their parameters, so every fit is one least-squares solve, and all of
-them are written as
-
-    f(n) = base + sum_i  params[i] * term_i(n),      x = log2(n)
-
-with ``base`` either 0 (free intercept) or 1 (pinned so that f(1) = 1).  The
-result is floored at 1, since one more guess is always needed.
-
-Parameters are fitted by policy iteration (see train.py) and cached on disk:
-one active set per combination of enabled priors, plus a per-form archive from
+Every form in ``FORMS`` is linear in its parameters and written as
+f(n) = base + sum_i params[i] * term_i(n) with x = log2(n), base 0 or 1, and
+floored at 1.  Parameters come from policy iteration (train.py) and are cached
+under estimator_cache/: one active fit per prior, plus a per-form archive from
 ``wordle_solver.py compare``.
 """
 
@@ -278,7 +265,7 @@ def default_params(form):
     """Projection of a rough reference curve onto this form's basis.
 
     Only for the paths that never consult f -- entropy mode, and callers that
-    pass ``load_cached=False`` deliberately.  Expected-guess play with no fit
+    pass ``load_cached=False``.  Expected-guess play with no fit
     raises ``NotFitted`` rather than coming here, since this curve is not a
     measurement of any prior and would not be saved if it were.
     """

@@ -1,25 +1,11 @@
-"""What a lost game would actually have cost, in guesses.
+"""What a lost game would have cost, in guesses.
 
-`loss_penalty.py` scores a loss as 7 -- one guess over the limit -- which is the
-convention every measured result uses and is also exactly what a penalty of 1
-asserts.  That makes it an assumption rather than a measurement, and it sits
-under the line diagram in SOLVER_EXPLAINED *Why the penalty is 5 and not 1*:
-the claim that penalty 1 wins below `L` = 7 is really the claim that a loss
-costs one more guess.
-
-So measure it.  Play every word as the answer under the six-turn deadline, take
-the games that lose, and carry each one on from its turn-6 position with the
-deadline lifted until the solver actually finds the word.  That is the
-continuation cost, and 6 + it is the risk-neutral value of `L`.
-
-It settles the baseline and not the choice.  Continuing a game prices a loss in
-guesses, which is the risk-neutral question by construction, so this can say
-where the leftmost line sits and never that 5 is right -- 5 is a claim that a
-failed puzzle is worth more than the guesses it cost, which no continuation
-measures.
-
-Backs the continuation figures in SOLVER_EXPLAINED *Why the penalty is 5 and
-not 1*.
+Every measured result scores a loss as 7, the claim a penalty of 1 makes.
+This plays every word under the six-turn deadline, takes the games
+that lose, and carries each on from its turn-6 position with the deadline
+lifted until the solver finds the word.  It prices the risk-neutral baseline
+and never the choice of 5.  Backs the continuation figures in
+SOLVER_EXPLAINED *Why the penalty is 5 and not 1*.
 """
 
 import argparse

@@ -1,18 +1,10 @@
 """Hands a fit to the native trainer where it can reproduce the settings.
 
-The same bargain `analysis/rust.py` strikes for sweeps: the Rust does the work,
-the Python keeps the reporting, and anything the flags cannot express declines
-rather than quietly fitting something else.  `estimator.save_params` still
-writes the cache, so there is one writer and one format.
-
-It is the default, and adopting it was a decision.  Given the same parameters the two
-implementations play identically, but their least-squares solves differ in the
-last bits -- LAPACK's reduction order is not reproducible, and `core/src/fit.rs`
-says so -- and greedy policy iteration amplifies that: one flipped tie changes a
-rollout, which changes the next fit, and the two walk different paths from
-there.  So the Rust returns a *different valid fit* rather than the Python's,
-and adopting it meant refitting everything and rerunning every measurement that
-moves with a fit, which the 2026-09-17 refit did.
+The Rust does the work and the Python keeps the reporting; a setting the flags
+cannot express declines, and `estimator.save_params` still writes the cache.
+The two least-squares solves differ in their last bits and policy iteration
+amplifies that, so the native fit is a different valid fit and not the
+Python's.  README *Fitting in Rust* has the measurement.
 """
 
 import json
@@ -41,7 +33,7 @@ def _flags(config, form, n_games, seed, max_iters, tol, patience,
            holdout_games, solver_options):
     """Flags reproducing this fit, or None where they cannot.
 
-    Deliberately strict, and strictest about the prior: the binary builds its
+    Strict, and strictest about the prior: the binary builds its
     own weights from a slug, so a configuration the slug does not fully
     describe would fit a different prior under the right name.
     """

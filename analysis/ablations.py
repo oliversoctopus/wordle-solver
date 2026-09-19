@@ -1,28 +1,11 @@
 """What each optimization is worth in wall clock, one knob off at a time.
 
-SOLVER_EXPLAINED *Why any of this finishes* collects five ideas.  What each is
-worth can be measured by taking it out and leaving everything else alone, which
-is what this does -- and it is not a thing the speedups quoted elsewhere can
-answer between them: they are measured on different operations against
-different baselines, so a product of them would be a number no run has ever
-produced.
-
-THIS NEEDS AN IDLE MACHINE, and unlike most of `analysis/` it cannot be made
-not to.  Every figure is a ratio of wall clocks, so background load does not
-average out of it: contention costs the sixteen-core run far more than the
-one-core run it is being compared against, and the single-threaded row goes
-first.  A reading taken on a busy machine measures the contention.  Where a
-question can be settled by counting instead, count it -- `branch_cap.py` is the
-same ablation of the endgame's cap done in subtree evaluations, and its answer
-holds whatever else the machine is doing.
-
-The naive kernels below are the shipped ones with exactly one idea removed --
-same accumulators, same blocks, same prange -- so what is timed is the removal
-rather than a rewrite.  `--check` scores them against the shipped kernel, since
-a wrong ablation is usually a fast one.
-
-The three levels are separate operations.  A factor from one says nothing about
-another, and the naive whole is not the product of these parts.
+Each naive kernel is the shipped one with one idea removed, so what is timed
+is the removal; `--check` scores them against the shipped kernel.  The three
+levels are separate operations, and the naive whole is not their product.
+NEEDS AN IDLE MACHINE: every figure is a ratio of wall clocks, and contention
+costs the sixteen-core run more than the one-core run it is compared against.
+Backs the ablation table in SOLVER_EXPLAINED *Why any of this finishes*.
 """
 
 import argparse
@@ -67,8 +50,8 @@ BLOCK = 64
 
 @njit(cache=True)
 def _color(gl, al):
-    """The coloring rule applied rather than looked up, which is what the
-    browser build does, having no table to read."""
+    """The coloring rule applied instead of looked up, as the browser build
+    does, having no table."""
     out = 0
     seen = np.zeros(26, np.uint8)
     mark = np.zeros(5, np.uint8)

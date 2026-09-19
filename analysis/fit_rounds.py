@@ -1,18 +1,10 @@
 """What policy iteration converges to, scored exactly rather than on a sample.
 
-Every round of `train.policy_iteration` leaves a fitted `f` behind, and the loop
-keeps the one whose policy measured best on the 2,000 training answers.  That
-is an in-sample statistic chosen by argmin over correlated draws, so it invites
-the suspicion that the kept fit is a lucky one.  Here every distinct `f` any
-round produced is played against all 12,947 words, weighted by the prior, which
-is computed rather than estimated and settles both questions at once: whether
-the loop's own choice is the best it saw, and whether running to convergence
-would have been better.
-
-The same run prices fitting under the exact endgame search, since it fits each
-prior twice -- at the `--exact-max 0` both front ends default to, and at the 60
-`play` uses.  Backs README *What the loop converges to* and the search figures
-in README *What it is worth*.
+Every distinct `f` a round produced is played against all 12,947 words,
+weighted by the prior, which settles whether the loop's own choice was the
+best it saw and whether running to convergence would have been better.  Each
+prior is fitted twice, at `--exact-max 0` and at 60.  Backs README *What the
+loop converges to* and the search figures in README *What it is worth*.
 """
 
 import argparse

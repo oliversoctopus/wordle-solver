@@ -1,20 +1,12 @@
-"""Rewrite what the site says, against the site that actually gets deployed.
+"""Rewrite what the site says, previewing the site that gets deployed.
 
     python editor.py                edit, on http://127.0.0.1:8001/editor
     python editor.py --port 9001    somewhere else
     python editor.py --no-browser   do not open one
 
-The page it previews is ``site/``, built by ``./build_site.sh``, which runs the
-solver in WASM and needs no server for anything.  So this loads no word lists,
-no 167 MB feedback table and no numba, and starts in the time it takes to read
-one directory.  ``web.py`` served the editor before and had to warm the whole
-solver first, to change a sentence.
-
-*Save* applies rewrites to the bytes on the way out, so the preview says the
-new thing at once and ``site/`` on disk is untouched.  *Write into the code*
-puts them in the source for good -- and a phrase written into the Rust needs
-``./build_site.sh`` again before the preview says it, since by then it is
-inside the compiled module rather than in a file being served.
+It previews ``site/``, so it loads no word lists and no table.  *Save* applies
+rewrites to the served bytes; *Write into the code* puts them in the source,
+and a phrase written into the Rust needs ``./build_site.sh`` to show.
 """
 
 import argparse

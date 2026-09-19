@@ -1,17 +1,10 @@
 """Rewrite Markdown as one line per paragraph, and check that it stays that way.
 
-Every `.md` file here is unwrapped; CLAUDE.md's *Conventions* say why.
-Run with no arguments to report which files still hold a wrapped paragraph, and
-with ``--write`` to convert them.  Verifying by default is the same bargain
-``word_lists.py`` and ``solutions.py`` strike: this rewrites files by hand-edited
-prose, so it says what it would do and stops.
-
-Fenced code, ``$$`` math blocks, tables, headings and rules are passed through
-untouched; prose, list items and blockquotes are joined.  Two guards decide
-whether the result is written at all.  The first collapses all whitespace and
-compares, so no word may be added, dropped or reordered.  The second fingerprints
-the file by blank-line-delimited chunk, typed by the chunk's first line, which
-wrapping cannot change.  Either one failing aborts the file untouched.
+Run bare to report files holding a wrapped paragraph, ``--write`` to convert.
+Fenced code, ``$$`` math, tables, headings and rules pass through untouched;
+prose, list items and blockquotes are joined.  Two guards abort a file: the
+words must be unchanged once whitespace is collapsed, and the sequence of
+blank-line-delimited chunks, typed by first line, must be unchanged.
 """
 
 import argparse

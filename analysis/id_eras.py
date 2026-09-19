@@ -1,36 +1,9 @@
 """What the NYT's `id` field indexes, and the two eras it does it in.
 
-`solutions.json` carries the NYT's own `id` per puzzle.  It is not the puzzle
-number and it is not stable per word: it is a position in one list that has
-only ever been appended to, and reading it that way accounts for every id in
-the record.  SOLVER_EXPLAINED *The off-list group* takes only what its block
-argument needs; the rest of the reconstruction is here.
-
-    1    - 2287   the curated words in the order they were first scheduled,
-                  which is the order `wordles.json` is stored in, with 22
-                  slots skipped
-    2288 - 2309   where words displaced by that skip came back
-    2310 - 2397   off-list words, appended in alphabetically sorted batches
-    2398 -        the list re-sorted alphabetically, from the regime boundary
-
-The skip is one edit rather than a drift.  Twenty-two slots between positions
-285 and 526 are never reached, and the words in them -- `fanny`, `vomit`,
-`bobby`, `harry` and the rest -- are a content purge, which dates it to the
-NYT's acquisition rather than to the fifteen months over which play walked
-into the gaps one at a time.  Eighteen were dropped outright.  `hasty` and
-`unlit` were requeued past the end, and `shine` and `gecko` were pulled
-forward from positions 2265 and 2266 to fill two of the holes on the spot.
-Twenty-two out and twenty-two back in is why the curated region is still
-exactly 2,309 wide, and so why the off-list appends start at 2310.
-
-Nothing was chosen about 2398 either.  It is where the end of the list had got
-to when `cigar` needed an entry that its spent slot could not give it, which is
-what a repeat is: every one of them carries an era-2 id for that reason alone.
-Everything else is still drawn off the old list.  The five curated first-uses
-that took an era-2 id had a free era-1 slot and took a new number anyway, and
-nothing here separates them from the 172 that did not.
-
-Nothing here feeds the solver, and the answer log moves under it.
+The id is a position in one list that has only ever been appended to, and
+reading it that way accounts for every id in the record.  README *What the id
+field indexes* has the reconstruction; SOLVER_EXPLAINED *The off-list group*
+takes what its block argument needs.  Nothing here feeds the solver.
 """
 
 import bisect

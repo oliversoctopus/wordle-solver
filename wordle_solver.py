@@ -1,21 +1,12 @@
 """The terminal front end: fitting, measuring and inspecting the solver.
 
-    python wordle_solver.py train                fit + cache f for all five prior combinations
-    python wordle_solver.py benchmark            self-play, entropy vs. expected guesses
-    python wordle_solver.py compare              policy iteration once per form of f
-    python wordle_solver.py info                 show the cached fits
-    python wordle_solver.py play                 solve a puzzle here rather than on the page
+    python wordle_solver.py train      fit + cache f for every prior combination
+    python wordle_solver.py benchmark  self-play, entropy vs. expected guesses
+    python wordle_solver.py compare    policy iteration once per form of f
+    python wordle_solver.py info       show the cached fits
+    python wordle_solver.py play       solve a puzzle here; the page's oracle
 
-Solving is what the page is for.  `play` stays because `tests/front_ends_agree.py`
-diffs its parser against the page's, which is the only thing making the two agree
-on what a switch means.
-
-Prior toggles (default: both on) are accepted by every subcommand:
-
-    --no-repeat-prior      stop down-weighting answers that have already been used
-    --no-curation-prior    stop down-weighting words off the curated answer list
-
-e.g. python wordle_solver.py train --no-curation-prior --form saturating
+The prior toggles, --mode and --form go after the subcommand.
 """
 
 import argparse
@@ -358,9 +349,7 @@ def build_parser():
     comp.add_argument("--holdout-games", type=int, default=200)
     comp.add_argument("--max-iters", type=int, default=training.DEFAULT_MAX_ITERS)
     comp.add_argument("--seed", type=int, default=0)
-    # same default as train, and for the same reason: fitting under the full
-    # search buys at most 0.0007 guesses and costs 4x the loop (README
-    # *What it is worth*)
+    # same default as train; README *What it is worth* has the measurement
     comp.set_defaults(func=cmd_compare, default_exact_max=0)
 
     info = sub.add_parser("info", parents=[common], help="show cached estimator fits")

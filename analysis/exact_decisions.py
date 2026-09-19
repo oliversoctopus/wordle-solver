@@ -1,27 +1,12 @@
 """What the endgame search is worth as a valuation, at the level of the choice.
 
-`lookahead_accuracy.py --decisions` asks how much a better valuation changes the
-guess, and what the change is worth, for the one-ply search.  This asks the same
-of `exact.ExactEndgame`, which is the strongest case available: where it reaches,
-its value is not a better estimate but the true one, so any disagreement with
-`min_g E(g, S)` is the estimator being wrong rather than two approximations
-differing.
-
-Positions are the ones the search actually takes over -- three or more turns left
-and at most `--exact-max` candidates.  Below three turns both arms are exact and
-there is nothing to compare; above the cap the search never runs.
-
-Every guess is continued by the shipped policy, so what separates two of them is
-the decision at this position and nothing downstream.  A loss cannot arise: the
-continuation is deadline-free, so a playout always ends in a win.
-
-Results are broken out by candidate count because that is where the old claim
-sat -- that the smallest positions disagree often and at no cost, being genuine
-ties.
-
-Backs README *What it is worth* and SOLVER_EXPLAINED *A better map, and
-next to no better score*.  Moves with the fit, since the estimator arm
-is `f`.
+Where `exact.ExactEndgame` reaches its value is the true one, so any
+disagreement with `min_g E(g, S)` is the estimator being wrong.  Positions are
+the ones the search takes over, three or more turns left and at most
+`--exact-max` candidates; every guess is continued by the shipped policy with
+no deadline.  Results are broken out by candidate count.  Backs README *What
+it is worth* and SOLVER_EXPLAINED *A better map, and next to no better
+score*; moves with the fit.
 """
 
 import argparse

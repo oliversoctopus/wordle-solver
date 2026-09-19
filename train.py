@@ -1,20 +1,10 @@
 """Policy iteration: fit f, act greedily on it, refit, until the fit settles.
 
-One round is
-
-    1. *evaluate* -- play a batch of games with the current policy and record,
-       for every position visited, its effective size and how many guesses the
-       policy actually needed from there;
-    2. *improve* -- least-squares fit f to those pairs.  Acting greedily on
-       E(g, S) = 1 + sum p_r f(n_r) with the new f is the improved policy.
-
-Round 0 is seeded with the greedy-entropy policy, so the first f is an estimate
-of how many guesses entropy-greedy needs.
-
-Training games are played with no deadline, so the targets are unbiased
-estimates of expected guesses and f keeps that meaning.  The six-guess deadline
-is a constraint on top of f rather than part of it: it only changes the last
-turn, which fewer than 3% of games reach.  Evaluation does apply it.
+One round plays a batch of games with the current policy, records each
+position's effective size and the guesses the policy needed from there, and
+least-squares fits f to those pairs.  Round 0 is seeded with greedy entropy.
+Training games have no deadline, so the targets are unbiased estimates of
+expected guesses; evaluation applies the six-guess limit.
 """
 
 import time

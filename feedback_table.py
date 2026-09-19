@@ -6,8 +6,7 @@ from collections import Counter
 
 from wordle_data import DATA_DIR, DERIVED_DIR, write_json
 
-# relative to this file, not to the working directory: running it from anywhere
-# else used to read and write a different set of files
+# relative to this file, not to the working directory
 def derived(name):
     return os.path.join(DERIVED_DIR, name)
 

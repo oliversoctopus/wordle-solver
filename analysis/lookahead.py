@@ -1,13 +1,10 @@
 """What one ply of branch-capped lookahead is worth, per prior and blended.
 
-The same answers are played twice, once with `--lookahead 0` and once with 1 at
-the default branch cap, so the difference is paired.  Both arms read the fit
-cached for that prior: lookahead sits above `f` rather than replacing it, and is
-not part of the cache key.
-
-Backs README *Lookahead*.  Its value moves with the quality of the base policy,
-so a refit of `f` moves this measurement -- read it against a run of the same
-vintage, not against a published number.
+The same answers are played with `--lookahead 0` and with 1 at the default
+branch cap, so the difference is paired.  Both arms read the fit cached for
+the prior; lookahead sits above `f` and is not part of the cache key.  Backs
+README *Lookahead*.  Its value moves with the base policy, so read it against
+a run of the same vintage.
 """
 
 import argparse

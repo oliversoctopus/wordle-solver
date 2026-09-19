@@ -1,22 +1,11 @@
 """Is each cached f still a fit of the answer record we have?
 
-`estimator` keys its cache on the `PriorConfig` alone.  It checks that a cached
-fit was made for the prior and the form being asked for, and nothing checks what
-answer record it was fitted against -- so `solutions.py --write` silently leaves
-every fit describing a shorter history than the solver now scores against, and
-the page carries on recommending under it.  Nothing anywhere says so.
-
-This is the one thing here that is not a test of code.  It compares two files:
-the `fitted_at` stamp each cache already carries, and the newest answer the
-solver actually uses.  What it catches is not a wrong function but a stale one.
-
-A repeat-off prior is exempt and says so: `priors.build_weights` reads the
-answer record only under `config.repeat`, so nothing `solutions.py --write` does
-can reach that fit.
-
-    python tests/fit_provenance.py
-
-Refit what it names with:  python wordle_solver.py train --this-config-only
+The estimator cache is keyed on the `PriorConfig` alone, so `solutions.py
+--write` leaves every fit describing a shorter record.  This compares each
+cache's `fitted_at` stamp with the newest answer the solver uses.  A
+repeat-off prior is exempt, since `priors.build_weights` reads the record only
+under `config.repeat`.  Refit what it names with
+`python wordle_solver.py train --this-config-only`.
 """
 
 import datetime

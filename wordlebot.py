@@ -1,19 +1,10 @@
 """Rescrape WordleBot's per-word weights, live and from the 2023 Wayback snapshot.
 
-Two files, from the same page at two points in time.  `wordlebot_weights.json`
-is the live list and is a solver input -- the `wordlebot` curation shape spreads
-the off-list mass by it -- so replacing it changes the shipped prior and every
-fit made against it.  `wordlebot_weights_2023-10-12.json` is a frozen copy that
-nothing plays with; it exists so the claim that an *old* list predicts *later*
-answers can be recomputed rather than remembered.
-
-The page gives a percentage per word.  Weights are stored relative to the
-largest, so the heaviest word is 1.0 and the file does not move when the site
-rescales.  Only guessable words are kept, the rest of the solver having no
-column for the others.
-
-Like the other fetchers here it verifies and writes nothing without `--write`,
-because a changed live list invalidates every cached fit.
+`wordlebot_weights.json` is a solver input, read by the `wordlebot` curation
+shape, so replacing it changes the prior and every fit.  The dated file is a
+frozen copy nothing plays with, kept so an old list can be scored against
+later answers.  Weights are stored relative to the largest, over guessable
+words only.  Writes nothing without `--write`.
 """
 
 import argparse

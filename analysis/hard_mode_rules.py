@@ -1,26 +1,12 @@
 """Which hard-mode rule, and what the difference between them is worth.
 
-The NYT's hard mode is a rule about letters: keep every green where it is, and
-use every revealed letter somewhere, with as many copies as have been revealed.
-It says nothing about gray letters, so a legal guess may spend letters already
-ruled out, carry more copies of a letter than the answer holds, or put a yellow
-back in the square where it came up yellow.  The solver's `--hard` reads the
-rule as "every guess must be a word that could still be the answer", which is
-strictly narrower: a possible answer keeps the greens and holds every revealed
-letter, so it is always legal, while a legal guess is frequently impossible.
+The NYT's hard mode keeps every green and reuses every revealed letter, and
+allows guesses that cannot be the answer; the solver's `--hard` allows only
+possible answers, a strict subset.  This plays every word under both rules,
+prices the gap, and counts how often the wider pool is taken.  The endgame
+search narrows to the candidates in both arms, so the figure is a floor.
 
-So the shipped arm plays a subset of the moves the NYT allows, and can only do
-worse or the same.  This plays every word as the answer under both readings and
-prices the gap, and counts the thing that would cause one: how often the wider
-pool is worth leaving the candidates for.
-
-Two things keep this a floor rather than the whole of it.  The endgame search
-narrows to the candidates in both arms, since its nodes would need a constraint
-history it is never given, and the pool a lookahead sees is the root's rather
-than the one that node would really have.  Both understate the wider rule.
-
-    python analysis/hard_mode_rules.py
-    python analysis/hard_mode_rules.py --answers 300     a slice, to try it out
+    python analysis/hard_mode_rules.py --answers 300     a slice
 """
 
 import argparse

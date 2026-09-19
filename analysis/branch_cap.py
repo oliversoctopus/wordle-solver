@@ -1,23 +1,9 @@
 """What the branch cap prunes, counted rather than timed.
 
-SOLVER_EXPLAINED *The endgame* says the cap keeps the fifty best splits by the
-bound and that it has never yet cost the winner.  Both halves are checkable
-without a stopwatch, which is the point of doing it this way: a count is the
-same on a loaded machine as on an idle one, where a wall clock is not.
-
-Two things are counted over real positions, capped against uncapped:
-
-1.  WHETHER THE CAP EVER COSTS THE ANSWER.  Solve each position both ways and
-    compare the guess and its value.  This is the claim the cap actually rests
-    on, and it is a claim about answers rather than about speed.
-2.  HOW OFTEN THE CAP IS WHAT PRUNED ANYTHING.  `_solve` walks the splits in
-    bound order and breaks the moment one cannot beat the incumbent, so the cap
-    only ever binds at a node that reaches fifty splits before that break.
-    Recording the splits evaluated per node says how often that happens.
-
-The answer to the second is "almost never", which is worth knowing before
-reaching for a wider cap: what prunes the endgame is the admissible bound, and
-the cap is trimming a tail the bound had already reached.
+Over real positions, capped against uncapped: whether the cap ever costs the
+answer, and how often the cap is what pruned anything, read off the splits
+evaluated per node.  A count is the same on a loaded machine as on an idle
+one.  Backs SOLVER_EXPLAINED *The endgame* and README *The exact endgame*.
 """
 
 import argparse

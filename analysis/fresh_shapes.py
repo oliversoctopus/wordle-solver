@@ -1,29 +1,11 @@
 """Prequential comparison of shapes for the fresh-curated group.
 
-`priors.build_weights` gives the used group the `binned` shape and the off-list
-group the `wordlebot` one, and passes ``None`` for the group between them: the
-curated words not yet used, which carry 81% of the prior's mass spread flat
-over ~490 words.  It is the largest group and the only one whose spread has
-never been measured, so this measures it.
-
-Every model predicts pick *i* from picks 1..i-1 only, and is normalized over
-the words still unused on that day, so no parameter sees the event it is
-scored on.  The last block does the opposite deliberately: a conditional logit
-fitted on every event at once, whose score is therefore a ceiling rather than
-an estimate -- if the best a model can do with hindsight is small, nothing
-honest does better.
-
-The off-list group is scored the same way in the same run, because the finding
-is the contrast: the group holding 9% of the mass has structure worth
-recovering and the group holding 81% has almost none.  Which off-list shape
-wins is `analysis/curation_shapes.py`'s question, not this one.
-
-Needs `wordfreq`, which `answer_like.py` also needs and nothing else does.
-
-Backs README *The group with no shape*.
-
-Pass --events 300 for a fixed point: it scores a frozen prefix, so what it
-prints should not move as the answer record grows.
+The unused curated words carry most of the prior's mass and get no shape.
+Every model predicts pick i from the picks before it, normalized over the
+words still unused that day; the last block fits a conditional logit on every
+event at once, a ceiling with hindsight.  The off-list group is scored the
+same way for the contrast.  `--events 300` scores a frozen prefix, a fixed
+point.  Needs `wordfreq`.  Backs README *The group with no shape*.
 """
 
 import argparse
@@ -109,10 +91,10 @@ def wordlebot(hedge):
     """WordleBot's own weight, with `hedge` of the mass spread over the words
     the scrape does not list.
 
-    The shipped hedge is sized for the off-list group, where 9,746 of 10,638
-    words are unlisted.  It does not transfer: only 7 curated words are
-    unlisted, so the same 5% hands each of them several times what a listed
-    word gets.  Hence the two rows.
+    The shipped hedge is sized for the off-list group, where nearly every
+    word is unlisted.  It does not transfer: few curated words are unlisted,
+    so the same hedge hands each of them several times what a listed word
+    gets.  Hence the two rows.
     """
     def fn(pool_words, tables):
         table = tables["wordlebot"]

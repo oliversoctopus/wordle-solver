@@ -1,38 +1,12 @@
 """What a stale answer record costs, in guesses.
 
-Every measurement here rebuilds the prior from strictly earlier puzzles on
-every day of the replay -- `replay.py`'s `as_of`, and the same convention
-behind the prequential shape scores in SOLVER_EXPLAINED 5.1 and 5.2.  The
-shipped solver does not.  `data/solutions.json` is refreshed by hand with
-`solutions.py --write` and stops at yesterday when it is, so the page plays
-with the record as of some days ago.  This
-prices the gap: the same replay with the record truncated to `t - lag` instead
-of `t`, for a range of lags, paired on the same answers.
-
-Nothing here refits `f`, and that is the point rather than an omission.
-`estimator.cache_path` is keyed on the prior's slug alone, so one fit serves
-every day of a replay and every day of a deployment alike.  What a fresh
-record buys is fresher weights out of `priors.build_weights`, and only under
-`PriorConfig.repeat` -- `priors.depends_on_answer_record` is that rule in one
-line, so with the repeat prior off the lag costs exactly nothing and there is
-nothing to measure.
-
-The answer comes out at nothing, and two things could account for that:
-
-1. The weights barely move.  A lag of k days leaves k words carrying
-   fresh-curated mass instead of used mass, and nothing else changes.
-2. The weights move and the board does not care, which is what
-   `prior_basin.py` finds for every other way of perturbing this prior.
-
-So the table carries a total-variation column beside the guesses, against the
-flattened repeat shape as a yardstick -- a perturbation of the same weights
-that the basin sweep prices at a real, if small, cost.
-
-    python analysis/refit_lag.py
-    python analysis/refit_lag.py --lags 0 1 7 28
-
-Backs README *How fresh the answer record has to be* and the two paragraphs
-closing SOLVER_EXPLAINED 14.1.
+The same regime replay with the record truncated to `t - lag` for a range of
+lags (`--lags`), paired on the same answers.  Nothing refits `f`: the cache is
+keyed on the prior's slug, so a fresh record buys fresher weights only, and
+only under `PriorConfig.repeat`.  A total-variation column beside the guesses
+says how far the weights moved, against the flattened repeat shape as a
+yardstick.  Backs README *How fresh the answer record has to be* and
+SOLVER_EXPLAINED 14.1.
 """
 
 import argparse

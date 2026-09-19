@@ -1,42 +1,12 @@
 """What a prior is worth in guesses, replayed against real answers.
 
-Two measurements, both of which need the solver rather than just the answer log,
-so this is the slow one -- a few minutes.
-
-1. The regime replay: every real puzzle since the regime began, with the prior
-   rebuilt from strictly earlier puzzles each day.
-2. The three-arm table: repeats / off-list / fresh curated, blended at the
-   regime's own mixture.  A prior can only be judged on answers that actually
-   happened; scoring it against answers sampled from its own belief is grading
-   its own homework, which is what makes this the one place arms under
-   *different* priors can be put side by side.  The fresh arm used to be the
-   497 curated words still unused, played as if today, and that broke the rule
-   one level down: `train.policy_iteration` draws its practice answers from the
-   prior it is fitting, whose fresh group is exactly those 497 words, so every
-   arm was being scored on what it had trained on.  `analysis/fresh_arm.py` has
-   what that was worth.  It is the regime's own 154 fresh answers now, which
-   costs precision on that arm and buys back the only thing the table has over
-   the replay above it: the off-list arm's 46 events against the window's 15.
-
-By default the arms are the two curation shapes, `frequency` against the shipped
-`wordlebot`.  `--shapes` widens that to all four sharpened combinations against
-uniform shapes, both priors on throughout, so what moves is only how each prior
-spreads its mass.  `--all-priors` instead switches the priors themselves on and
-off, which is the larger question and has the larger answer.
-
-Every arm plays the same real answers and every mean is an unweighted average
-over them, so the arms are comparable to each other however much their priors
-disagree.  A whole run is not comparable to an older run: each arm is a prior
-*and* the f fitted for it, so a refit moves the numbers as surely as a longer
-answer log does.
-
-    python analysis/replay.py                the two curation shapes
-    python analysis/replay.py --shapes       the four shape combinations
-    python analysis/replay.py --all-priors   the four prior combinations
-
-Backs the head-to-head paragraph under README *The curation prior's shape*, with
-`--shapes` the table under *What the two shapes are worth together*, and with
-`--all-priors` the one under *What each prior is worth on real answers*.
+Two measurements: the regime replay, every real puzzle since the regime began
+with the prior rebuilt from earlier puzzles each day; and the three-arm table,
+repeats, off-list and the regime's fresh curated answers, blended at the
+regime's mixture.  The default arms are the two curation shapes; `--shapes`
+runs the four sharpened combinations against uniform, `--all-priors` the four
+prior combinations.  Backs README *The curation prior's shape*, *What the two
+shapes are worth together* and *What each prior is worth on real answers*.
 """
 
 import argparse

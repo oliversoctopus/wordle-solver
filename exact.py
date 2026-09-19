@@ -1,70 +1,12 @@
 """Exact endgame search.
 
-Once the candidate set is small the value function can be computed outright
-instead of estimated:
+Once the candidate set is small the value function is computed outright:
 
     V(S, t) = min over g of [ 1 + sum_{r != GGGGG} p_r * V(S_r, t-1) ]
     V(S, 0) = loss_penalty
 
-with ``t`` the number of guesses left including this one.  Scoring a lost game
-as 7 is the same as ``loss_penalty = 1`` -- running out of turns costs one more
-unit than the six already spent -- so the deadline needs no separate objective.
-Raising the penalty buys solve rate at the cost of mean score.
-
-Note that V is non-*decreasing* in t under this convention: with more turns you
-are obliged to actually finish rather than paying the (comparatively cheap)
-penalty.  That is what makes the two-turn value a valid lower bound for pruning.
-
-Four things keep it tractable, the last of which trades the proof of optimality
-for a large amount of time:
-
-* **partition dedupe** -- two guesses that split S identically are
-  interchangeable, so the branching factor is the number of distinct splits of
-  S rather than the ~13k words.  A guess that is itself a candidate always has
-  a distinct split, since only it can produce GGGGG, so the dedupe never merges
-  a possible answer with a probe.  Note this only bites while S is *very*
-  small: at 8 candidates about 10.6k of the 13k guesses already split S
-  differently, and by 12 candidates it is 12.7k, so beyond that the dedupe buys
-  almost nothing and the branching factor is effectively the whole word list.
-  That, not the node count, is what makes the occasional deep position slow --
-  a 12-candidate set with four turns left can take tens of seconds.
-* **exact leaves** -- one and two turns left, and one and two candidates left,
-  are closed forms, so the recursion only has nodes at t >= 3 with three or
-  more candidates.
-* **branch and bound** -- guesses are ordered by their two-turn value (a lower
-  bound), and within a guess each bucket's bound is replaced by its exact value
-  one at a time, abandoning the guess as soon as the running total passes the
-  incumbent.
-* **branch cap** (``max_branch``) -- only the best ``max_branch`` splits by that
-  bound are tried at all.  This is what tames the tail described above, and it
-  is worth being clear about why it costs so little: branch and bound finds the
-  best guess early and then spends nearly all of its time *proving* that nothing
-  else beats it.  The cap buys the answer and skips the proof.
-
-  Measured over 1275 real positions across the four priors, against the
-  uncapped optimum: a cap of 25 or 50 picks the optimal guess every time, while
-  a cap of 10 misses 5 of 1275 (mean regret 0.0002 guesses, worst 0.053).  The
-  default of 50 leaves a margin over the smallest value that measured clean.
-  Wall clock over those positions falls from 322s to 8s, and the worst single
-  position from 30s to 1.9s.
-
-  The value returned is therefore an upper bound on the true one rather than
-  the true one, and ``solve`` is optimal-within-the-cap, not provably optimal.
-  Set ``max_branch=None`` to get the proof back.
-
-  ``top`` needs a wider cap than ``solve``, which is what ``root_branch`` is.
-  A ranking is not one answer but five, and the runners-up sit near the cap in
-  a way the winner does not: over 80 positions at four turns a cap of 50 gets
-  every winner exactly right and still leaves one list 0.0055 guesses off the
-  uncapped one, while 80 is the smallest that measured clean.  The default of
-  150 leaves the same margin as above, and costs only the node being ranked --
-  everything under it needs its winner alone, so it keeps ``max_branch``.
-
-  It is a knob rather than a constant because it buys nothing an experiment
-  measures: the winner is already exact at 50, so only a ranking's tail moves,
-  and the wider search costs about 2x at the position it is asked about.  Set
-  ``WORDLE_ROOT_BRANCH=50`` to time the endgame the way it was timed before,
-  or pass ``root_branch`` outright.
+with ``t`` the guesses left including this one.  README *The exact endgame*
+has what keeps it affordable and what each part costs.
 """
 
 import os
@@ -79,23 +21,19 @@ MAX_TURNS = 6
 # above this many candidates the packed signature no longer fits in an int64
 MAX_PACKED = 7
 
-# how many splits a node may try, best-bound first.  Set to None to search every
-# one and get a provable optimum; see the note on the branch cap above.
+# how many splits a node may try, best-bound first; None searches every one
 DEFAULT_MAX_BRANCH = 50
 
-# how many the node being *ranked* may try; see the note on the cap above.
-# WORDLE_ROOT_BRANCH narrows it back, and the Rust reads the same variable
+# how many the node being *ranked* may try; WORDLE_ROOT_BRANCH narrows it, and
+# the Rust reads the same variable
 DEFAULT_ROOT_BRANCH = int(os.environ.get("WORDLE_ROOT_BRANCH") or 150)
 
-# two guesses that split the candidates identically score identically -- the
-# same buckets filled in the same order -- so this gates the feedback-vector
-# comparison at equality rather than at a tolerance; the comparison is what
-# settles whether they are one guess under two spellings
+# two guesses that split the candidates identically score identically, so the
+# feedback-vector comparison is gated at equality
 SPLIT_TIE_TOL = 0.0
 
-# the branch cap orders on the bound rounded to this, so two bounds within a
-# float's noise of each other tie and the lower word index decides; `exact.rs`
-# rounds the same way, which is what lets the two agree without agreeing bitwise
+# the branch cap orders on the bound rounded to this, and a tie goes to the
+# lower word index; `exact.rs` rounds the same way
 BRANCH_TIE_TOL = 1e-11
 
 

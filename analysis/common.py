@@ -311,11 +311,9 @@ def header(title):
 
 
 # ---------------------------------------------------------------- results
-#
-# What a script prints, it also records, and `doc_numbers.py` carries the
-# figure into the documents from there.  `record(key, value)` at the print
-# site; the values land in `analysis/results/<script>.json` when the script
-# exits cleanly, merged into whatever an earlier run with other flags left.
+# `record(key, value)` at the print site; the values land in
+# `analysis/results/<script>.json` when the script exits cleanly, merged into
+# whatever an earlier run with other flags left.
 
 RESULTS_DIR = os.path.join(HERE, "results")
 _RECORDED = {}

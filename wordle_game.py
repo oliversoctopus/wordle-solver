@@ -1,21 +1,12 @@
-"""Play Wordle in the terminal, against an answer you choose or one drawn
-from the solver's prior.
+"""Play Wordle in the terminal, against a chosen or a sampled answer.
 
     python wordle_game.py                  pick how to play from a menu
     python wordle_game.py --answer crane   play against a known answer
     python wordle_game.py --random         answer drawn from the prior
 
-The prior the answer is drawn from is chosen with the same toggles the solver
-uses, so all four combinations are available:
-
-    python wordle_game.py --random --no-repeat-prior
-    python wordle_game.py --random --no-repeat-prior --no-curation-prior
-
-While playing, type ``?`` for the solver's recommendation or ``quit`` to give
-up.  ``--assist`` shows the recommendation every turn without being asked, and
-``--auto`` hands the whole game to the solver, which is the quickest way to
-watch it play a position you have in mind.  ``--share`` adds the emoji grid to
-the board printed at the end.
+The prior toggles select what ``--random`` draws from.  While playing, ``?``
+asks the solver and ``quit`` gives up; ``--assist`` shows the pick every turn,
+``--auto`` lets the solver play, and ``--share`` prints the emoji grid.
 """
 
 import argparse
@@ -51,11 +42,9 @@ GREEN, YELLOW, GRAY = "\x1b[30;102m", "\x1b[30m" + wash(GOLD), "\x1b[30;47m"
 TILE_COLOR = {"G": GREEN, "Y": YELLOW, "N": GRAY}
 TILE_RANK = {"N": 0, "Y": 1, "G": 2}
 
-# The share grid is drawn as blocks of color rather than as the emoji below,
-# which the console sets ragged at mismatched widths.  A cell is twice as tall
-# as it is wide, so a square tile three cells across is a full line plus U+2580
-# over the top half of the next, and the half-line left over is the gap below.
-# The gap along a row has to be a space, or the row runs together into one bar.
+# The share grid is drawn as blocks of color, since the console sets the emoji
+# ragged.  A square tile is three cells wide: a full line plus U+2580 over the
+# top half of the next, and the half-line left over is the gap below.
 BLOCK_RGB = {"G": LEAF, "Y": GOLD, "N": SLATE}
 TILE_BLOCK = {"G": "\U0001F7E9", "Y": "\U0001F7E8", "N": "⬛"}
 
@@ -183,7 +172,7 @@ def choose_answer(data, args):
 # ---------------------------------------------------------------------- play
 
 class SolverHint:
-    """Wraps the solver, loading it (and the 167 MB feedback table) only if a
+    """Wraps the solver, loading it (and the feedback table) only if a
     recommendation is actually asked for.  Guesses made before that point are
     replayed when it loads, so a hint asked for on turn 4 is still correct."""
 

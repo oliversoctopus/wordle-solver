@@ -1,28 +1,12 @@
 """Should the feedback table be indexed [answer, guess] instead, or as well?
 
-The table is square over the same word list either way, so the choice is not
-about size but about which axis the inner loop walks.  Every shipped kernel
-fixes a guess and reads scattered candidates, which `[guess, answer]` makes a
-row.  Written for `[answer, guess]` the loops invert -- fix a candidate, walk a
-contiguous run of guesses -- and the table reads become perfect: this measures
-them as insensitive to whether the candidates are scattered or adjacent, which
-the shipped layout is not.
-
-That is not the whole cost, and the rest of it is the answer to the question.
-Visiting every guess on every candidate means every guess's buckets have to be
-live at once, so the accumulator grows from 243 slots shared by a block of 64
-guesses to 243 per guess in flight.  The scatter does not go away; it moves off
-the table and onto the accumulator, which is touched exactly as often.
-
-So the comparison turns on how many accumulators the reduce needs.  Entropy
-keeps one per bucket and expected guesses keeps four, and both are swept here
-because they do not give the same answer.  Both answer-major kernels have had
-the same optimization effort as the shipped ones -- the accumulator is
-allocated once per thread rather than once per block, which was worth about 2x
-at the low end -- so this is not a draft measured against a tuned kernel.
-
-Backs SOLVER_EXPLAINED *Storing the table the other
-way round.  It is a timing probe, so it moves with the machine.
+Written for `[answer, guess]` the loops fix a candidate and walk a contiguous
+run of guesses, so the table reads stop depending on whether the candidates
+are scattered.  The scatter moves onto the accumulator instead, which has to
+hold every guess in flight, so the comparison turns on how many accumulators
+the reduce needs; entropy and expected guesses are both swept.  Backs
+SOLVER_EXPLAINED *Storing the table the other way round*.  A timing probe,
+so it moves with the machine.
 """
 
 import argparse

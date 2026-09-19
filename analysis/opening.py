@@ -1,26 +1,12 @@
 """Is the opening `f` picks the best one available to the policy behind it?
 
-The root is the widest position in the game and the only one every game shares,
-so the guess taken there is worth checking rather than trusting `f` on.  The
-check is exact: the policy is deterministic, so playing every word as the answer
-behind a forced opening *computes* that opening's mean instead of estimating it.
-Guesses are counted as they are everywhere else -- a deadline of six, a loss
-worth seven -- so the winning row reproduces the mean in README *Results*.
-
-What it cannot do is look outside the shortlist.  The ranking is `f`'s, so an
-opening that `f` prices badly enough to rank below `--top` is invisible here.
-The band table is the evidence on whether that matters: if the true mean climbs
-steadily with `f`'s rank, then `f` discriminates coarsely even where it cannot
-order finely, and a good opening far down the list is unlikely.  If the bands are
-flat, the shortlist is not doing its job and only an exhaustive sweep would
-settle it.
-
-Unlike its siblings this defaults to the shipped prior alone, since every prior
-is another `--top` full enumerations and the four together run for hours.
-
-Backs README *The opening is not where the estimator is weak*, and the
-third case in SOLVER_EXPLAINED *A better map, and next to no better
-score*.  It moves with the fit, the ranking being `f`'s.
+Playing every word as the answer behind a forced opening computes that
+opening's mean; the winning row reproduces README *Results*.  The shortlist
+is `f`'s, so an opening ranked below `--top` is invisible, and the band table
+says whether that matters.  Defaults to the shipped prior alone.  Backs README
+*The opening is not where the estimator is weak* and the third case in
+SOLVER_EXPLAINED *A better map, and next to no better score*; moves with
+the fit.
 """
 
 import argparse

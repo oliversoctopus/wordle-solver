@@ -1,16 +1,8 @@
 """Bring `solutions.json`, the answer history, up to date from the NYT's endpoint.
 
-`solutions.json` is its own cache: the days already in it are the days not
-fetched, so a rerun costs one request per day since the last one.  There is no
-second copy of the scrape -- the file the solver reads is the record.
-
-It stops at yesterday.  Every row is a puzzle already played, so a reader can
-use the whole file rather than discounting the newest entry -- today's answer
-is not in it to leak into the used-word prior of somebody solving today.
-
-`id` is the NYT's own field and is the index into their internal answer list,
-not the puzzle number -- it is what puts the off-list answers in a block above
-2309.
+The file is its own cache: a rerun fetches one request per day since the last
+entry.  It stops at yesterday, so every row is a puzzle already played.  `id`
+is the NYT's index into their internal answer list, not the puzzle number.
 """
 
 import argparse

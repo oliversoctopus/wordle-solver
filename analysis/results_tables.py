@@ -1,13 +1,9 @@
 """The two tables in README *Results*, replayed over every possible answer.
 
-Part one scores every archived form under the shipped prior.  Part two plays each
-prior combination in both modes.  Both weight by the prior in question rather
-than sampling from it, so the means are computed rather than estimated and the
-gaps between rows carry no sampling error at all -- see the note on enumerating
-in `analysis/README.md`.
-
-Both parts evaluate what is cached; neither refits.  Run `wordle_solver.py
-train` first if the fits are stale.
+Part one scores every archived form under the shipped prior; part two plays
+each prior combination in both modes.  Both weight by the prior in question,
+so the means are computed and the gaps carry no sampling error.  Neither
+refits: run `wordle_solver.py train` first if the fits are stale.
 """
 
 import argparse

@@ -1,15 +1,9 @@
 """What the answer-major dispatch is worth in whole games.
 
-`table_layout.py` measures the two layouts kernel by kernel and projects a total
-from the mix.  This measures the total directly: the same games played by a
-solver holding an answer-major copy and by one without, wall clock, everything
-included.
-
-Each arm gets a fresh solver so neither inherits the other's memo, and the arms
-are interleaved and taken at their best, because a run of this length drifts with
-whatever else the machine is doing.  The opening is reported apart from the rest
-for the reason it always is -- the memo answers it after the first game, so how
-much it weighs is a fact about the length of the run.
+The same games played by a solver holding an answer-major copy and by one
+without, wall clock, everything included.  Each arm gets a fresh solver, the
+arms are interleaved and taken at their best, and the opening is reported
+apart from the rest, since the memo answers it after the first game.
 """
 
 import argparse

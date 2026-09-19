@@ -1,14 +1,9 @@
 """Is the block the editor recycles from moving forward through the archive?
 
-Two stories fit: a *static window* over the early answers, or a *fixed replay
-lag* -- reuse a constant time after first use.  The drift rate separates them,
-in source-index per puzzle:
-
-    static window     0.0     the block never moves
-    fixed replay lag  1.0     one puzzle a day, so a constant lag drags the
-                              source forward one position a day
-
-Backs the closing paragraph of README *The repeat prior's shape*.
+Two stories fit: a static window over the early answers, or a fixed replay
+lag.  The drift rate in source-index per puzzle separates them: 0 for a
+static window, 1.0 for a fixed lag.  Backs the closing paragraph of README
+*The repeat prior's shape*.
 """
 
 import numpy as np

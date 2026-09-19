@@ -1,16 +1,10 @@
 """Is the fit the native trainer returns as good as the one Python returns?
 
-`train --rust` walks a different path to a different `f`: the two least-squares
-solves differ in their last bits, greedy policy iteration acts on that, and a
-flipped tie sends the loops to different fixed points.  Parity can only follow
-them as far as the seed round, so whether the Rust's answer is as *good* is a
-question for a measurement rather than for a diff.
-
-Both sides are fitted at `train`'s own settings and the resulting `f` is scored
-the way `fit_rounds.py` scores one -- every answer, weighted by the prior,
-computed rather than sampled.  Several seeds, because one pair of fits says
-nothing about whether a difference has a sign: what would condemn the native
-trainer is losing across the board, not losing once.
+The two least-squares solves differ in their last bits and policy iteration
+walks to different fixed points, so parity stops at the seed round and the
+question is one for a measurement.  Both sides are fitted at `train`'s own
+settings over several seeds, and each `f` is scored over every answer,
+weighted by the prior.  Backs README *Fitting in Rust*.
 """
 
 import argparse

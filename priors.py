@@ -1,25 +1,12 @@
 """The answer prior, assembled from two independently toggleable assumptions.
 
-The editor's process is modeled as:
-
-    1. with probability ``repeat_prob`` pick a word that has already been an
-       answer;
-    2. otherwise pick an unused word, which is off the curated 2022 answer list
-       with probability ``noncurated_prob``.
-
-Step 1 is the *repeat* prior, step 2 is the *curation* prior.  Either can be
-switched off, in which case that split is simply not made:
-
-    repeat=1 curation=1   the full model above
-    repeat=1 curation=0   used vs. unused only, uniform inside each
-    repeat=0 curation=1   curated vs. non-curated only, over every word
-    repeat=0 curation=0   uniform over all words
-
-Each group also has a *shape*: how its mass is spread over its members.  Both
-default to the sharpened shape, worth -0.064 +- 0.032 guesses together; passing
-``uniform`` gives the flat spread the two priors used on their own.  They were
-adopted as a pair because together they measured far better than the sum of
-their parts; on current data they measure merely additive -- see README.
+The editor picks a used word with probability ``repeat_prob`` (the *repeat*
+prior), and otherwise an unused word that is off the curated 2022 list with
+probability ``noncurated_prob`` (the *curation* prior).  Either prior can be
+off, and that split is then not made.  Each group also has a *shape*, how its
+mass is spread over its members; both default to the sharpened shape, and
+``uniform`` gives a flat spread.  README *The two priors* has what each is
+worth.
 """
 
 import json
@@ -55,8 +42,7 @@ BIN_ALPHA = 0.5
 # optimum is flat between 0.2 and 0.5; this is the middle of it.
 FREQ_TEMPERATURE = 0.35
 
-# 'wordlebot': mass kept outside the list, since the 2023 snapshot missed 2 of
-# the 44 off-list answers that followed it
+# 'wordlebot': mass kept outside the list, for the answers the list misses
 OFFLIST_HEDGE = 0.05
 
 _TABLES = {}
@@ -221,7 +207,7 @@ def _curation_shape(data, mask, shape):
 
     # 'wordlebot': the mass goes to the words WordleBot considers answerable,
     # in proportion to its weight, less a hedge spread over everything else.
-    # The hedge stays flat on purpose -- see analysis/curation_shapes.py
+    # The hedge stays flat; analysis/curation_shapes.py has why.
     table = _table(WORDLEBOT_PATH)
     listed = np.array([table.get(w, 0.0) for w in words])
     inside = listed > 0.0

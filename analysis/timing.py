@@ -1,22 +1,11 @@
-"""The wall-clock figures CLAUDE.md and README quote for the Rust port.
+"""The wall-clock figures README quotes for the Rust port.
 
-A sweep of every answer in Rust against the Python, what keeping a few games
-in flight is worth, what the answer-major dispatch is worth over a sweep, and
-what a whole `train` costs each way -- with the chunking that helps a sweep
-and costs a training round.  These were timed by hand until now, which is why
-none of them had a script and the figures could not be checked.
-
-THIS NEEDS AN IDLE MACHINE, like `ablations.py`: every figure is a ratio of
-wall clocks.  Each Rust sweep is run twice and the faster kept; the Python
-sweep runs in a fresh process each time, since the memos would otherwise
-answer the second run out of the first.  `--train` adds the trainer probes,
-which overwrite the estimator cache and restore it afterwards.
-
-    python analysis/timing.py            the sweeps, about two minutes
-    python analysis/timing.py --train    also the trainer, about five more
-
-Backs the `every_answer` and chunking figures in CLAUDE.md, and README
-*Fitting in Rust*.
+A sweep of every answer in Rust against the Python, what keeping games in
+flight is worth, what the answer-major dispatch is worth over a sweep, and
+what a whole `train` costs each way.  NEEDS AN IDLE MACHINE.  Each Rust sweep
+runs twice and the faster is kept; the Python sweep runs in a fresh process.
+`--train` adds the trainer probes, which overwrite the estimator cache and
+restore it.  Backs README *Fitting in Rust* and *Keeping the port in step*.
 """
 
 import argparse

@@ -1,19 +1,11 @@
 """The page and the terminal have to ask the solver the same question.
 
-Two front ends drive one solver by different routes: `wordle_solver.py play`
-builds a `PriorConfig` from command line flags, `web.py` builds one from a JSON
-body, and each has its own parser with its own defaults.  Nothing makes them
-agree, and a divergence is invisible from either side -- the page would simply
-recommend under a prior nobody selected, with a panel describing it correctly.
+`wordle_solver.py play` builds a `PriorConfig` from flags and `web.py` from a
+JSON body, each with its own parser.  The second implementation is the oracle
+throughout.  ``--full`` also compares the recommendations, which loads the
+table and compiles the kernels.
 
-So the second implementation is the oracle.  Everything here compares the two
-paths rather than checking either against a number written down by hand.
-
-    python tests/front_ends_agree.py            the settings, in a second
-    python tests/front_ends_agree.py --full     also the recommendations
-
-``--full`` builds real solvers, so it loads the 167 MB table and compiles the
-kernels.  Everything else needs neither.
+    python tests/front_ends_agree.py --full
 """
 
 import argparse

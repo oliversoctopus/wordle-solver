@@ -1,61 +1,11 @@
 """Numba kernels that score guesses against a candidate set.
 
-All three scorers share one shape: for each guessable word, bucket the current
-candidates by the feedback pattern they would produce, then reduce those
-buckets to a single number.  Entropy reduces them to bits gained, the expected
-guess count reduces them through the fitted estimator f, and the two-turn value
-reduces them to the exact score when two guesses remain.
-
-Small candidate sets are scored far more often than large ones.  Every node of
-the exact search and every late turn of every rollout scans a handful of
-candidates against all ~13k guesses, and a scan carrying a cost fixed at the 243
-possible patterns would spend all its time there.  Three things avoid that.  None
-of them adds to the accumulate loop, which runs once per (guess, candidate) pair
-and stays branch-free:
-
-* the per-pattern accumulators are allocated once per block of guesses, not
-  once per guess;
-* below ``_RESCAN_MAX`` candidates the reduce walks the candidates a second
-  time instead of sweeping all 243 patterns, taking each bucket the first time
-  it is reached and zeroing it there.  The reduce *and* the clear for the next
-  guess then both cost the number of candidates;
-* ``w * log2(w)`` depends only on the candidate and never on the guess.
-  Computing it once per candidate instead of once per (guess, candidate) pair
-  was, on its own, most of the cost of scoring a wide position.
-
-What is left is bound by memory, not arithmetic.  ``feedback_table[guess, c]``
-for scattered ``c`` spends a whole cache line per candidate to use one byte of
-it, and a small scattered candidate set costs several times what the same number
-of adjacent candidates would.  That is why the second pass above is nearly free:
-it re-reads what the first pass has already pulled in.
-
-That penalty is bounded at both ends, which is most of why the layout is what it
-is.  A row is 203 cache lines, so past a couple of hundred candidates a
-scattered set can touch no more of one than a dense set does, and below about
-twenty-five there is too little traffic either way to matter.  Indexing
-``[answer, guess]`` instead does make the reads contiguous, and over the
-positions in between it is worth between 1.2x and 2.4x on the sets real play
-produces.  What it cannot do is win the widest ones, and that part is
-structural: reducing a guess needs that guess's whole feedback vector, which
-that layout holds as a strided column, so it has to either keep every guess in
-the block accumulating at once -- putting the accumulator out of L1 -- or
-rebuild the vector by transposing a tile, and both are additive on top of a scan
-already reading the table a full cache line at a time.  Neither ordering
-dominates the other.  ``analysis/table_layout.py`` measures it.
-
-None of these carry ``fastmath``, and they must not.  The reduce reads a bucket
-and then zeroes it for the next guess; under fastmath LLVM reorders the store
-ahead of the load, and every bucket maximum reads back as zero.  It shows up as
-``two_turn_scores`` returning 3.0 everywhere and the search preferring nonsense
-words.  The two other scorers happen to survive only because a log or a call in
-the reduce blocks the same transform, which is not something to rely on.
-Leaving it off costs nothing on the widest positions and up to about 10% in the
-middle.  That is a small price for scores that are what they claim.
-
-Every kernel takes a ``pool`` of row indices into the feedback table and returns
-one score per pool entry, in pool order; ``pool=None`` means every row.  Scoring
-a restricted pool is what keeps a deeper search affordable, since a lookahead
-never needs all 13k replies to a bucket of ninety candidates.
+Each scorer buckets the candidates by the pattern a guess would produce and
+reduces the buckets to one number: bits gained, expected guesses through f, or
+the exact two-turn value.  Every kernel takes a ``pool`` of table rows to score
+and returns one score per pool entry in pool order; ``pool=None`` means every
+row.  None of them carries ``fastmath``, which reorders the bucket clear above
+the read.  SOLVER_EXPLAINED §8 has the cost model and the layout choice.
 """
 
 import numpy as np
@@ -69,11 +19,9 @@ from wordle_data import N_PATTERNS, WIN_PATTERN  # 243, and "GGGGG" = 242
 # in the noise
 _MAX_BLOCK = 64
 
-# at or above this many candidates, the reduce sweeps all 243 patterns; below
-# it, it walks the candidates a second time instead (see the kernels).  The test
-# is on the candidate count, which is fixed for the whole scan, so the branch
-# costs nothing per guess.  SOLVER_EXPLAINED §8 has why the threshold sits here
-# and why the two branches disagreeing in their last bits is harmless.
+# at or above this many candidates the reduce sweeps all 243 patterns; below it,
+# it walks the candidates a second time instead.  SOLVER_EXPLAINED §8 has why
+# the threshold sits here.
 _RESCAN_MAX = 128
 
 _ALL_ROWS = {}
@@ -237,8 +185,8 @@ def expected_guesses_all(feedback_table, candidates, weights, params,
 
     ``p_r`` is the prior mass of bucket r relative to the whole candidate set,
     and ``n_r`` is that bucket's effective size.  The GGGGG bucket contributes
-    nothing, which is what makes a guess that could itself be the answer come
-    out ahead of an equally informative guess that could not.
+    nothing, so a guess that could itself be the answer comes out ahead of an
+    equally informative guess that could not.
     """
     pool, block = _resolve_pool(feedback_table.shape[0], pool)
     wlw = _w_log_w(weights)
@@ -310,8 +258,8 @@ def two_turn_scores(feedback_table, candidates, weights, penalty, pool=None):
 
     with A the mass and B the sum of bucket maxima over the non-winning
     buckets.  Called with ``penalty = min(loss_penalty, 1)`` this is also a
-    valid lower bound on the value at any larger number of turns, which is what
-    the exact search prunes with.
+    valid lower bound on the value at any larger number of turns, and the exact
+    search prunes with it.
     """
     pool, block = _resolve_pool(feedback_table.shape[0], pool)
     return _two_turn(feedback_table, candidates, weights, penalty, pool, block)
@@ -324,9 +272,9 @@ def signature_keys(feedback_table, candidates):
     """Pack each guess's feedback pattern over the candidates into one integer.
 
     Guesses sharing a key split the candidate set identically and are
-    interchangeable, which is what collapses the exact search's branching
-    factor from ~13k to the number of distinct partitions.  Needs 8 bits per
-    candidate, so callers must keep to at most 7 candidates.
+    interchangeable, so the exact search branches over distinct partitions
+    and not over every word.  Needs 8 bits per candidate, so callers must keep
+    to at most 7 candidates.
     """
     n_guesses = feedback_table.shape[0]
     m = candidates.shape[0]

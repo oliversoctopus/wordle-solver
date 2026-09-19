@@ -95,7 +95,7 @@ The native sweep is worth about 1.7× on the scripts that use it. The memos are 
 | `drift.py` | the closing paragraph of README *The repeat prior's shape* |
 | `fresh_shapes.py` | README *The group with no shape* |
 | `curation_shapes.py` | SOLVER_EXPLAINED §5.2 — the shape table, the snapshot's forward-prediction table, and why the hedge is flat; the opening of README *The curation prior's shape* |
-| `id_eras.py` | the id evidence for the off-list block in SOLVER_EXPLAINED §5.2. Its header carries the rest of the reconstruction, which that section leaves out: the 2022 purge, where the displaced words went, and what a repeat costs in numbering |
+| `id_eras.py` | the id evidence for the off-list block in SOLVER_EXPLAINED §5.2, and the reconstruction in README *What the id field indexes* |
 | `hard_mode.py` | the table and the entropy paragraph under README *Hard mode* |
 | `hard_mode_rules.py` | the paragraph under README *Hard mode* saying the shipped restriction is not the NYT's rule, and what widening it to theirs would be worth |
 | `lookahead.py` | the paired figures in README *Lookahead*, not its accuracy table |

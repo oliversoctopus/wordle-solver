@@ -1,19 +1,9 @@
 """Rebuild `answer_like.json`: how answer-like each non-curated word is.
 
-The curated list is 2,309 labeled examples of "a word an editor considered
-answerable" and it is independent of the off-list events, so fit a logistic
-regression with the curated words as positives and the non-curated words as
-negatives and keep the log-odds.  `SOLVER_EXPLAINED.md` 5.3 says why the shape
-exists and what it is worth against the shipped one.
-
-This reproduces the shipped `answer_like.json` exactly.  It writes nothing
-unless you pass `--write`, since the solver reads the file.
-
-The fit is sensitive to details that are easy to guess wrong -- the feature set,
-the language list, the ridge on the intercept.  Change any of them and it still
-fits, still correlates at r ~ 0.98, and no longer reproduces the file.
-
-Needs `wordfreq`, which nothing else in the project uses:
+A logistic regression with the curated words as positives and the rest as
+negatives, keeping the log-odds; `SOLVER_EXPLAINED.md` 5.3 has what it is
+worth.  Writes nothing without `--write`.  The fit reproduces the shipped file
+only with this exact feature set, language list and ridge.  Needs `wordfreq`:
 
     pip install wordfreq
 """
@@ -31,7 +21,7 @@ ANSWER_LIKE_PATH = os.path.join(DATA_DIR, "answer_like.json")
 
 # the "is this actually a name" lift: a word as common abroad as at home is a
 # name, not an English word.  Ten languages, not twenty -- adding more drags
-# the lift toward zero for genuinely international words like `laser`.
+# the lift toward zero for international words like `laser`.
 FOREIGN_LANGUAGES = ("fr", "de", "es", "it", "pl", "tr", "nl", "sv", "pt", "id")
 
 SUFFIXES = ("s", "es", "ed", "er", "y", "ly")

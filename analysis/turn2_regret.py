@@ -1,41 +1,12 @@
 """What is left in the second guess, and whether taking it survives the prior.
 
-Behind a fixed opening the whole turn-2 policy is at most 243 decisions, one per
-feedback pattern, so it can be priced exhaustively rather than sampled.  Each
-position is scored by playing out the true value of the top `--top` guesses --
-`common.guess_value`, the same device `lookahead_accuracy.py --decisions` uses --
-and weighted by its exact prior mass, which is the probability play reaches it.
-That matters because `f` decides turn 2 and almost nothing else: the opening is a
-single position already known to be optimal, and by four turns left the exact
-search has taken over.  Whatever the estimator still costs is here.
-
-Something is here, and it is 0.003 guesses.  Substituting those decisions and
-sweeping every answer reproduces the figure end to end, which is the check that
-the census measured what it meant to.
-
-Then the point of the script.  Those decisions were chosen to minimize a mean
-under the shipped prior, and the prior is a model of the editor rather than the
-editor, so the last stage scores the identical substitution under distributions
-it was not chosen under -- three other enumerated ones, and the answers the NYT
-really published.  The sign does not survive.  What the gain rides on is a
-reshuffle of a tenth of the word list, nearly half of which moves the wrong way,
-and a small nudge to the prior's weighting decides which half wins.
-
-The two real-answer rows are differences and not levels.  Both arms replay those
-answers under today's prior, where every one of them is a word already used and
-priced at repeat weight, so both sit far above the 3.1684 `replay.py` reports
-from a prior rebuilt as of each puzzle.  That handicap is common to the arms and
-cancels in the pair, which is the only quantity read off those rows.
-
-So this backs a negative result, and it is the sharpest of the cases in
-SOLVER_EXPLAINED *A better map, and next to no better score*: not that a
-better valuation fails to pay, but that at the last position where the
-estimator decides anything, playing
-*optimally* is worth less than the error in the prior it would be optimal for.
-README *Perfecting the second guess* is the write-up.
-
-Nothing is written and no override is cached.  They are derived here each run,
-since they belong to one opening, one prior and one fit.
+Behind a fixed opening the turn-2 policy is at most 243 decisions, so each is
+priced by playing out the true value of the top `--top` guesses, weighted by
+its exact prior mass, and substituting them reproduces the gain in a sweep.
+The same substitution is then scored under distributions it was not chosen
+under, three enumerated ones and the real answers, whose rows are read as a
+difference.  Backs README *Perfecting the second guess* and the sharpest case
+in SOLVER_EXPLAINED *A better map, and next to no better score*.
 """
 
 import argparse

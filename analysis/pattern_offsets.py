@@ -1,20 +1,10 @@
 """How much of f's error is the feedback pattern that produced the bucket.
 
-`f` reads one scalar, so it cannot tell ten candidates in the `-atch` family
-from ten well-separated ones.  The pattern is the one structural feature
-already in hand where `f` is evaluated, so the question worth asking is whether
-a per-pattern offset would have anything to read.  It would: the bias rises
-with the green count and is large under the priors with no curation shape.
-
-Two rival causes have to be separated, which is what the depth dummies are for.
-A four-green bucket arrives late in a game, so a class effect and a depth
-effect are confounded in the marginal table; entering both leaves each read
-against the other, and `f`'s own basis is in the design throughout so neither
-can stand in for the curve.
-
-What this does *not* reproduce is the verdict.  Playing the correction needs a
-kernel that carries the offsets, and that patch was not kept -- README
-*Conditioning f on the pattern* has what it measured.  Backs the residual
+`f` reads one scalar and cannot tell a one-letter family from a well-separated
+set.  A per-pattern offset is fitted with depth dummies, so a class effect and
+a depth effect are read against each other, and `f`'s own basis is in the
+design throughout.  The verdict on playing the correction is not reproduced
+here; README *Conditioning f on the pattern* has it.  Backs the residual
 figures in that section.
 """
 

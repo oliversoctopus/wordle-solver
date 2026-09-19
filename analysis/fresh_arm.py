@@ -1,34 +1,12 @@
 """Why the fresh arm and the real fresh answers disagree.
 
-The three-arm table's fresh column WAS a census of the 497 curated words still
-unused; it is the regime's own 154 fresh answers now, and this script is why.
-No word is in both sets -- one leaves the unused pile the moment the editor uses
-it -- and sharpening the repeat shape cost nothing on the census against about
-an eighth of a guess on the 154, which is what made the old blend in
-`replay.py --shapes` disagree with the plain replay above it.
-
-Two candidates, and the script separates them:
-
-1. WHEN.  The census plays as if today; the 154 played on their own days.  So
-   play the census words on the real answers' days too, same solver, and see
-   whether the gap survives.
-2. WHICH f.  Each arm of the table carries the f fitted for its own prior, and
-   `train.policy_iteration` draws its training answers FROM that prior -- whose
-   fresh-curated group is, at fitting time, exactly the 497.  Every f in the
-   repo is therefore tuned on the census and has never seen a word the editor
-   actually picked.  So run the same contrast with f forced to one value in both
-   arms, at each of the two fits, and see how much of the gap is left.
-
-The second is the one that carries it, which made the census a quiet case of the
-thing SOLVER_EXPLAINED 14.1 opens by warning against: answers sampled from the
-prior, smuggled back in through the estimator rather than through the arm.  It
-was training on the test set, and that is why the arm was replaced.
-Note that this locates the effect rather than proving the mechanism -- the
-confirming run is an f fitted on a distribution that includes the editor's
-picks, which is a policy iteration this does not do.
-
-Backs the fresh-arm paragraph of SOLVER_EXPLAINED 14.1 and the caveat under
-README *What the two shapes are worth together*.
+The three-arm table's fresh column is the regime's own fresh answers, not a
+census of the curated words still unused, and this script is why.  Two
+candidates are separated: WHEN, by playing the census on the real answers'
+days; and WHICH f, by forcing one `f` on both arms, since policy iteration
+draws its training answers from the prior and its fresh group is the census.
+The second carries it.  Backs the fresh-arm paragraph of SOLVER_EXPLAINED 14.1
+and README *What the two shapes are worth together*.
 """
 
 import argparse

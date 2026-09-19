@@ -4,8 +4,8 @@ Every model predicts repeat *i* from repeats 1..i-1 only, so no parameter ever
 sees the event it is scored on.  Backs README *The repeat prior's shape* and
 SOLVER_EXPLAINED *The repeat group*.
 
-Pass --events 18 to reproduce the numbers the README carried before the
-2026-08-10 update; that is the check that the method has not drifted.
+Pass --events 18 for a fixed point: it scores a frozen prefix, so what it
+prints should not move as the answer record grows.
 """
 
 import argparse
@@ -16,7 +16,7 @@ import common
 
 BIN_WIDTH = 200
 # uniform-mixture weight for the window models: with a hard cutoff instead, a
-# single repeat landing outside the window costs ~7 nats and swamps everything
+# single repeat landing outside the window swamps everything
 WINDOW_OUTSIDE = 0.01
 AGE_GRID = np.linspace(-2.0, 6.0, 81)
 

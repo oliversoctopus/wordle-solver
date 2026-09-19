@@ -1,31 +1,12 @@
 """Bind the numbers in the documents to the scripts that measured them.
 
-Every measured figure in the Markdown here comes from a script in `analysis/`,
-and until now the documents were brought up to date by hand, one number at a
-time.  Instead, a script records what it prints -- `common.record(key, value)`
--- into `analysis/results/<script>.json`, and the documents mark where each
-figure comes from with an HTML comment, invisible when rendered:
-
-    <!--n repeat_shapes.binned_vs_uniform-->+1.13 ± 0.21      one number
-    <!--n regime.since.repeat .1%-->10.5%                     with a format
-    <!--s replay.winner-->wins 19 of 24<!--/s-->               any string
-    <!--table results_tables.priors-->                        a whole table
-    | ... |
-    <!--/table-->
-
-Run with no arguments to check that every bound figure matches its results
-file, which `tests/run.py` does; `--write` rewrites the ones that differ and
-lists them, old beside new, which is the reading list for the prose around
-them -- a number that moved is a sentence to reread, and the tool cannot
-reread it.  `--unbound FILE` lists what looks like a figure and carries no
-marker, for the markup pass.
-
-A raw number takes the marker's Python format spec (`.1%`, `+.4f`, `,d`),
-defaulting to a thousands-separated integer or `g`, and a minus is rendered as
-U+2212 the way the documents write it.  Only the number is replaced: a unit
-after it -- `%`, `×`, `σ` -- is the document's own and stays, so a `%` spec
-scales the value without printing the sign.  A recorded string is inserted as
-it is.  The key is `<results file>.<name>`, and a name may itself carry dots.
+A script records what it prints with `common.record(key, value)` into
+`analysis/results/<script>.json`, and a document marks each figure with an
+HTML comment naming the key: `<!--n script.key .4f-->` before a number,
+`<!--s script.key-->…<!--/s-->` around a string, `<!--table script.key-->` and
+`<!--/table-->` around a table.  Run bare to check, `--write` to rewrite and
+list what moved, `--unbound FILE` to list unmarked figures.  A number takes the
+marker's format spec; a unit after it belongs to the document and stays.
 """
 
 import argparse
@@ -42,7 +23,7 @@ DOCS = ["README.md", "SOLVER_EXPLAINED.md", "ABOUT_SOLVER_EXPLAINED.md",
         os.path.join("tests", "README.md")]
 
 N_RE = re.compile(r"<!--n ([\w.\-/]+)(?: ([^ >]+))?-->")
-# what follows an inline marker: a signed number and its ± if any; the unit
+# what follows an inline marker: a signed number and its error term; the unit
 # after it (%, ×, σ, s) belongs to the document and stays put
 NUMBER = r"[+\-−]?\d(?:[\d,]*\d)?(?:\.\d+)?(?:e[+\-−]?\d+)?"
 TOKEN_RE = re.compile(NUMBER + r"(?:\s*±\s*" + NUMBER + r")?")
@@ -72,7 +53,7 @@ def render(value, spec):
         spec = ",d" if isinstance(value, int) else "g"
     text = format(value, spec)
     if "e" in text:
-        # the documents write 5.4e-5: a short exponent, ASCII minus
+        # the documents write a short exponent with an ASCII minus
         mantissa, exponent = text.split("e")
         return f"{mantissa}e{int(exponent)}"
     # a percent spec scales the value; the sign itself is the document's
@@ -147,7 +128,7 @@ def unbound(path):
 
 
 def main():
-    # the figures carry − ± × σ, which a cp1252 console would refuse to print
+    # the figures carry non-ASCII signs and units a cp1252 console refuses
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--write", action="store_true",

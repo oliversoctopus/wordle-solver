@@ -1,33 +1,12 @@
-"""What the branch cap's tie tolerance costs, and whether 1e-11 sits in a band.
+"""What the branch cap's tie tolerance costs, and whether it sits in a band.
 
-The cap keeps the best `max_branch` splits by their bound, and the bounds tie in
-bulk -- one position holds 1,176 of its 1,177 at exactly 2.0 -- so which of them
-survives is settled by the tie-break rather than by the bound.  Reading the bound
-raw makes that a last-bit comparison, which two summation orders do not
-reproduce; `exact.BRANCH_TIE_TOL` rounds it first, so bounds within a float's
-noise of each other tie and the word index decides between them.  The bucket is
-centred on a multiple of the tolerance rather than started there, because the
-ties sit on whole values like 2.0 and an edge through one of those splits the
-very cluster the rounding exists to gather -- put the edge there instead and
-which outcome you get starts depending on the tolerance's decade.
-
-Two questions, and the second is the one that matters.  How close do genuinely
-distinct bounds get, which is the ceiling on any tolerance?  And over what range
-of tolerances does play not move, which is where the choice is safe?  A tolerance
-whose neighbours for decades either side play identically is a tolerance nothing
-turns on; one that sits alone is a number someone tuned.
-
-Read the guess *total* rather than the answers that moved.  Splits tied on the
-bound are tied on what they cost, so choosing between them hands the same guesses
-to different words -- the length distribution shifts, and every tolerance still
-totals the same.  Which near-ties a given tolerance collapses depends on where
-its grid lines fall against them, so the count of reassigned answers can wander while
-nothing that matters does.
-
-Everything runs in the Python, `WORDLE_NO_RUST=1` and all: the arms below are
-counterfactual orderings that only `exact.py` has, so handing a sweep to the
-native binary would measure the shipped rule five times over.  Backs README
-*The exact endgame* and SOLVER_EXPLAINED SS12.
+The bounds tie in bulk, so which splits the cap keeps rests on the tie-break;
+`exact.BRANCH_TIE_TOL` rounds the bound first and the word index decides.
+Two questions: how close distinct bounds get, the ceiling on any tolerance,
+and over what range of tolerances play does not move.  Read the guess total,
+since tied splits cost the same and only reassign answers.  Runs in Python
+only, its arms being orderings `exact.py` alone has.  Backs README *The exact
+endgame* and SOLVER_EXPLAINED §12.
 """
 
 import argparse

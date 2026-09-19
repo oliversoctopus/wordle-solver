@@ -1,14 +1,9 @@
 """The Rust core agrees with the Python it was ported from.
 
-Not a test of either implementation on its own: each check runs the two against
-the same inputs and diffs them, so the Python is the oracle for the port in the
-same way the other files here use one -- the second implementation, the answer
-record, or a property that holds of every board.  Nothing below asserts a figure
-written down by hand.
-
-Skips rather than fails when the Rust has not been built, so a checkout without
-a toolchain still runs the rest of the suite.  Build it with ``cargo build
---release``, or ``./build.sh`` if cargo is not on your PATH.
+Each check runs the two against the same inputs and diffs them; the Python is
+the oracle and nothing asserts a figure written by hand.  Skips when the Rust
+is not built: ``cargo build --release``, or ``./build.sh`` when cargo is not
+on PATH.
 """
 
 import argparse
@@ -25,20 +20,9 @@ ROOT = os.path.dirname(HERE)
 TARGET = os.path.join(ROOT, "target", "release")
 sys.path.insert(0, ROOT)
 
-# Almost nothing needs this any more: `core/src/sum.rs` reproduces `np.sum`, so
-# the two sides reduce a vector to the same float and every check below but one
-# comes out at exactly zero.  What is left is what numpy hands to BLAS -- the
-# letter odds are `weights @ letter_presence` and `f_value` is a matrix product
-# too -- and BLAS reduces in an order that is neither written down nor stable
-# across builds.  That is worth about 2e-14 in practice.
-#
-# The ceiling: over all 12,947 guesses at the opening the closest pair of scores
-# differs by 1.1e-9 under the shipped prior and 6e-11 under the loosest, so a
-# disagreement has to reach 6e-11 before it can reorder anything.
-#
-# Absolute as well as relative, because a score of zero is an ordinary answer --
-# a guess leaving every candidate in one bucket gains exactly no information --
-# and dividing by it says nothing.
+# between the noise a BLAS reduction opens and the closest pair of distinct
+# scores over a scan; absolute as well as relative, since a score of exactly
+# zero is an ordinary answer
 ATOL = 1e-11
 RTOL = 1e-11
 
@@ -344,9 +328,9 @@ def check_exact(report):
     """The endgame search, against ``exact.ExactEndgame``.
 
     Both the guess and the value have to match.  A guess of equal value would
-    not do: the closest real pair of scores over a whole scan is 1.1e-9, so a
-    drifting branch order shows up as a different word long before it shows up
-    as a different number.
+    not do: distinct scores over a whole scan sit far apart, so a drifting
+    branch order shows up as a different word long before it shows up as a
+    different number.
     """
     path = binary("parity_exact")
     if path is None:
@@ -414,12 +398,9 @@ def check_exact(report):
                     guess, value = search.solve(s, turns)
                     got_guess, got_value = next_int(), next_floats(1)[0]
                     worst = max(worst, gap([got_value], [value]))
-                    # A position routinely has several optimal guesses, and
-                    # which one comes back is decided by the order the bounds
-                    # were sorted into.  Both sides now sort stably and so break
-                    # a tie by word index, which is why this finds nothing; it
-                    # stays because it reports a divergence in terms of what the
-                    # guess is worth rather than merely that there was one.
+                    # a position routinely has several optimal guesses; both
+                    # sides break the tie by word index, so this finds nothing,
+                    # and stays to price a divergence by what the guess is worth
                     if got_guess != guess:
                         mine = search._evaluate(int(got_guess), s, weights[s],
                                                 weights[s].sum(), turns, np.inf)
@@ -430,13 +411,8 @@ def check_exact(report):
                             return False
                         ties += 1
 
-                    # Words as well as values, all five of them.  That is only
-                    # askable because the branch order is now the same rule on
-                    # both sides: `_bounded_splits` routinely leaves scores of
-                    # guesses tied on the bound -- 1176 of 1177 at exactly 2.0
-                    # in one of these positions -- so the cap keeps whichever
-                    # the sort left in front, and an unstable sort there meant
-                    # each side ranked a different fifty guesses.
+                    # words as well as values, all five, since the branch order
+                    # is the same rule on both sides and the bounds tie in bulk
                     top = search.top(s, turns, k=5)
                     got_words = next_indices()
                     got_values = next_floats(len(top))
@@ -466,8 +442,8 @@ def check_exact(report):
 def check_solver(report):
     """Which branch of the dispatch answers, and what it answers with.
 
-    The point is coverage of the dispatch rather than one more number: it has
-    five ways out -- a closed form at one or two candidates, the exact search,
+    This covers the dispatch: it has five ways out, a closed form at one or two
+    candidates, the exact search,
     the heaviest candidate on the last turn, lookahead, and the heuristic
     scorer -- and the arms below reach each of them.
     """
@@ -497,11 +473,8 @@ def check_solver(report):
     sets.extend(_endgame_sets(data, wanted=4))
 
     # Which arms visit each set, one bit per arm.  Everything narrow goes to
-    # all six; the opening does not, being one wide scan repeated per arm
-    # rather than six different searches -- it is a constant per setting, and
-    # `openings.json` precomputes it for the site on exactly that grounds.  One
-    # arm per mode keeps both scorers covered at that width.  Rust reads these
-    # rather than deciding for itself, so the rule lives here alone.
+    # all six; the opening, a constant per setting, goes to one arm per mode.
+    # Rust reads these, so the rule lives here alone.
     every_arm = (1 << len(arms)) - 1
     wide_arms = (1 << 0) | (1 << 4)
     masks = [wide_arms if s.size == data.n_words else every_arm for s in sets]
@@ -642,13 +615,9 @@ def check_every_answer(report):
         report(f"mean apart by {abs(got_mean - mean):.2e}, "
                f"loss by {abs(got_loss - loss):.2e}")
 
-        # A different tolerance from the rest of this file, measuring a
-        # different thing.  The two are not disagreeing about arithmetic: where
-        # a position has several exactly optimal guesses they take different
-        # ones, play different games from there, and land on the same expected
-        # value by a different route -- which is why the differing games split
-        # almost exactly evenly between longer and shorter.  What must not move
-        # is anything the documents quote, and at 1e-5 nothing does.
+        # A different tolerance: where a position has several optimal guesses
+        # the two take different ones and land on the same expected value by
+        # another route.  What must not move is anything the documents quote.
         if abs(got_mean - mean) > 1e-5 * mean or abs(got_loss - loss) > 1e-5:
             report("the weighted figures moved by more than the documents' precision")
             return False
@@ -875,13 +844,8 @@ def check_api(report):
         {"answer": "pouch", "mode": "entropy"},
     ]
     # Two rows of each opening the prior switches can produce, since a board
-    # starting on that word is the only one served from `openings.json` rather
-    # than solved on the spot -- any other first word falls through to the live
-    # search, and the precomputed entries would have nothing checking them.
-    # One wide pattern each and one narrow enough to reach the exact endgame,
-    # where the two used to be free to differ: the search orders its branches on
-    # bounds that tie in bulk, and until both sides broke those ties by word
-    # index the cap kept a different fifty on each.
+    # starting on that word is served from `openings.json`.  One wide pattern
+    # each and one narrow enough to reach the exact endgame.
     played = [[],
               [("salet", "NYNYN")], [("salet", "GYNNY")],
               [("tares", "NYNYN")], [("tares", "NYYNY")],
@@ -941,7 +905,7 @@ def check_api(report):
             # "the 80 likeliest" is ambiguous when more than 80 words tie, and
             # most of them do: numpy's argsort is not stable, so which of the
             # tied ones it lists is arbitrary.  What has to match is the
-            # weights, which is what likeliest means.
+            # weights, the meaning of likeliest.
             for reply in (got, mine):
                 reply["possible_answers"] = [float(solver_weights[data.word2ind[w]])
                                              for w in reply["possible_answers"]]
@@ -1199,11 +1163,9 @@ CHECKS = [
 ]
 
 
-# The whole sweep, which is an acceptance test for the port rather than a
-# comparison the checks above do not already make: they settle that the guesses
-# are bit-identical across every branch of the dispatch, where this permits two
-# games to diverge and reconverge and only fails when the weighted mean moves.
-# It is a fifth of the runtime, so it is asked for rather than assumed.
+# The whole sweep, an acceptance test for the port.  The checks above settle
+# that the guesses are bit-identical; this permits games to diverge and fails
+# only when the weighted mean moves.  A fifth of the runtime, so asked for.
 ACCEPTANCE = [
     ("every answer",
      "the whole sweep reproduces the mean and loss probability README quotes",

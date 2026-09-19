@@ -1,30 +1,11 @@
 """Scoring kernels that read an answer-major copy of the feedback table.
 
-The shipped kernels in `kernels.py` fix a guess and walk the candidates, which
-`feedback_table[guess, answer]` makes a row: contiguous for a whole candidate
-set, and a cache line fetched per candidate for a scattered handful.  That is
-the bill at every mid-sized position, and an answer-major copy is what pays it
-off -- one candidate against a contiguous run of guesses.
-
-Reading that way on its own is not enough, because the reduce is per guess and
-walking guesses in the inner loop leaves all of them accumulating at once, which
-puts the accumulator out of L1 and costs more than the reads save.  These
-kernels avoid the trade instead of taking it.  For a block of G guesses they
-read the G x m tile out of the answer-major table -- contiguous, G bytes per
-candidate -- and transpose it into a small buffer on the way in.  Each guess's
-feedback vector is then a contiguous row of that tile, so the reduce is exactly
-the shipped one, over a single 243-bucket accumulator reused across the block.
-
-Contiguous reads and an L1-resident accumulator, at the price of writing and
-re-reading the tile.  That price is nothing while the tile is in cache and grows
-with the candidate count, which is why `FUSED_MAX` exists: above it the shipped
-kernels are faster, and at the widest positions they cannot be beaten at all,
-since there they already read the table a full cache line at a time.
-
-Everything here is a fallback to `kernels` when the transposed table is absent
-or the position is outside the band, and the summation order is the shipped
-order throughout, so scores are bit-identical rather than merely close.
-`analysis/table_layout.py` is where the band and the block rule come from.
+For a block of guesses they read a contiguous tile out of the answer-major
+table, transpose it into a small buffer, and reduce each row with the shipped
+kernels' own loop, so a score is bit-identical to ``kernels``'.  The band of
+candidate counts it pays in runs from ``FUSED_MIN`` to ``FUSED_MAX``; outside
+it, or with no transposed table, every entry point falls back to ``kernels``.
+SOLVER_EXPLAINED *Storing the table the other way round* has the measurements.
 """
 
 import os
@@ -54,8 +35,8 @@ DEFAULT_ENABLED = os.environ.get("WORDLE_FUSED") == "1"
 
 
 def build_transposed(feedback_table):
-    """The answer-major copy, `tt[answer, guess]`.  About 0.3 s and another
-    168 MB; there is no file for it, and it is not worth one."""
+    """The answer-major copy, `tt[answer, guess]`, built in memory; there is
+    no file for it."""
     if feedback_table is None:
         return None
     return np.ascontiguousarray(feedback_table.T)

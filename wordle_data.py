@@ -31,8 +31,8 @@ TILE_VALS = {"N": 0, "Y": 1, "G": 2}
 def write_json(path, payload, indent=4, sort_keys=False):
     """JSON to disk, LF-terminated whatever the platform.
 
-    ``newline=""`` is the whole point: text mode would otherwise write CRLF on
-    Windows, and every line of the file would register as changed.
+    ``newline=""`` stops text mode writing CRLF on Windows, where every line
+    of the file would register as changed.
     """
     with open(path, "w", encoding="utf-8", newline="") as file:
         json.dump(payload, file, indent=indent, ensure_ascii=False,
@@ -57,7 +57,7 @@ def score_guess(guess, answer):
 
     This is the rule ``feedback_table.npy`` is built from; it exists separately
     so that anything only needing a single score (the game, say) does not have
-    to load the 167 MB table.
+    to load the table.
     """
     result = ["N"] * 5
     remaining = Counter(answer)
@@ -132,7 +132,7 @@ def load_data(mask_last=0, use_cache=True, with_feedback_table=True):
     already played and there is nothing to hold back.
 
     ``with_feedback_table=False`` leaves ``feedback_table`` as None, which is
-    enough for the word lists and the priors and skips a 167 MB read.
+    enough for the word lists and the priors and skips the table read.
     """
     key = (mask_last, with_feedback_table)
     if use_cache and key in _CACHE:

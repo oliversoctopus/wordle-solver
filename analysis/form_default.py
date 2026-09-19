@@ -1,16 +1,10 @@
 """Which form of f to fit when none is asked for.
 
-Every archived fit is replayed over every possible answer, weighted by the prior
-it was fitted for, so each row is that form's exact performance under that prior
-rather than its score on a sample.  There is no holdout because there is nothing
-held out: the evaluation covers the whole space a game can be drawn from.  Backs
-README *Which form is the default*.
-
-`--shapes` adds the three priors the shape comparison needs, and `--promote`
-writes each prior's winner as its active fit -- the refit procedure, so the
-active `f` is the form that scores best over every answer rather than the one
-`compare` ranked first on its holdout.  The fit already in play is ranked with
-the archives and kept when nothing beats it, so a refit never demotes a prior.
+Every archived fit is replayed over every possible answer, weighted by the
+prior it was fitted for.  `--shapes` adds the three priors the shape
+comparison needs; `--promote` writes each prior's winner as its active fit,
+ranking the fit already in play with the archives and keeping it when nothing
+beats it.  Backs README *Which form is the default*.
 """
 
 import argparse

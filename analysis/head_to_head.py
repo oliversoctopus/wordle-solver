@@ -1,21 +1,11 @@
 """The shipped solver against the reference that needs no fit, game by game.
 
-`results_tables.py` puts both on one line each; this asks where the difference
-between those lines actually comes from.  Both policies are deterministic, so
-playing all 12,947 words once is the whole sample space rather than a draw from
-it: the paired column has no sampling error in it at all, and a word either
-changes hands or it does not.
-
-The reference is `IG(g) + a*p_win(g)` with `a` pinned by two exact facts rather
-than fitted -- see README *Results*.  It is not the baseline; greedy entropy is,
-and `--baseline` puts that arm in instead.
-
-    python analysis/head_to_head.py               shipped vs the reference
-    python analysis/head_to_head.py --baseline    shipped vs greedy entropy
-    python analysis/head_to_head.py --all-priors  every prior combination
-
-Backs README *Where the estimator's guesses come from*.  Moves with the fit and
-with the answer log, being a replay of both policies.
+Both policies play all 12,947 words, so the paired column has no sampling
+error and a word either changes hands or it does not.  The reference is
+`IG(g) + a*p_win(g)` with `a` pinned by two exact facts; `--baseline` puts
+greedy entropy in instead, and `--all-priors` runs every combination.  Backs
+README *Where the estimator's guesses come from*; moves with the fit and the
+answer log.
 """
 
 import argparse
@@ -110,7 +100,7 @@ for config in configs:
     common.record(tag + "loss_ratio", mass(arms["shipped"][0] > MAX_GUESSES)
                   / mass(arms[other][0] > MAX_GUESSES))
 
-    # the whole point of enumerating: a word either changes hands or it does not
+    # enumerated, so a word either changes hands or it does not
     first, second = (arms[label][0] for label in arms)
     diff = second - first
     print("\n  head to head")
