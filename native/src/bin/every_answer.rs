@@ -138,7 +138,7 @@ fn sweep<S: wordle_core::source::Source>(
 }
 
 fn run(options: &Options) -> Result<(), Box<dyn std::error::Error>> {
-    let data = WordleData::load(&options.root, 1)?;
+    let data = WordleData::load(&options.root, 0)?;
     let config = match &options.prior {
         None => PriorConfig::default(),
         Some(slug) => all_configs()

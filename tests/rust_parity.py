@@ -733,7 +733,7 @@ def check_messages(report):
     import web
     from wordle_data import score_guess
 
-    pool = web.SolverPool(mask_last=1)
+    pool = web.SolverPool()
     data = pool.data()
     settings = web.parse_settings({})
 
@@ -913,7 +913,7 @@ def check_api(report):
     if replies is None:
         return None
 
-    pool = web.SolverPool(mask_last=1)
+    pool = web.SolverPool()
     data = pool.data()
     config = priors.PriorConfig()
     worst, at, ties = 0.0, "", 0
@@ -1114,7 +1114,7 @@ def check_train(report):
     from wordle_data import load_data
 
     games = 200
-    data = load_data(mask_last=1)
+    data = load_data()
     worst, worst_where = 0.0, None
 
     for config in ALL_CONFIGS:

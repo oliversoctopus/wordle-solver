@@ -15,7 +15,7 @@ use wordle_core::priors::{all_configs, build_weights, ShapeTables};
 use wordle_core::rng::{sample_answers, Pcg64};
 use wordle_core::WordleData;
 
-const MASK_LAST: usize = 1;
+const MASK_LAST: usize = 0;
 const DOUBLES: usize = 64;
 const GAMES: usize = 2000;
 const SEEDS: [u64; 3] = [0, 1, 12345];

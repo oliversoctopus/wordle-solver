@@ -36,7 +36,7 @@ parser.add_argument("--reaches", type=int, nargs="+", default=[60, 0],
 common.add_prior_filter(parser)
 args = parser.parse_args()
 
-data = load_data(mask_last=1)
+data = load_data()
 
 
 def exact_mean(config, params, form):

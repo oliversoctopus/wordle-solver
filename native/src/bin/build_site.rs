@@ -84,7 +84,7 @@ fn write_ranking(
 
 fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(out_dir)?;
-    let data = WordleData::load(root, 1)?;
+    let data = WordleData::load(root, 0)?;
     let tables = ShapeTables::load(root)?;
     let table = Table::build(&data.words);
     let everything: Vec<usize> = (0..data.n_words()).collect();

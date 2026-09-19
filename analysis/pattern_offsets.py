@@ -38,7 +38,7 @@ args = parser.parse_args()
 
 GREENS = np.array([num_to_feedback(p).count("G") for p in range(243)])
 MIN_LEVEL = 30          # states a level needs before it gets a dummy
-data = load_data(mask_last=1)
+data = load_data()
 
 
 def rollout(solver, answers):

@@ -15,9 +15,9 @@ use std::process::ExitCode;
 use wordle_core::priors::{all_configs, build_weights, ShapeTables};
 use wordle_core::WordleData;
 
-/// Matches `wordle_data.load_data`'s default: today's answer is kept out of the
-/// "already used" prior while you are still solving today's puzzle.
-const MASK_LAST: usize = 1;
+/// Matches `wordle_data.load_data`'s default: the record stops at yesterday,
+/// so the whole of it is used.
+const MASK_LAST: usize = 0;
 
 fn write_weights(path: &str, weights: &[f64]) -> std::io::Result<()> {
     let mut out = BufWriter::new(File::create(path)?);

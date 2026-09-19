@@ -66,7 +66,7 @@ fn band(
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = std::env::args().nth(1).unwrap_or_else(|| ".".into());
-    let data = WordleData::load(&root, 1)?;
+    let data = WordleData::load(&root, 0)?;
     let config = PriorConfig::default();
     let tables = ShapeTables::load(&root)?;
     let weights = build_weights(&data, &config, &tables)?;

@@ -352,7 +352,7 @@ def build_parser():
     parser.add_argument("--no-color", action="store_true", help="plain text tiles")
     parser.add_argument("--share", action="store_true",
                         help="also print the emoji grid, for pasting elsewhere")
-    parser.add_argument("--mask-last", type=int, default=1,
+    parser.add_argument("--mask-last", type=int, default=0,
                         help="ignore the last N entries of solutions.json (default 1)")
     return parser
 

@@ -33,7 +33,7 @@ parser.add_argument("--reach", type=int, default=0,
 common.add_prior_filter(parser)
 args = parser.parse_args()
 
-data = load_data(mask_last=1)
+data = load_data()
 
 
 def fitted(config, form, seed, use_rust):

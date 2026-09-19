@@ -59,7 +59,7 @@ parser.add_argument("--priors", type=int, default=len(ALL_CONFIGS),
 common.add_prior_filter(parser)
 args = parser.parse_args()
 
-data = load_data(mask_last=1)
+data = load_data()
 SHIPPED = exact.ExactEndgame._branch_order
 
 

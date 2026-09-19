@@ -4,8 +4,8 @@ Every measurement here rebuilds the prior from strictly earlier puzzles on
 every day of the replay -- `replay.py`'s `as_of`, and the same convention
 behind the prequential shape scores in SOLVER_EXPLAINED 5.1 and 5.2.  The
 shipped solver does not.  `data/solutions.json` is refreshed by hand with
-`solutions.py --write`, and `web.py` masks one further day on top of whatever
-that leaves, so the page plays with the record as of some days ago.  This
+`solutions.py --write` and stops at yesterday when it is, so the page plays
+with the record as of some days ago.  This
 prices the gap: the same replay with the record truncated to `t - lag` instead
 of `t`, for a range of lags, paired on the same answers.
 

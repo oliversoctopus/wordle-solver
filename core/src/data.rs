@@ -32,8 +32,8 @@ impl WordleData {
     /// Loads from a repository root.
     ///
     /// `mask_last` drops the most recent N entries of `solutions.json`, which
-    /// is how today's not-yet-played answer is kept out of the "already used"
-    /// prior while you are solving today's puzzle.
+    /// winds the used-word prior back to an earlier day.  The record itself
+    /// stops at yesterday, so 0 is what everything passes.
     pub fn load(root: &str, mask_last: usize) -> Result<WordleData, Box<dyn Error>> {
         WordleData::from_json(
             &std::fs::read_to_string(format!("{root}/data/derived/ind2word.json"))?,

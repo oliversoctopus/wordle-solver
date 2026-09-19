@@ -97,7 +97,7 @@ class SolverPool:
     them all is loaded once by ``load_data``'s own cache.
     """
 
-    def __init__(self, mask_last=1, options=None):
+    def __init__(self, mask_last=0, options=None):
         self.mask_last = mask_last
         self.options = options or {}
         self.lock = threading.Lock()
@@ -848,8 +848,9 @@ def build_parser():
     parser.add_argument("--wording-file", default=None, metavar="PATH",
                         help="where the rewrites editor.py saves are kept "
                              "(default wording.json)")
-    parser.add_argument("--mask-last", type=int, default=1,
-                        help="ignore the last N entries of solutions.json (default 1)")
+    parser.add_argument("--mask-last", type=int, default=0,
+                        help="ignore the last N entries of solutions.json "
+                             "(default %(default)s)")
     parser.add_argument("--no-exact", action="store_true",
                         help="never use the exact endgame search, only the estimator")
     parser.add_argument("--exact-max", type=int, default=DEFAULT_EXACT_MAX,

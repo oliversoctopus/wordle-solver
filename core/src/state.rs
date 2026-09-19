@@ -205,7 +205,7 @@ pub fn init(body: &json::Value) -> Result<(), String> {
     let mask_last = body
         .get("mask_last")
         .and_then(|v| v.as_f64())
-        .unwrap_or(1.0) as usize;
+        .unwrap_or(0.0) as usize;
 
     let data = WordleData::from_json(
         text("ind2word")?,

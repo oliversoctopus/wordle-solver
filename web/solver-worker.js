@@ -104,7 +104,7 @@ async function boot() {
     ...Object.values(DATA_FILES).map((path) => fetch(path).then((r) => r.text())),
   ]);
 
-  const payload = { fits, openings, mask_last: 1 };
+  const payload = { fits, openings, mask_last: 0 };
   Object.keys(DATA_FILES).forEach((key, i) => {
     payload[key] = contents[i];
   });

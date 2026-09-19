@@ -52,7 +52,7 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     }
     println!("  {} forms on the synthetic parameters", forms().len());
 
-    let data = WordleData::load(root, 1)?;
+    let data = WordleData::load(root, 0)?;
     let mut fits = 0;
     let tables = ShapeTables::load(root)?;
     for config in all_configs() {

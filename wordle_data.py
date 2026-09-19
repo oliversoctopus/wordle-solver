@@ -117,18 +117,19 @@ _CACHE = {}
 
 @functools.lru_cache(maxsize=None)
 def record_through():
-    """The print date of the record's last entry, masked or not: the day the
-    solver was last brought up to date, which the page shows."""
+    """The print date of the record's last entry: the day the solver was last
+    brought up to date, which the page shows."""
     with open(SOLUTIONS_PATH, "r") as file:
         return json.load(file)[-1].get("print_date", "")
 
 
-def load_data(mask_last=1, use_cache=True, with_feedback_table=True):
+def load_data(mask_last=0, use_cache=True, with_feedback_table=True):
     """Load everything.
 
-    ``mask_last`` drops the most recent N entries of solutions.json, which is
-    how the notebook avoids leaking today's (not yet played) answer into the
-    "already used" prior.
+    ``mask_last`` drops the most recent N entries of solutions.json, which
+    winds the used-word prior back to an earlier day.  It defaults to 0:
+    ``solutions.py`` stops the record at yesterday, so every entry is a puzzle
+    already played and there is nothing to hold back.
 
     ``with_feedback_table=False`` leaves ``feedback_table`` as None, which is
     enough for the word lists and the priors and skips a 167 MB read.

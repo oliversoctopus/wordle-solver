@@ -27,7 +27,7 @@ const SPLIT_MAX: usize = 200;
 
 fn run(root: &str, sets_path: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(out_dir)?;
-    let data = WordleData::load(root, 1)?;
+    let data = WordleData::load(root, 0)?;
     let config = PriorConfig::default();
     let tables = ShapeTables::load(root)?;
     let weights_all = build_weights(&data, &config, &tables)?;

@@ -24,7 +24,7 @@ use wordle_core::WordleData;
 
 /// `estimator.DEFAULT_FORM`.
 const DEFAULT_FORM: &str = "saturating";
-const MASK_LAST: usize = 1;
+const MASK_LAST: usize = 0;
 
 struct Args {
     root: String,

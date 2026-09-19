@@ -4,6 +4,10 @@
 fetched, so a rerun costs one request per day since the last one.  There is no
 second copy of the scrape -- the file the solver reads is the record.
 
+It stops at yesterday.  Every row is a puzzle already played, so a reader can
+use the whole file rather than discounting the newest entry -- today's answer
+is not in it to leak into the used-word prior of somebody solving today.
+
 `id` is the NYT's own field and is the index into their internal answer list,
 not the puzzle number -- it is what puts the off-list answers in a block above
 2309.
@@ -64,9 +68,13 @@ def fetch_day(session, date):
 
 
 def collect(offline=False, until=None):
-    """Everything already known, plus whatever days are missing before `until`."""
+    """Everything already known, plus whatever days are missing before `until`.
+
+    `until` defaults to yesterday, so the record holds only puzzles that have
+    already been played and every reader can use all of it.
+    """
     rows = {r["print_date"]: r for r in load_existing()}
-    until = until or datetime.date.today()
+    until = until or datetime.date.today() - datetime.timedelta(days=1)
     wanted = [LAUNCH_DATE + datetime.timedelta(days=i)
               for i in range((until - LAUNCH_DATE).days + 1)]
     missing = [d for d in wanted if d.isoformat() not in rows]
@@ -104,6 +112,13 @@ def main():
         print(f"  CHANGED      {len(changed)} existing days, e.g. {changed[0]}")
 
     if args.write:
+        # the whole file is read as played puzzles, so an unplayed one cannot
+        # go in -- see the invariant at the top
+        today = datetime.date.today().isoformat()
+        unplayed = [r["print_date"] for r in rows if r["print_date"] >= today]
+        if unplayed:
+            raise SystemExit(f"refusing to write: {unplayed[0]} is today or "
+                             f"later, and the record holds played puzzles only")
         # indented, one field per line: a day added should read as a few added
         # lines, not as a rewrite of the whole file
         write_json(SOLUTIONS_PATH, rows)
