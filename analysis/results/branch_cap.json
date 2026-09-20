@@ -1,7 +1,7 @@
 {
     "runs": {
         "branch_cap.py": {
-            "at": "2026-09-18 03:08",
+            "at": "2026-09-20 15:01",
             "solutions": 1917,
             "through": "2026-09-17",
             "fits": {
@@ -22,13 +22,21 @@
         "busiest.none": 8781,
         "evaluations.cap": 355,
         "evaluations.none": 9086,
-        "measured": "2026-09-18",
+        "measured": "2026-09-20",
         "nodes": 180,
         "positions": 150,
         "same_guess": 150,
         "same_nodes": true,
         "same_value": 150,
         "table": "| over 150 real positions | cap 50 | no cap |\n| --- | --- | --- |\n| interior nodes searched | 180 | 180 |\n| subtrees evaluated | 355 | 9,086 |\n| splits evaluated at the busiest single node | 50 | 8,781 |",
-        "unbound_nodes": 179
+        "tied.at": 1.9999999999999998,
+        "tied.discarded": 1528,
+        "tied.splits": 1578,
+        "tied.tied": 962,
+        "unbound_nodes": 179,
+        "widest.discarded": 11500,
+        "widest.splits": 11550,
+        "widest.tied": 83,
+        "widest.tied_at": 2.28309727775
     }
 }

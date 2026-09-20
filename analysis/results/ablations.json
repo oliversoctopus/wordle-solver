@@ -1,7 +1,7 @@
 {
     "runs": {
         "ablations.py": {
-            "at": "2026-09-18 03:10",
+            "at": "2026-09-20 13:25",
             "solutions": 1917,
             "through": "2026-09-17",
             "fits": {
@@ -32,18 +32,19 @@
         }
     },
     "values": {
-        "branch_cap": 2.5494562882818763,
-        "measured": "2026-09-18",
+        "branch_cap": 2.553402899032227,
+        "measured": "2026-09-20",
         "memo.at12947": 99.83498395495637,
-        "memo.at400": 14.620992101382976,
-        "midgame.python": 3270.258414032607,
-        "midgame.table": 11.775044260638767,
-        "midgame.threads": 8.499454578251632,
-        "midgame.wlogw": 1.6989429385368,
-        "opening.python": 12932.139107950905,
-        "opening.table": 48.52572813092089,
-        "opening.threads": 9.138568696638208,
-        "opening.wlogw": 4.85781265687048,
+        "memo.at400": 14.704311297948548,
+        "midgame.candidates": 268,
+        "midgame.python": 3361.81503411773,
+        "midgame.table": 11.477824419470052,
+        "midgame.threads": 7.9289835536181315,
+        "midgame.wlogw": 1.8943972051101512,
+        "opening.python": 12570.372216893586,
+        "opening.table": 47.34519018006099,
+        "opening.threads": 8.589849309316314,
+        "opening.wlogw": 4.899485632810266,
         "projection.ns_per_pair": 0.19123839853420269,
         "projection.opening.naive": "6.9 minutes",
         "projection.opening.shipped": "32 ms",
@@ -52,6 +53,6 @@
         "projection.train.naive": "355 days",
         "projection.us_per_pair_python": 2.4731215726260642,
         "search_positions": 150,
-        "table": "| taking one idea back out | at the opening | at a mid-game position |\n| --- | --- | --- |\n| `w log w` back inside the inner loop | 4.9× | 1.7× |\n| no table — the coloring rule applied per pair | 49× | 12× |\n| one core instead of 16 | 9.1× | 8.5× |\n| **all three at once, in plain Python** | 12,932× | 3,270× |"
+        "table": "| taking one idea back out | at the opening | at a mid-game position |\n| --- | --- | --- |\n| `w log w` back inside the inner loop | 4.9× | 1.9× |\n| no table — the coloring rule applied per pair | 47× | 11× |\n| one core instead of 16 | 8.6× | 7.9× |\n| **all three at once, in plain Python** | 12,570× | 3,362× |"
     }
 }

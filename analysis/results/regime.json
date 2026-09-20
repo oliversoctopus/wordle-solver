@@ -1,18 +1,18 @@
 {
     "runs": {
         "regime.py": {
-            "at": "2026-09-18 01:01",
+            "at": "2026-09-20 13:10",
             "solutions": 1917,
             "through": "2026-09-17",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
-                "repeat1_curation1": "spline 2026-09-17 22:12:11",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
             }
         }
     },
@@ -23,6 +23,8 @@
         "answers": 1917,
         "curated_unused": 474,
         "curated_used": 1835,
+        "default_over_all.offlist": 3.263793103448276,
+        "default_over_all.repeat": 7.9875,
         "distinct_used": 1893,
         "early.offlist": 1.7501508750754375,
         "early.puzzles": 1657,
@@ -42,6 +44,8 @@
         "last50.repeat": 12.0,
         "last_date": "2026-09-17",
         "last_no": 1917,
+        "letter_e": 40.4695720252983,
+        "measured": "2026-09-20",
         "mixture": "10.5% / 11.8% / 77.6%",
         "mixture.fresh": 77.63157894736842,
         "mixture.offlist": 11.842105263157894,
@@ -49,6 +53,9 @@
         "offlist_events": 58,
         "regime_no": 1690,
         "repeat_events": 24,
+        "share.fresh": 81.00000000000003,
+        "share.offlist": 9.07593456311358,
+        "share.used": 10.0,
         "since.offlist": 13.235294117647058,
         "since.puzzles": 228,
         "since.repeat": 10.526315789473685,

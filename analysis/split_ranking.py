@@ -95,6 +95,9 @@ for config in configs:
             label = f"{lo}-{hi}" if hi < 12947 else f"{lo}+"
             print(f"  {label:>11}  {len(rows):>10}   {distinct:>16.2f}   "
                   f"{named:>15.1f}")
+            if config == PriorConfig() and mode == EXPECTED:
+                common.record(f"band{lo}_{hi}.distinct", float(distinct))
+                common.record(f"band{lo}_{hi}.words", float(named))
         print()
 
 # ------------------------------------------------- what the runners-up cost

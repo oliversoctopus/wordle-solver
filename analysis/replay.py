@@ -290,6 +290,7 @@ for label, _ in ARMS:
     rec(f"{key}.blend_sigma", float(abs(blend) / blend_se))
     for name, cell in zip(("repeat", "offlist", "fresh"), rows[label]):
         rec(f"{key}.arm.{name}", pm(cell[0], cell[1]))
+        rec(f"{key}.arm.{name}_se", float(cell[1]))
     arm_table.append((label, *(pm(c[0], c[1]) for c in rows[label]),
                       pm(blend, blend_se)))
 rec("arm_table", common.md_table(

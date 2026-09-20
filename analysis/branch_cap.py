@@ -11,7 +11,7 @@ import argparse
 import numpy as np
 
 import common
-from exact import ExactEndgame, SearchBudgetExceeded
+from exact import BRANCH_TIE_TOL, ExactEndgame, SearchBudgetExceeded
 from priors import PriorConfig, build_weights
 from solver import EXPECTED, WordleSolver
 from wordle_data import load_data
@@ -53,6 +53,17 @@ class Counting(ExactEndgame):
         self._here += 1
         self.evaluations += 1
         return super()._evaluate(*a, **kw)
+
+    def _bounded_splits(self, candidates, weights):
+        representatives, bounds = super()._bounded_splits(candidates, weights)
+        # the node where the bound at the cap's edge is shared most widely
+        keys = np.sort(np.round(bounds / BRANCH_TIE_TOL))
+        if len(keys) > args.cap:
+            edge = keys[args.cap - 1]
+            shared = int((keys == edge).sum())
+            if shared > getattr(self, "tied", (0, 0, 0.0))[1]:
+                self.tied = (len(bounds), shared, float(edge * BRANCH_TIE_TOL))
+        return representatives, bounds
 
 
 def real_positions(limit):
@@ -133,6 +144,13 @@ common.record("same_guess", same_guess)
 common.record("same_value", same_value)
 common.record("binding_nodes", binds)
 common.record("unbound_nodes", len(ev) - binds)
+splits, tied, at = full.tied
+print(f"    at the cap's edge the bound ties most widely on a node of {splits:,} "
+      f"splits, {tied:,} of them at {at:g}")
+common.record("tied.splits", splits)
+common.record("tied.tied", tied)
+common.record("tied.at", at)
+common.record("tied.discarded", splits - args.cap)
 common.record("table", common.md_table(
     [f"over {scored} real positions", f"cap {args.cap}", "no cap"],
     [("interior nodes searched", f"{capped.total_nodes:,}", f"{full.total_nodes:,}"),

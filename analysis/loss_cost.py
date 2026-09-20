@@ -90,6 +90,7 @@ for penalty, extra in blended.items():
     print(f"    losses under penalty {penalty:g}: L = 6 + {extra:.2f} "
           f"= {6 + extra:.2f}")
     common.record(f"penalty{penalty:g}.extra", float(extra))
+    common.record(f"penalty{penalty:g}.price", float(6 + extra))
     common.record(f"penalty{penalty:g}.worst", worst[penalty])
 print()
 print("  Weighted over the losing words only -- what the games that actually")

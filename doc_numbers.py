@@ -1,15 +1,16 @@
 """Bind the numbers in the documents to the scripts that measured them.
 
 A script records what it prints with `common.record(key, value)` into
-`analysis/results/<script>.json`, and a document marks each figure with an
-HTML comment naming the key: `<!--n script.key .4f-->` before a number,
-`<!--s script.key-->…<!--/s-->` around a string, `<!--table script.key-->` and
-`<!--/table-->` around a table.  Run bare to check, `--write` to rewrite and
-list what moved, `--unbound FILE` to list unmarked figures.  A number takes the
-marker's format spec; a unit after it belongs to the document and stays.
+`analysis/results/<script>.json`; a document marks each figure with a comment
+naming the key: `<!--n script.key .4f-->` before a number, `<!--s key-->…
+<!--/s-->` around a string, `<!--table key-->`…`<!--/table-->` around a table.
+Run bare to check, `--write` to rewrite and list what moved, `--unbound` to
+fail on an unmarked figure.  `<!--c-->` marks a definition and `<!--u-->` a
+figure analysis/README *What is not reproduced here* lists as measured once.
 """
 
 import argparse
+import ast
 import glob
 import json
 import os
@@ -21,6 +22,10 @@ RESULTS = os.path.join(HERE, "analysis", "results")
 DOCS = ["README.md", "SOLVER_EXPLAINED.md", "ABOUT_SOLVER_EXPLAINED.md",
         "CLAUDE.md", os.path.join("analysis", "README.md"),
         os.path.join("tests", "README.md")]
+# the modules whose upper-case assignments are the shipped defaults, and the
+# check whose limits the test catalogue quotes
+CONSTANT_MODULES = ["priors.py", "exact.py", "solver.py", "train.py",
+                    "wordle_data.py", os.path.join("tests", "voice.py")]
 
 N_RE = re.compile(r"<!--n ([\w.\-/]+)(?: ([^ >]+))?-->")
 # what follows an inline marker: a signed number and its error term; the unit
@@ -30,7 +35,16 @@ TOKEN_RE = re.compile(NUMBER + r"(?:\s*±\s*" + NUMBER + r")?")
 S_RE = re.compile(r"<!--s ([\w.\-/]+)-->(.*?)<!--/s-->", re.S)
 TABLE_RE = re.compile(r"(<!--table ([\w.\-/]+)-->\n)(.*?)(\n<!--/table-->)", re.S)
 # a figure-shaped thing in prose, for --unbound
-FIGURE_RE = re.compile(r"(?<![\w.<!\-])[+\-−]?\d[\d,]*(?:\.\d+)?(?:%|×|σ)?(?![\w\-])")
+FIGURE = r"[+\-−]?\d(?:[\d,]*\d)?(?:\.\d+)?(?:e[+\-−]?\d+)?(?:%|×|σ|x)?"
+FIGURE_RE = re.compile(r"(?<![\w.<!\-])" + FIGURE + r"(?![\w\-])")
+# the exemption markers: a span, or the one figure that follows
+EXEMPT_SPAN_RE = re.compile(r"<!--([cu])-->.*?<!--/\1-->")
+EXEMPT_NEXT_RE = re.compile(r"<!--[cu]-->\s*" + FIGURE)
+# figures that name something: a section, a puzzle number, a date, a year, a
+# function's argument, and an integer short enough to be a count in prose
+NAMED_RE = re.compile(r"§\d+(?:\.\d+)?|#\d+(?:[–-]#?\d+)?|\d{4}-\d\d-\d\d|"
+                      r"\b20[12]\d\b|\(\d[\d,.]*\)")
+SHORT_RE = re.compile(r"[+\-−]?\d{1,2}σ?")
 
 
 def load_results():
@@ -110,21 +124,73 @@ def bind(text, values, path, changes, missing):
     return TABLE_RE.sub(table, out)
 
 
-def unbound(path):
-    with open(path, "r", encoding="utf-8") as file:
+def constants():
+    """Figures that follow from the code or the data, exempt from binding."""
+    found = {0, 1}
+    for name in CONSTANT_MODULES:
+        with open(os.path.join(HERE, name), "r", encoding="utf-8") as file:
+            tree = ast.parse(file.read())
+        for node in tree.body:
+            if not (isinstance(node, ast.Assign) and len(node.targets) == 1
+                    and isinstance(node.targets[0], ast.Name)
+                    and node.targets[0].id.isupper()):
+                continue
+            for leaf in ast.walk(node.value):
+                if (isinstance(leaf, ast.Constant)
+                        and isinstance(leaf.value, (int, float))
+                        and not isinstance(leaf.value, bool)):
+                    found.add(leaf.value)
+    sys.path.insert(0, HERE)
+    import wordle_data
+    with open(wordle_data.CURATED_PATH, "r", encoding="utf-8") as file:
+        curated = len(json.load(file))
+    with open(os.path.join(wordle_data.DERIVED_DIR, "ind2word.json"), "r",
+              encoding="utf-8") as file:
+        words = len(json.load(file))
+    patterns = len(wordle_data.TILE_VALS) ** 5
+    found |= {words, words - 1, words * words, words * words // 10 ** 6,
+              curated, words - curated, patterns, patterns - 1,
+              wordle_data.MAX_GUESSES + 1}
+    # a probability is written as itself or as the percent of its complement
+    found |= {1 - p for p in list(found) if 0 < p < 1}
+    return found
+
+
+def figure_value(token):
+    """The number a figure token stands for, percent scaled."""
+    text = token.replace(",", "").replace("−", "-").rstrip("%×σx")
+    value = float(text)
+    return value / 100 if token.endswith("%") else value
+
+
+def unbound(name, exempt):
+    """Prints the figures in document ``name`` with no marker; returns how many."""
+    with open(os.path.join(HERE, name), "r", encoding="utf-8") as file:
         lines = file.read().split("\n")
+    count, fenced = 0, False
     for number, line in enumerate(lines, start=1):
-        if line.startswith("|") or line.startswith("```"):
+        if line.startswith("```"):
+            fenced = not fenced
             continue
-        clean = S_RE.sub("", line)
+        if fenced or line.startswith(("|", "#", "$$")):
+            continue
+        clean = re.sub(r"`[^`]*`", "", line)
+        clean = S_RE.sub("", clean)
+        clean = EXEMPT_SPAN_RE.sub("", clean)
+        clean = EXEMPT_NEXT_RE.sub("", clean)
         for match in reversed(list(N_RE.finditer(clean))):
             token = TOKEN_RE.match(clean, match.end())
             clean = clean[:match.start()] + clean[token.end() if token else match.end():]
         clean = re.sub(r"<!--.*?-->", "", clean)
+        clean = NAMED_RE.sub(" ", clean)
         hits = [m.group(0) for m in FIGURE_RE.finditer(clean)
-                if not re.fullmatch(r"[+\-−]?\d{1,2}", m.group(0))]
+                if not SHORT_RE.fullmatch(m.group(0))
+                and not any(abs(figure_value(m.group(0)) - c) <= 1e-9 * max(1, abs(c))
+                            for c in exempt)]
         if hits:
-            print(f"{path}:{number}: {' '.join(hits)}")
+            print(f"{name}:{number}: {' '.join(hits)}")
+            count += len(hits)
+    return count
 
 
 def main():
@@ -133,12 +199,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--write", action="store_true",
                         help="rewrite the documents; the default only checks")
-    parser.add_argument("--unbound", metavar="FILE",
-                        help="list figures in FILE that carry no marker")
+    parser.add_argument("--unbound", metavar="FILE", nargs="?", const="all",
+                        help="list figures that carry no marker, in FILE or "
+                             "in every document")
     args = parser.parse_args()
 
     if args.unbound:
-        unbound(args.unbound)
+        exempt = constants()
+        docs = DOCS if args.unbound == "all" else [args.unbound]
+        loose = sum(unbound(name, exempt) for name in docs)
+        if loose:
+            print(f"{loose} figures carry no marker")
+            return 1
+        print("every figure is bound or marked")
         return 0
 
     values = load_results()

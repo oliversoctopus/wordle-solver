@@ -1,18 +1,18 @@
 {
     "runs": {
         "curation_shapes.py": {
-            "at": "2026-09-18 00:49",
+            "at": "2026-09-20 13:10",
             "solutions": 1917,
             "through": "2026-09-17",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
-                "repeat1_curation1": "spline 2026-09-17 22:12:11",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
             }
         }
     },
@@ -30,6 +30,7 @@
         "hedge.net": 0.31087925559569524,
         "in_snapshot": 51,
         "listed_offlist": 892,
+        "measured": "2026-09-20",
         "misses": "`loris`, `kefir`, `capon`",
         "n_misses": 3,
         "post": 54,
@@ -40,6 +41,7 @@
         "unlisted": 9746,
         "wordlebot.nats": -6.4465383265400895,
         "wordlebot.post": -6.4442140720540815,
-        "wordlebot.support": 911.0125729923327
+        "wordlebot.support": 911.0125729923327,
+        "wordlebot_words": 3194
     }
 }

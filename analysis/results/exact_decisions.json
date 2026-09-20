@@ -16,7 +16,7 @@
             }
         },
         "exact_decisions.py --who-decides": {
-            "at": "2026-09-18 03:08",
+            "at": "2026-09-20 13:19",
             "solutions": 1917,
             "through": "2026-09-17",
             "fits": {
@@ -38,16 +38,17 @@
         "blended.rho": 0.7787594787671334,
         "blended.search_regret": 0.0009651991407389609,
         "blended.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 134 | 35.4% | 0.0000 | all of them |\n| 5–10 | 219 | 35.5% | 0.0066 | 28.3% |\n| 11–60 | 247 | 39.2% | 0.0113 | 9.9% |",
-        "measured": "2026-09-18",
+        "measured": "2026-09-20",
         "shipped.differ": 7.5892857142857135,
         "shipped.positions": 150,
         "shipped.regret": 0.0003818104984567266,
         "shipped.rho": 0.9010822510822509,
         "shipped.search_regret": 2.6032521568293753e-05,
         "shipped.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 24 | 0.0% | 0.0000 | all of them |\n| 5–10 | 61 | 11.0% | 0.0003 | 7.3% |\n| 11–60 | 65 | 7.2% | 0.0006 | 1.8% |",
-        "who.f_at_four": 97,
+        "who.f_at_four": 99,
         "who.f_late": 0,
-        "who.late": 1153,
-        "who.table": "| turns left | `f` | exact search | closed form | one candidate |\n| --- | --- | --- | --- | --- |\n| 6 | 1,600 | 0 | 0 | 0 |\n| 5 | 1,298 | 292 | 4 | 6 |\n| 4 | 97 | 1,116 | 128 | 191 |\n| 3 | 0 | 309 | 133 | 449 |\n| 2 | 0 | 37 | 28 | 165 |\n| 1 | 0 | 0 | 0 | 32 |"
+        "who.games": 1600,
+        "who.late": 1168,
+        "who.table": "| turns left | `f` | exact search | closed form | one candidate |\n| --- | --- | --- | --- | --- |\n| 6 | 1,600 | 0 | 0 | 0 |\n| 5 | 1,297 | 294 | 3 | 6 |\n| 4 | 99 | 1,104 | 124 | 204 |\n| 3 | 0 | 320 | 125 | 447 |\n| 2 | 0 | 36 | 28 | 180 |\n| 1 | 0 | 0 | 0 | 32 |"
     }
 }

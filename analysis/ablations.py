@@ -300,6 +300,7 @@ opening = data.word2ind["salet"]
 answer = data.word2ind["month"]
 mid = solver.filter(opening, solver.feedback(opening, answer),
                     data.all_candidates())
+common.record("midgame.candidates", len(mid))
 scan_level(mid, f"after salet against {data.all_words[answer]}")
 common.record("table", common.md_table(
     ["taking one idea back out", "at the opening", "at a mid-game position"],

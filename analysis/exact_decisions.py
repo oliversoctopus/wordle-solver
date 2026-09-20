@@ -154,6 +154,7 @@ def who_decides():
     if len(configs) > 1:
         report_deciders(f"all {len(configs)} priors, {args.games} games each",
                         total, tag="who")
+        common.record("who.games", args.games * len(configs))
 
 
 def report_deciders(title, counts, tag=None):

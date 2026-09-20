@@ -12,7 +12,8 @@ import datetime
 import numpy as np
 
 import common
-from priors import PriorConfig, build_weights
+from priors import (DEFAULT_NONCURATED_PROB, DEFAULT_REPEAT_PROB, PriorConfig,
+                    build_weights)
 from wordle_data import load_data
 
 sol = common.solutions()
@@ -46,7 +47,7 @@ def row(lo, hi, label):
 start = common.regime_start(sol)
 end2025 = sum(1 for r in sol if r["print_date"] < "2026-01-01")
 regime_no = common.puzzle_no(sol[start], start)
-table = []
+table, rates = [], {}
 for key, (lo, hi, label, shown) in {
         "early": (0, end2025, "2021-2025", "2021\u20132025"),
         "since": (start, N, f"since #{regime_no} ({common.REGIME_DATE})",
@@ -54,6 +55,7 @@ for key, (lo, hi, label, shown) in {
         "last50": (N - 50, N, "last 50", "last 50"),
         "all": (0, N, "all time", "all time")}.items():
     n, rep, off = row(lo, hi, label)
+    rates[key] = (rep, off)
     common.record(f"{key}.puzzles", n)
     common.record(f"{key}.repeat", rep)
     common.record(f"{key}.offlist", off)
@@ -159,5 +161,18 @@ for label, config in (("", PriorConfig()), ("curation_only.", PriorConfig(repeat
     common.record(f"weight.{label}fresh", float(w[is_curated & ~is_used].mean()))
     common.record(f"weight.{label}offlist_listed",
                   float(w[~is_curated & listed].mean()))
+
+# the three groups' shares of the shipped prior, the defaults against the
+# full record, and the letter the empty board's frequency list opens with
+w = build_weights(data, PriorConfig())
+common.record("share.used", 100 * float(w[is_used].sum()))
+common.record("share.fresh", 100 * float(w[is_curated & ~is_used].sum()))
+common.record("share.offlist", 100 * float(w[~is_curated].sum()))
+all_rep, all_off = rates["all"]
+common.record("default_over_all.repeat", 100 * DEFAULT_REPEAT_PROB / all_rep)
+common.record("default_over_all.offlist",
+              100 * DEFAULT_NONCURATED_PROB / all_off)
+common.record("letter_e", 100 * float(sum(
+    w[i] for i, word in enumerate(data.all_words) if "e" in word)))
 print("\n  Each prior is wildly wrong about the rate the *other* one governs,")
 print("  which is why neither is worth much alone.")

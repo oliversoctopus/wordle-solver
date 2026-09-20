@@ -94,7 +94,7 @@ Three views, solve, play and find, over one board and one set of switches. READM
 
 ## Numbers in the documents
 
-A script calls `common.record(key, value)` at the print site; the figure lands in `analysis/results/<script>.json`; the document marks the figure with an HTML comment naming the key, as `doc_numbers.py`'s docstring shows. `python doc_numbers.py` checks, `--write` rewrites and lists what moved, `--unbound FILE` lists unmarked figures. Never type a measured number into a document.
+A script calls `common.record(key, value)` at the print site; the figure lands in `analysis/results/<script>.json`; the document marks the figure with an HTML comment naming the key, as `doc_numbers.py`'s docstring shows. `python doc_numbers.py` checks, `--write` rewrites and lists what moved, `--unbound` fails on an unmarked figure. Never type a measured number into a document.
 
 The refresh: `solutions.py --write`, refit, rerun the live scripts, `doc_numbers.py --write`, reread what moved. `analysis/README.md` *Rerunning them* says which scripts are live and which are findings.
 

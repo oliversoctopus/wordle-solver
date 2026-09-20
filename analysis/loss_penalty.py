@@ -399,6 +399,8 @@ def crossovers(grid, settings):
         print(f"    penalty {low:>4} gives way to {high:<5} at L = "
               f"{(i_high - i_low) / (p_low - p_high):6.2f}")
         edges.append((low, high, (i_high - i_low) / (p_low - p_high)))
+        common.record(f"crossover.{low:g}_{high:g}",
+                      float((i_high - i_low) / (p_low - p_high)))
     rows_out = []
     for k, (low, high, at) in enumerate(edges):
         if k == 0:

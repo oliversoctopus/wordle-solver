@@ -48,6 +48,7 @@ print(f"Era 1 -- id is a position in the list as first played.")
 print(f"  wordles.json is stored in that order, not alphabetically "
       f"(sorted: {curated == alpha})")
 print(f"  id equals the file position for the first {max(exact)} puzzles")
+common.record("exact_positions", max(exact))
 print()
 print("  after that the id runs behind it, by a gap that widens with position:")
 seen, drift = None, []
@@ -118,6 +119,15 @@ print(f"    {len(block)} of the {BLOCK_HI - BLOCK_LO + 1} slots have been an "
       f"answer; curated words in that range: {len(inside)}")
 runs = ascending_runs(block)
 print("    the batches come out alphabetically sorted:")
+for k, r in enumerate(sorted(runs, key=len, reverse=True)[:2], start=1):
+    common.record(f"run{k}.words", len(r))
+    common.record(f"run{k}.lo", r[0][0])
+    common.record(f"run{k}.hi", r[-1][0])
+    common.record(f"run{k}.list", " ".join(w for _, w in r))
+    # the unseen ids between the run's first two words
+    gap = range(r[0][0] + 1, r[1][0])
+    common.record(f"run{k}.gap", " and ".join(str(i) for i in gap))
+    common.record(f"run{k}.gap_words", f"`{r[0][1]}` and `{r[1][1]}`")
 for r in runs:
     if len(r) >= 4:
         print(f"      {len(r):2d} words, ids {r[0][0]}-{r[-1][0]}: "

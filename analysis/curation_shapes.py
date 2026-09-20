@@ -97,6 +97,7 @@ common.record("forward_pct", 100 * (len(post) - len(missed)) / len(post))
 common.record("misses", ", ".join(f"`{w}`" for w in missed))
 common.record("n_misses", len(missed))
 common.record("listed_offlist", sum(1 for w in noncurated if wordlebot.get(w, 0.0) > 0))
+common.record("wordlebot_words", len(wordlebot))
 
 print()
 print("  Restricting to post-snapshot events barely moves WordleBot, so it is")

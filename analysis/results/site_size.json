@@ -1,0 +1,34 @@
+{
+    "runs": {
+        "site_size.py": {
+            "at": "2026-09-20 13:14",
+            "solutions": 1917,
+            "through": "2026-09-17",
+            "fits": {
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+            }
+        }
+    },
+    "values": {
+        "data_kb": 776.154,
+        "measured": "2026-09-20",
+        "openings": 180,
+        "solutions_kb": 300.322,
+        "solutions_wire_kb": 16.093,
+        "total_mb": 1.584233,
+        "turn2.per_prior": 197.5,
+        "turn2.priors": 4,
+        "turn2.rankings": 790,
+        "turn2.wire_kb": 29.091,
+        "wasm_kb": 468.35,
+        "wasm_wire_kb": 124.61,
+        "wire_kb": 281.763
+    }
+}

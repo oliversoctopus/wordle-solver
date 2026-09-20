@@ -1,7 +1,7 @@
 {
     "runs": {
         "split_ranking.py": {
-            "at": "2026-09-18 03:08",
+            "at": "2026-09-20 13:19",
             "solutions": 1917,
             "through": "2026-09-17",
             "fits": {
@@ -17,15 +17,23 @@
         }
     },
     "values": {
-        "cost.pick.mean_ms": 3.592623498698231,
-        "cost.pick.worst_ms": 141.26140001462772,
+        "band13_40.distinct": 4.936708860759493,
+        "band13_40.words": 0.06075949367088609,
+        "band2_4.distinct": 4.688524590163935,
+        "band2_4.words": 19.42295081967213,
+        "band41_12947.distinct": 5.0,
+        "band41_12947.words": 0.0,
+        "band5_12.distinct": 4.842105263157895,
+        "band5_12.words": 0.4189473684210527,
+        "cost.pick.mean_ms": 3.680633001786191,
+        "cost.pick.worst_ms": 151.88610000768676,
         "cost.positions": 200,
-        "cost.top1.mean_ms": 3.626838498748839,
-        "cost.top1.worst_ms": 143.28519999980927,
-        "cost.top3.mean_ms": 11.813586500065867,
-        "cost.top3.worst_ms": 1088.0960000213236,
-        "cost.top5.mean_ms": 18.20292199990945,
-        "cost.top5.worst_ms": 1107.842100027483,
-        "measured": "2026-09-18"
+        "cost.top1.mean_ms": 3.6901350007974543,
+        "cost.top1.worst_ms": 158.2543999538757,
+        "cost.top3.mean_ms": 12.062236997298896,
+        "cost.top3.worst_ms": 1133.3771999925375,
+        "cost.top5.mean_ms": 19.824546498712152,
+        "cost.top5.worst_ms": 1254.9362000427209,
+        "measured": "2026-09-20"
     }
 }

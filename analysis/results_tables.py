@@ -16,7 +16,8 @@ import common
 import estimator
 from priors import PriorConfig
 from solver import DERIVED_WIN_BONUS, ENTROPY, EXPECTED, WordleSolver
-from wordle_data import MAX_GUESSES
+from wordle_data import (MAX_GUESSES, N_PATTERNS, WIN_PATTERN, load_data,
+                         num_to_feedback)
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--part", choices=("forms", "priors", "both"), default="both")
@@ -221,3 +222,34 @@ if args.part in ("priors", "both"):
          for label in order if label in by_label]))
     common.record("bonus_ratio", (by_label["both"][0] - by_label["both"][1])
                   / (by_label["none"][0] - by_label["none"][1]))
+
+# what the cached fits converged through: the default prior's rounds, and the
+# round counts across the five priors `train` fits
+common.header("the rounds the cached fits took")
+history = [h["mean_guesses"] for h in estimator.load_record(PriorConfig())["history"]]
+print(f"  default prior: " + " -> ".join(f"{m:.2f}" for m in history))
+common.record("rounds.seed", history[0])
+common.record("rounds.iter1", history[1])
+common.record("rounds.iter2", history[2])
+fitted = [PriorConfig(repeat=False, curation=False), PriorConfig(repeat=False),
+          PriorConfig(curation=False), PriorConfig(),
+          PriorConfig(curation_shape="frequency")]
+iterations = [estimator.load_record(c)["iterations"] for c in fitted]
+print(f"  rounds per prior: {min(iterations)} to {max(iterations)} "
+      f"over {len(fitted)} priors")
+common.record("rounds.min", min(iterations))
+common.record("rounds.max", max(iterations))
+common.record("rounds.priors", len(fitted))
+
+# the partition SOLVER_EXPLAINED opens with: one guess against the whole list
+common.header("the buckets `crane` makes of the whole list")
+data = load_data()
+counts = np.bincount(data.feedback_table[data.word2ind["crane"]], minlength=N_PATTERNS)
+order = np.argsort(-counts, kind="stable")
+rows = [(f"`{num_to_feedback(int(p))}`", f"{int(counts[p]):,}") for p in order[:3]]
+rows += [("…", f"({int((counts > 0).sum())} non-empty buckets)"),
+         ("`GGGGG`", f"{int(counts[WIN_PATTERN])} (`crane` itself)")]
+for pattern, size in rows:
+    print(f"  {pattern:10s} {size}")
+common.record("crane.buckets", int((counts > 0).sum()))
+common.record("crane.table", common.md_table(["pattern", "candidates"], rows))

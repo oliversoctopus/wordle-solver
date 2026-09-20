@@ -1,18 +1,18 @@
 {
     "runs": {
         "hard_mode.py --all-priors": {
-            "at": "2026-09-18 01:15",
+            "at": "2026-09-20 15:03",
             "solutions": 1917,
             "through": "2026-09-17",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
-                "repeat1_curation1": "spline 2026-09-17 22:12:11",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-18 02:03:42",
+                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
+                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
+                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
+                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
             }
         },
         "hard_mode.py --all-priors --mode entropy": {
@@ -32,15 +32,15 @@
         }
     },
     "values": {
-        "both.cost": 0.024234046482380037,
-        "both.free": 3.064087936713613,
+        "both.cost": 0.02425733503650551,
+        "both.free": 3.063624361892917,
         "both.free_solved": 99.97571443019837,
-        "both.hard": 3.0883219831959936,
+        "both.hard": 3.0878816969294225,
         "both.hard_solved": 99.90031393783174,
-        "both_frequency.cost": 0.02771255925246464,
-        "both_frequency.free": 3.1007041189651554,
+        "both_frequency.cost": 0.02773865596774443,
+        "both_frequency.free": 3.1002509447668283,
         "both_frequency.free_solved": 99.95856950990434,
-        "both_frequency.hard": 3.12841667821762,
+        "both_frequency.hard": 3.127989600734572,
         "both_frequency.hard_solved": 99.6938817178254,
         "curation_only.cost": 0.10000373531550932,
         "curation_only.free": 3.490330927120179,
@@ -74,17 +74,18 @@
         "entropy.repeat_only.hard": 4.419899652999184,
         "entropy.repeat_only.hard_solved": 91.30877929218097,
         "entropy.table": "| priors | free | hard | cost | solve rate, free → hard |\n| --- | --- | --- | --- | --- |\n| none | 4.1223 | 4.4731 | +0.3507 | 99.83% → 90.84% |\n| curation only | 3.8455 | 3.7902 | −0.0553 | 100.00% → 99.28% |\n| repeat only | 4.1036 | 4.4199 | +0.3163 | 99.84% → 91.31% |\n| **both (the default)** | **3.7569** | **3.5065** | **−0.2504** | **100.00% → 99.83%** |\n| both, `frequency` | 3.7429 | 3.5457 | −0.1972 | 100.00% → 99.62% |",
+        "measured": "2026-09-20",
         "none.cost": 0.382714142272341,
         "none.free": 4.069436935197341,
         "none.free_solved": 99.8918668417394,
         "none.hard": 4.452151077469683,
         "none.hard_solved": 92.33026956051596,
-        "none_over_both": 15.792415952928158,
-        "repeat_only.cost": 0.3621435945461882,
-        "repeat_only.free": 4.010502363157916,
-        "repeat_only.free_solved": 99.92791952164741,
-        "repeat_only.hard": 4.372645957704106,
-        "repeat_only.hard_solved": 92.58935201333527,
-        "table": "| priors | free | hard | cost | solve rate, free → hard |\n| --- | --- | --- | --- | --- |\n| none | 4.0694 | 4.4522 | +0.3827 | 99.89% → 92.33% |\n| curation only | 3.4903 | 3.5903 | +0.1000 | 99.99% → 99.58% |\n| repeat only | 4.0105 | 4.3726 | +0.3621 | 99.93% → 92.59% |\n| **both (the default)** | **3.0641** | **3.0883** | **+0.0242** | **99.98% → 99.90%** |\n| both, `frequency` | 3.1007 | 3.1284 | +0.0277 | 99.96% → 99.69% |"
+        "none_over_both": 15.777254248926534,
+        "repeat_only.cost": 0.3621071043124136,
+        "repeat_only.free": 4.010498995826916,
+        "repeat_only.free_solved": 99.92791362976205,
+        "repeat_only.hard": 4.37260610013933,
+        "repeat_only.hard_solved": 92.58878064053133,
+        "table": "| priors | free | hard | cost | solve rate, free → hard |\n| --- | --- | --- | --- | --- |\n| none | 4.0694 | 4.4522 | +0.3827 | 99.89% → 92.33% |\n| curation only | 3.4903 | 3.5903 | +0.1000 | 99.99% → 99.58% |\n| repeat only | 4.0105 | 4.3726 | +0.3621 | 99.93% → 92.59% |\n| **both (the default)** | **3.0636** | **3.0879** | **+0.0243** | **99.98% → 99.90%** |\n| both, `frequency` | 3.1003 | 3.1280 | +0.0277 | 99.96% → 99.69% |"
     }
 }

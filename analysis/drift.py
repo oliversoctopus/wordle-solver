@@ -34,6 +34,7 @@ for n in (18, len(events)):
     common.record(tag + "rho", float(rho))
     common.record(tag + "p", float(p))
     common.record(tag + "drift", common.neg(f"{per_puzzle[0]:+.2f} \u00b1 {per_puzzle[1]:.2f}"))
+    common.record(tag + "drift_se", float(per_puzzle[1]))
 
 print()
 print("  0.0 = static window, 1.0 = fixed replay lag; an interval covering both")

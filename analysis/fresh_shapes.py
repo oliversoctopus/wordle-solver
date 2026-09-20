@@ -248,6 +248,8 @@ def main():
     tables = {"wordlebot": common.load("wordlebot_weights.json"),
               "position": {w: i for i, w in enumerate(curated)}}
     start = editor_start(sol)
+    common.record("editor_start_no", common.puzzle_no(sol[start], start))
+    common.record("editor_start_date", sol[start]["print_date"])
 
     common.header("the group with no shape")
     print(f"  Fresh-curated picks are counted from puzzle "

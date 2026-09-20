@@ -25,6 +25,8 @@ FAST = [
      [sys.executable, os.path.join(HERE, "doc_refs.py")]),
     ("every bound figure is current",
      [sys.executable, os.path.join(ROOT, "doc_numbers.py")]),
+    ("every figure is bound or marked",
+     [sys.executable, os.path.join(ROOT, "doc_numbers.py"), "--unbound"]),
     ("the facts the rest is measured against",
      [sys.executable, os.path.join(HERE, "anchors.py")]),
     ("the voice and comment rules hold",

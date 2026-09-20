@@ -80,6 +80,17 @@ for m, ratio in re.findall(r"(\d+) candidates\s+shipped.*?fused.*?([\d.]+)x",
     print(f"  {int(m):>5} candidates   {float(ratio):.2f}x")
     common.record(f"scan.at{m}", float(ratio))
 
+common.header("scoring live against reading the table, one scan each")
+for label, size, table_ms, live_ms in re.findall(
+        r"(median|worst) bucket \((\d+) candidates\):\s+table\s+([\d.]+) ms"
+        r"\s+live\s+([\d.]+) ms", done.stdout):
+    print(f"  {label:>6} bucket, {int(size):>4} candidates   table {float(table_ms):.1f} ms"
+          f"   live {float(live_ms):.1f} ms   {float(live_ms) / float(table_ms):.1f}x")
+    common.record(f"live.{label}.candidates", int(size))
+    common.record(f"live.{label}.table_ms", float(table_ms))
+    common.record(f"live.{label}.live_ms", float(live_ms))
+    common.record(f"live.{label}.ratio", float(live_ms) / float(table_ms))
+
 if args.train:
     trainer = rust_train.binary()
     if trainer is None:

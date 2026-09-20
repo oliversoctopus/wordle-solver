@@ -37,7 +37,7 @@ python tests/scoring.py --games 6     three games per mode by default
 
 ## `anchors.py` — the facts the rest is measured against
 
-Four things are asserted from definitions outside this repository, worked out by hand. The coloring rule, on seven patterns of which six turn on a duplicate letter: `eerie` against `crane` is `NNYNG`. The pattern encoding: a base-3 numeral read from the left, so `GGGGG` is 242. Information gain in bits: four equally likely candidates told apart are worth 2 bits, an even coloring is worth 0, and a 3:1 split is worth H(3/4, 1/4). What optimal play is worth: one candidate costs 1 guess, two equal ones 1.5, two at 3:1 1.25, and three cost 5/3 when a guess separates them. The last two run on a six-word game whose table `score_guess` builds, and each asserts the structure it rests on before the value. Two bounds then run over random positions: no guess is worth more than the prior entropy, and no play beats winning outright on the likeliest word. `--full` adds `score_guess` against `feedback_table.npy` over 400 drawn words, half of them with a repeated letter.
+Four things are asserted from definitions outside this repository, worked out by hand. The coloring rule, on seven patterns of which six turn on a duplicate letter: `eerie` against `crane` is `NNYNG`. The pattern encoding: a base-3 numeral read from the left, so `GGGGG` is 242. Information gain in bits: four equally likely candidates told apart are worth 2 bits, an even coloring is worth 0, and a 3:1 split is worth H(3/4, 1/4). What optimal play is worth: one candidate costs 1 guess, two equal ones <!--c-->1.5, two at 3:1 <!--c-->1.25, and three cost 5/3 when a guess separates them. The last two run on a six-word game whose table `score_guess` builds, and each asserts the structure it rests on before the value. Two bounds then run over random positions: no guess is worth more than the prior entropy, and no play beats winning outright on the likeliest word. `--full` adds `score_guess` against `feedback_table.npy` over <!--c-->400 drawn words, half of them with a repeated letter.
 
 ```
 python tests/anchors.py --full --seed 7 --rounds 200
@@ -53,7 +53,7 @@ A reference to a document names its heading, as `README *Results*`, and matches 
 
 ## `doc_numbers.py` — every figure the documents quote is the one its script recorded
 
-At the repository root, since it is also the tool that rewrites the documents. Each script in `analysis/` records its figures to `analysis/results/<script>.json`, and the documents mark each figure with an HTML comment naming the key. Run bare it fails on any figure that differs from its results file. `--write` rewrites them and lists what moved, which is the list of sentences to reread.
+At the repository root, since it is also the tool that rewrites the documents. Each script in `analysis/` records its figures to `analysis/results/<script>.json`, and the documents mark each figure with an HTML comment naming the key. Run bare it fails on any figure that differs from its results file. `--write` rewrites them and lists what moved, which is the list of sentences to reread. `--unbound` fails on a figure that carries no marker. It passes the word counts, the pattern count, the shipped defaults it reads out of the modules, section numbers, years and puzzle numbers, and anything in code. The rest is bound, marked `<!--c-->` as a definition or a worked example, or marked `<!--u-->` as a figure measured once with no script here.
 
 ## `rust_parity.py` — the Rust core agrees with the Python
 
