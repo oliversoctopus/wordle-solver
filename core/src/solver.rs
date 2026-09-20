@@ -321,7 +321,7 @@ impl<'a, S: Source> Solver<'a, S> {
                 let h = -pairwise_of(p.len(), |i| p[i] * p[i].log2());
                 return (candidates[first], h);
             }
-            return (candidates[first], 2.0 - p[first]);
+            return (candidates[first], kernels::two_candidates(p[first]));
         }
 
         let turns = guesses_left.unwrap_or(MAX_TURNS);
@@ -349,8 +349,8 @@ impl<'a, S: Source> Solver<'a, S> {
         let pool = self.guess_pool(candidates);
         let scores = self.score_all(candidates, pool);
         let best = match self.mode {
-            Mode::Expected => argmin(&scores),
-            Mode::Entropy => argmax(&scores),
+            Mode::Expected => kernels::argmin(&scores),
+            Mode::Entropy => kernels::argmax(&scores),
         };
         (Self::row(pool, best), scores[best])
     }
@@ -574,24 +574,4 @@ impl<'a, S: Source> Solver<'a, S> {
         self.memo.clear();
         self.lookahead_memo.clear();
     }
-}
-
-fn argmin(values: &[f64]) -> usize {
-    let mut best = 0;
-    for (i, &v) in values.iter().enumerate() {
-        if v < values[best] {
-            best = i;
-        }
-    }
-    best
-}
-
-fn argmax(values: &[f64]) -> usize {
-    let mut best = 0;
-    for (i, &v) in values.iter().enumerate() {
-        if v > values[best] {
-            best = i;
-        }
-    }
-    best
 }

@@ -1325,6 +1325,28 @@ function restart() {
 
 /* ------------------------------------------------------------------- views */
 
+// which views each element is shown in; the finder never asks the solver for
+// a guess, so nothing that shapes one is shown alongside it
+const SHOWN_IN = {
+  "board": ["solve", "play"],
+  "finder-board": ["finder"],
+  "solve-panel": ["solve"],
+  "play-panel": ["play"],
+  "finder-panel": ["finder"],
+  "solve-controls": ["solve"],
+  "answer-bar": ["solve"],
+  "play-controls": ["play"],
+  "finder-controls": ["finder"],
+  "solve-keys": ["solve"],
+  "play-keys": ["play"],
+  "finder-keys": ["finder"],
+  "answer-setting": ["play"],
+  "mode-setting": ["solve", "play"],
+  "form-setting": ["solve", "play"],
+  "hard-setting": ["solve", "play"],
+  "reset": ["solve", "play"],
+};
+
 const VIEW_NOTE = {
   solve: `A setting changed here re-runs the solver over the board you already
           have; only New board clears it.`,
@@ -1342,25 +1364,9 @@ function setView(next) {
     button.setAttribute("aria-pressed", String(on));
   }
 
-  $("board").hidden = next === "finder";
-  $("finder-board").hidden = next !== "finder";
-  $("solve-panel").hidden = next !== "solve";
-  $("play-panel").hidden = next !== "play";
-  $("finder-panel").hidden = next !== "finder";
-  $("solve-controls").hidden = next !== "solve";
-  $("answer-bar").hidden = next !== "solve";
-  $("play-controls").hidden = next !== "play";
-  $("finder-controls").hidden = next !== "finder";
-  $("solve-keys").hidden = next !== "solve";
-  $("play-keys").hidden = next !== "play";
-  $("finder-keys").hidden = next !== "finder";
-  $("answer-setting").hidden = next !== "play";
-  // the finder never asks the solver for a guess, so nothing that shapes one is
-  // shown alongside it
-  for (const id of ["mode-setting", "form-setting", "hard-setting"]) {
-    $(id).hidden = next === "finder";
+  for (const [id, views] of Object.entries(SHOWN_IN)) {
+    $(id).hidden = !views.includes(next);
   }
-  $("reset").hidden = next === "finder";
   $("reset").textContent = next === "play" ? "New game" : "New board";
   $("settings-note").textContent = VIEW_NOTE[next];
 

@@ -20,7 +20,6 @@ from priors import ALL_CONFIGS, PriorConfig
 from solver import WordleSolver
 from wordle_data import write_json
 
-MAX_GUESSES = 6
 
 # the three priors `replay.py --shapes` compares against the shipped one
 SHAPE_CONFIGS = [

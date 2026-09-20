@@ -10,7 +10,7 @@ from exact import (DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH, MAX_TURNS,
                    SearchBudgetExceeded)
 from memo import Memo
 from priors import PriorConfig, build_weights
-from wordle_data import WIN_PATTERN, load_data
+from wordle_data import MAX_GUESSES, WIN_PATTERN, load_data
 
 ENTROPY = "entropy"
 EXPECTED = "expected"
@@ -20,7 +20,7 @@ MODES = (ENTROPY, EXPECTED)
 # IG(g) + a*p_win(g); README *Results* says where the 2 comes from
 DERIVED_WIN_BONUS = 2.0
 
-DEFAULT_DEADLINE = 6
+DEFAULT_DEADLINE = MAX_GUESSES
 
 # largest candidate set the exact endgame search is allowed to take on when
 # three or more turns remain; with two or fewer it is always used, since it
@@ -35,6 +35,23 @@ DEFAULT_LOSS_PENALTY = 5.0
 
 # positions a memo holds before it starts dropping the least recently used
 DEFAULT_MEMO_LIMIT = 200_000
+
+
+def solver_options(args):
+    """The keywords a front end's flags name.  ``--exact-max`` is a sentinel
+    on the terminal, resolved per subcommand through ``default_exact_max``."""
+    exact_max = args.exact_max
+    if exact_max is None:
+        exact_max = getattr(args, "default_exact_max", DEFAULT_EXACT_MAX)
+    return {
+        "use_exact": not args.no_exact,
+        "exact_max": exact_max,
+        "loss_penalty": args.loss_penalty,
+        "exact_max_branch": None if args.exact_branch <= 0 else args.exact_branch,
+        "exact_root_branch": args.exact_root_branch,
+        "lookahead": args.lookahead,
+        "lookahead_max_branch": args.lookahead_branch,
+    }
 
 
 class WordleSolver:
@@ -268,7 +285,7 @@ class WordleSolver:
             if self.mode == ENTROPY:
                 h = float(-(p * np.log2(p)).sum())
                 return int(candidates[first]), h
-            return int(candidates[first]), 2.0 - float(p[first])
+            return int(candidates[first]), kernels.two_candidates(float(p[first]))
 
         turns = MAX_TURNS if guesses_left is None else int(guesses_left)
         if self._exact_applies(m, turns):
@@ -450,7 +467,8 @@ class WordleSolver:
             if self.mode == ENTROPY:
                 h = float(-(p * np.log2(p)).sum())
                 return [(int(candidates[i]), h) for i in order]
-            return [(int(candidates[i]), 2.0 - float(p[i])) for i in order]
+            return [(int(candidates[i]), kernels.two_candidates(float(p[i])))
+                    for i in order]
 
         turns = MAX_TURNS if guesses_left is None else int(guesses_left)
         if self._exact_applies(m, turns):

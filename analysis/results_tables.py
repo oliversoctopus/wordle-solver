@@ -16,8 +16,7 @@ import common
 import estimator
 from priors import PriorConfig
 from solver import DERIVED_WIN_BONUS, ENTROPY, EXPECTED, WordleSolver
-
-MAX_GUESSES = 6
+from wordle_data import MAX_GUESSES
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--part", choices=("forms", "priors", "both"), default="both")

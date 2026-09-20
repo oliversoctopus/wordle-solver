@@ -7,14 +7,14 @@
 //! shows it to the user.
 
 use crate::feedback::{pattern_text, N_PATTERNS, WIN_PATTERN};
+use crate::game::MAX_GUESSES;
 use crate::json::{self, Object, Value};
-use crate::priors::{CurationShape, PriorConfig, RepeatShape};
+use crate::priors::PriorConfig;
 use crate::solver::{Mode, Solver};
 
 use crate::state;
 use crate::sum::{pairwise, pairwise_of};
 
-pub const MAX_GUESSES: usize = 6;
 const MAX_LISTED_CANDIDATES: usize = 80;
 const MAX_LISTED_SIBLINGS: usize = 40;
 
@@ -268,12 +268,12 @@ fn parse_pattern(value: Option<&Value>) -> Result<u8, String> {
     Ok(tiles.iter().fold(0u8, |acc, &tile| acc * 3 + tile))
 }
 
-/// The key `openings.json` is indexed by. Must match `build_site`'s.
+/// The key `openings.json` is indexed by; `build_site` writes it with this.
 ///
 /// The form is in the key because it changes `f`, and `f` is what expected
 /// mode ranks by. Entropy never consults it, so its ten entries per prior are
 /// one ranking written ten times over.
-fn settings_key(config: &PriorConfig, mode: Mode, hard: bool, form: &str) -> String {
+pub fn settings_key(config: &PriorConfig, mode: Mode, hard: bool, form: &str) -> String {
     format!(
         "{}|{}|{}|{}",
         config.slug(),
@@ -537,15 +537,6 @@ fn mode_name(mode: Mode) -> &'static str {
 
 /// The prior in a sentence, as `PriorConfig.describe` writes it.
 fn prior_summary(config: &PriorConfig) -> String {
-    let shape_name = |shape: RepeatShape| match shape {
-        RepeatShape::Uniform => "uniform",
-        RepeatShape::Binned => "binned",
-    };
-    let curation_name = |shape: CurationShape| match shape {
-        CurationShape::Uniform => "uniform",
-        CurationShape::Frequency => "frequency",
-        CurationShape::Wordlebot => "wordlebot",
-    };
     let on = |flag: bool| if flag { "ON" } else { "OFF" };
     format!(
         "repeat prior {}{}, curation prior {}{}",
@@ -554,7 +545,7 @@ fn prior_summary(config: &PriorConfig) -> String {
             format!(
                 " (p={}, {})",
                 config.repeat_prob,
-                shape_name(config.repeat_shape)
+                config.repeat_shape.name()
             )
         } else {
             String::new()
@@ -564,7 +555,7 @@ fn prior_summary(config: &PriorConfig) -> String {
             format!(
                 " (p={}, {})",
                 config.noncurated_prob,
-                curation_name(config.curation_shape)
+                config.curation_shape.name()
             )
         } else {
             String::new()
@@ -575,16 +566,6 @@ fn prior_summary(config: &PriorConfig) -> String {
 /// The prior as the page explains it: which halves are on, how much mass each
 /// takes, how that mass is shaped, and the rates it is set from.
 fn describe_prior(out: &mut String, loaded: &state::Loaded, config: &PriorConfig) {
-    let shape_name = |shape: RepeatShape| match shape {
-        RepeatShape::Uniform => "uniform",
-        RepeatShape::Binned => "binned",
-    };
-    let curation_name = |shape: CurationShape| match shape {
-        CurationShape::Uniform => "uniform",
-        CurationShape::Frequency => "frequency",
-        CurationShape::Wordlebot => "wordlebot",
-    };
-
     let stats = crate::priors::regime_stats(&loaded.data);
     let mut object = Object::new(out);
     object
@@ -594,12 +575,12 @@ fn describe_prior(out: &mut String, loaded: &state::Loaded, config: &PriorConfig
         .bool("curation", config.curation)
         .num("noncurated_prob", config.noncurated_prob);
     if config.repeat {
-        object.str("repeat_shape", shape_name(config.repeat_shape));
+        object.str("repeat_shape", config.repeat_shape.name());
     } else {
         object.null("repeat_shape");
     }
     if config.curation {
-        object.str("curation_shape", curation_name(config.curation_shape));
+        object.str("curation_shape", config.curation_shape.name());
     } else {
         object.null("curation_shape");
     }

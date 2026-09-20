@@ -9,14 +9,10 @@ so there is no hard-mode fit to read.  Backs README *Hard mode*.
 
 import argparse
 
-import numpy as np
-
 import common
 from priors import ALL_CONFIGS, PriorConfig
 from solver import ENTROPY, EXPECTED, WordleSolver
-from wordle_data import load_data
-
-MAX_GUESSES = 6
+from wordle_data import MAX_GUESSES, load_data
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--mode", choices=(EXPECTED, ENTROPY), default=EXPECTED)

@@ -12,6 +12,7 @@ use std::env;
 use std::fs;
 use std::process::ExitCode;
 
+use wordle_core::api::settings_key;
 use wordle_core::estimator::{forms, load_fit, load_form_fit, Form};
 use wordle_core::feedback::{pattern_text, N_PATTERNS, WIN_PATTERN};
 use wordle_core::json::{write_f64, write_string};
@@ -23,21 +24,6 @@ use wordle_core::WordleData;
 /// How many guesses the page lists: the pick plus its alternatives.
 const TOP: usize = 5;
 
-/// The key the page's settings collapse to, and the key `openings.json` is
-/// indexed by. Must match `settings_key` in the `api` module.
-fn settings_key(config: &PriorConfig, mode: Mode, hard: bool, form: &str) -> String {
-    format!(
-        "{}|{}|{}|{}",
-        config.slug(),
-        if mode == Mode::Entropy {
-            "entropy"
-        } else {
-            "expected"
-        },
-        if hard { "hard" } else { "free" },
-        form
-    )
-}
 
 /// One ranking into `openings.json`. Only the active form's line is printed:
 /// there are 180 keys and the other 160 say the same handful of words.

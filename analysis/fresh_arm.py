@@ -10,7 +10,6 @@ and README *What the two shapes are worth together*.
 """
 
 import argparse
-import copy
 import json
 import os
 import time
@@ -61,12 +60,6 @@ PAIRINGS = (("each prior its own f", FLAT_FIT, SHARP_FIT),
             ("both on the sharp prior's f", SHARP_FIT, SHARP_FIT))
 
 
-def as_of(t):
-    view = copy.copy(data)
-    view.past_solutions = data.past_solutions[:t]
-    return view
-
-
 def length(solver, word):
     out = solver.play(data.word2ind[word])
     return len(out[0] if isinstance(out, tuple) else out)
@@ -87,7 +80,7 @@ common.record("census_today", common.neg(
 rng = np.random.default_rng(0)
 got = {label: {"real": [], "census": []} for label, _, _ in PAIRINGS}
 for i, (t, answer) in enumerate(days):
-    view = as_of(t)
+    view = common.as_of(data, t)
     picks = [census[j] for j in rng.choice(len(census), args.per_day,
                                            replace=False)]
     made = {}

@@ -9,7 +9,6 @@ groups` moves the mass between groups by sweeping `repeat_prob` and
 
 import argparse
 import contextlib
-import copy
 import json
 import os
 import time
@@ -69,17 +68,10 @@ def tempered(t_rep, t_cur):
         priors._repeat_shape, priors._curation_shape = rep, cur
 
 
-def as_of(t):
-    """`data` with its answer history truncated to strictly before puzzle t."""
-    view = copy.copy(data)
-    view.past_solutions = data.past_solutions[:t]
-    return view
-
-
 def regime(config, params, form):
     out = []
     for t in range(START, END):
-        solver = WordleSolver(data=as_of(t), config=config,
+        solver = WordleSolver(data=common.as_of(data, t), config=config,
                               params=params, form=form)
         played = solver.play(data.word2ind[words[t]])
         out.append(len(played[0] if isinstance(played, tuple) else played))

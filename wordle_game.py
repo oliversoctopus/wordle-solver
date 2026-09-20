@@ -15,9 +15,8 @@ import sys
 import numpy as np
 
 from priors import PriorConfig, build_weights
-from wordle_data import WIN_PATTERN, load_data, num_to_feedback, score_guess
-
-MAX_GUESSES = 6
+from wordle_data import (MAX_GUESSES, TILE_VALS, WIN_PATTERN, load_data,
+                         num_to_feedback, score_guess)
 ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 
 RESET = "\x1b[0m"
@@ -40,7 +39,6 @@ def wash(rgb):
 
 GREEN, YELLOW, GRAY = "\x1b[30;102m", "\x1b[30m" + wash(GOLD), "\x1b[30;47m"
 TILE_COLOR = {"G": GREEN, "Y": YELLOW, "N": GRAY}
-TILE_RANK = {"N": 0, "Y": 1, "G": 2}
 
 # The share grid is drawn as blocks of color, since the console sets the emoji
 # ragged.  A square tile is three cells wide: a full line plus U+2580 over the
@@ -79,7 +77,7 @@ class Keyboard:
 
     def update(self, word, pattern):
         for letter, tile in zip(word, num_to_feedback(pattern)):
-            if TILE_RANK[tile] > TILE_RANK.get(self.state.get(letter), -1):
+            if TILE_VALS[tile] > TILE_VALS.get(self.state.get(letter), -1):
                 self.state[letter] = tile
 
     def describe(self):

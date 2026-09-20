@@ -7,6 +7,7 @@ scripts can be run from anywhere:
 """
 
 import atexit
+import copy
 import glob
 import json
 import os
@@ -26,7 +27,7 @@ for path in (ROOT, HERE):
 import rust  # noqa: E402  -- needs the path above
 from priors import (WORDLEBOT_SNAPSHOT_DATE,  # noqa: E402  -- likewise
                     depends_on_answer_record)
-from wordle_data import write_json  # noqa: E402  -- likewise
+from wordle_data import MAX_GUESSES, write_json  # noqa: E402  -- likewise
 
 DATA = os.path.join(ROOT, "data")
 
@@ -151,7 +152,11 @@ def paired(a, b):
     return d.mean(), d.std(ddof=1) / np.sqrt(len(d)), d
 
 
-MAX_GUESSES = 6
+def as_of(data, t):
+    """``data`` with its answer history cut to strictly before puzzle t."""
+    view = copy.copy(data)
+    view.past_solutions = data.past_solutions[:max(t, 0)]
+    return view
 
 
 def every_answer(solver, max_guesses=MAX_GUESSES):

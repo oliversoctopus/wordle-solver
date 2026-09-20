@@ -195,7 +195,7 @@ fn run(args: &Args) -> Result<String, Box<dyn std::error::Error>> {
             &mut out,
             &slug,
             &form,
-            &data.words.word(outcome.opening),
+            data.words.word(outcome.opening),
             &outcome,
         );
     }

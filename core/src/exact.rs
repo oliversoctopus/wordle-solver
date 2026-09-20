@@ -10,12 +10,12 @@
 //! with `t` the guesses left. README *The exact endgame* has the rest.
 
 use crate::fused;
-use crate::kernels::{distinct_partitions, signature_keys, MAX_PACKED};
+use crate::kernels::{argmin, distinct_partitions, signature_keys, two_candidates, MAX_PACKED};
 use crate::memo::Memo;
 use crate::source::{Columns, Source, Transposed};
 use crate::sum::pairwise_of;
 
-pub const MAX_TURNS: usize = 6;
+pub const MAX_TURNS: usize = crate::game::MAX_GUESSES;
 
 /// How many splits a node may try, best-bound first. README *The exact
 /// endgame* has what the cap costs.
@@ -220,7 +220,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         }
         if m == 2 {
             // guess the likelier one; if wrong the other is known
-            return Ok((candidates[heaviest] as i64, 2.0 - p_max));
+            return Ok((candidates[heaviest] as i64, two_candidates(p_max)));
         }
 
         let key = (candidates.to_vec(), turns);
@@ -312,7 +312,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
                 .map(|i| {
                     (
                         candidates[i] as i64,
-                        2.0 - self.weights[candidates[i]] / total,
+                        two_candidates(self.weights[candidates[i]] / total),
                     )
                 })
                 .collect());
@@ -401,6 +401,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     /// Exact value of one guess, abandoned early if it cannot beat `cutoff`.
     /// Starts from the per-bucket lower bounds and replaces them with exact
     /// values one bucket at a time.
+    #[allow(clippy::too_many_arguments)]
     fn evaluate<F: Source>(
         &mut self,
         fb: &F,
@@ -443,7 +444,7 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
                 continue;
             }
             if size == 2 {
-                running += share * (2.0 - sub_p_max);
+                running += share * two_candidates(sub_p_max);
                 continue;
             }
             let bound = 1.0 + (1.0 - sub_p_max) * self.bound_penalty;
@@ -564,16 +565,6 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
     pub fn swap_memo(&mut self, other: &mut Memo<(Vec<usize>, usize), Solved>) {
         std::mem::swap(&mut self.memo, other);
     }
-}
-
-fn argmin(values: &[f64]) -> usize {
-    let mut best = 0;
-    for (i, &v) in values.iter().enumerate() {
-        if v < values[best] {
-            best = i;
-        }
-    }
-    best
 }
 
 #[cfg(test)]

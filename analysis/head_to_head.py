@@ -15,8 +15,7 @@ import numpy as np
 import common
 from priors import PriorConfig
 from solver import DERIVED_WIN_BONUS, ENTROPY, WordleSolver
-
-MAX_GUESSES = 6
+from wordle_data import MAX_GUESSES
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--baseline", action="store_true",

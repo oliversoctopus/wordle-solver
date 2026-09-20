@@ -15,9 +15,7 @@ import numpy as np
 import common
 from priors import PriorConfig
 from solver import EXPECTED, WordleSolver
-from wordle_data import load_data
-
-MAX_GUESSES = 6
+from wordle_data import MAX_GUESSES, load_data
 
 # the same four combinations `loss_penalty.py` blends its lines over, so the
 # continuation cost lands on the population the crossovers are computed on

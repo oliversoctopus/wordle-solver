@@ -16,8 +16,9 @@ import numpy as np
 import fused_kernels
 import kernels
 from memo import Memo
+from wordle_data import MAX_GUESSES
 
-MAX_TURNS = 6
+MAX_TURNS = MAX_GUESSES
 # above this many candidates the packed signature no longer fits in an int64
 MAX_PACKED = 7
 
@@ -120,7 +121,7 @@ class ExactEndgame:
             return int(candidates[heaviest]), 1.0 + (1.0 - p_max) * self.loss_penalty
         if m == 2:
             # guess the likelier one; if wrong the other is known
-            return int(candidates[heaviest]), 2.0 - p_max
+            return int(candidates[heaviest]), kernels.two_candidates(p_max)
         key = (candidates.tobytes(), turns)
         cached = self.memo.get(key)
         if cached is not None:
@@ -182,7 +183,8 @@ class ExactEndgame:
             # either order wins by the second turn; leading with the likelier
             # one is what makes the difference
             order = np.argsort(-weights, kind="stable")
-            return [(int(candidates[i]), 2.0 - float(weights[i] / total))
+            return [(int(candidates[i]),
+                     kernels.two_candidates(float(weights[i] / total)))
                     for i in order]
         if turns == 2:
             # the closed form scores every guess rather than the distinct
@@ -278,7 +280,7 @@ class ExactEndgame:
                 continue
             sub_p_max = float(sub_weights.max() / mass)
             if size == 2:
-                running += share * (2.0 - sub_p_max)
+                running += share * kernels.two_candidates(sub_p_max)
                 continue
             bound = 1.0 + (1.0 - sub_p_max) * self.bound_penalty
             running += share * bound

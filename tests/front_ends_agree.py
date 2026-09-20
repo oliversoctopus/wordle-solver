@@ -42,9 +42,7 @@ def terminal_args(argv=()):
 # --------------------------------------------------------------- the settings
 
 # --exact-max is a sentinel on the terminal, resolved per subcommand by
-# solver_kwargs, so the raw defaults differ by design; check_solver_options
-# compares what it resolves to.  mode, form and top are process-level flags
-# there and per-request fields here, which is why they are not shared at all.
+# solver.solver_options, so the raw defaults differ
 SENTINELS = {"exact_max"}
 
 
@@ -77,16 +75,6 @@ def check_prior():
                   (terminal.repeat, terminal.curation, terminal.repeat_prob,
                    terminal.noncurated_prob, terminal.repeat_shape,
                    terminal.curation_shape))
-
-
-def check_solver_options():
-    """And the solver each front end builds has to be built the same way."""
-    page = web.solver_options(page_args())
-    terminal = wordle_solver.solver_kwargs(terminal_args())
-    terminal.pop("hard")   # the page carries hard mode per request, not per process
-    check("the solver options are the same set", sorted(page), sorted(terminal))
-    for name in sorted(set(page) & set(terminal)):
-        check(f"    {name} is built the same", page[name], terminal[name])
 
 
 def check_request_defaults():
@@ -122,17 +110,18 @@ def check_recommendations():
     a different candidate filter, a different guesses_left, a solver cached
     under a key that does not describe it.
     """
-    from wordle_data import load_data, score_guess
+    from solver import solver_options
+    from wordle_data import MAX_GUESSES, load_data, score_guess
 
     args = terminal_args()
     data = load_data(mask_last=args.mask_last)
     config = wordle_solver.config_from_args(args)
     terminal = wordle_solver.WordleSolver(
         data=data, config=config, mode=args.mode, form=args.form,
-        **wordle_solver.solver_kwargs(args))
+        hard=args.hard, **solver_options(args))
 
     pool = web.SolverPool(mask_last=page_args().mask_last,
-                          options=web.solver_options(page_args()))
+                          options=solver_options(page_args()))
     settings = web.parse_settings({})
 
     for answer, guesses in BOARDS:
@@ -146,7 +135,7 @@ def check_recommendations():
         candidates = terminal.all_candidates()
         for guess, pattern in rows:
             candidates = terminal.filter(guess, pattern, candidates)
-        guess, _ = terminal.best_guess(candidates, wordle_solver.MAX_GUESSES - len(rows))
+        guess, _ = terminal.best_guess(candidates, MAX_GUESSES - len(rows))
         terminal_word = data.all_words[guess]
 
         played = " ".join(guesses) or "an empty board"
@@ -163,7 +152,6 @@ def main():
 
     check_defaults()
     check_prior()
-    check_solver_options()
     check_request_defaults()
     if args.full:
         print("\nloading the table and compiling the kernels...")

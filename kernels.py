@@ -106,14 +106,19 @@ def _w_log_w(weights):
 
 
 @njit(cache=True, inline="always")
+def two_candidates(p_max):
+    """Guesses still needed from two candidates, the likelier one played first."""
+    return 2.0 - p_max
+
+
+@njit(cache=True, inline="always")
 def _bucket_guesses(mass, count, wlw, heaviest, params, codes, knots, base):
     """Guesses still needed from one bucket.  One and two candidates are worth
     exactly 1 and 2 - p_max, so the estimator is only consulted above that."""
     if count == 1.0:
         return 1.0
     if count == 2.0:
-        # guess the likelier one: right with probability p_max, else one more
-        return 2.0 - heaviest / mass
+        return two_candidates(heaviest / mass)
     return f_eval_x(np.log2(mass) - wlw / mass, params, codes, knots, base)
 
 

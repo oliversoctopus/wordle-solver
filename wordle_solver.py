@@ -19,10 +19,8 @@ from priors import (ALL_CONFIGS, CURATION_SHAPES, REPEAT_SHAPES, PriorConfig,
                     depends_on_answer_record)
 from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
                     DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED, MODES,
-                    WordleSolver)
-from wordle_data import WIN_PATTERN, feedback_to_num, load_data
-
-MAX_GUESSES = 6
+                    WordleSolver, solver_options)
+from wordle_data import MAX_GUESSES, WIN_PATTERN, feedback_to_num, load_data
 
 
 def config_from_args(args):
@@ -36,28 +34,6 @@ def config_from_args(args):
     )
 
 
-def solver_kwargs(args):
-    # --exact-max defaults per subcommand, but it cannot be done with
-    # set_defaults: parents=[common] shares one action object between every
-    # subparser, and set_defaults writes through to it, so setting train's
-    # default would silently set everyone's.  Hence the sentinel.
-    exact_max = args.exact_max
-    if exact_max is None:
-        exact_max = getattr(args, "default_exact_max", DEFAULT_EXACT_MAX)
-    return {
-        "use_exact": not args.no_exact,
-        "exact_max": exact_max,
-        "loss_penalty": args.loss_penalty,
-        "exact_max_branch": None if args.exact_branch <= 0 else args.exact_branch,
-        "exact_root_branch": args.exact_root_branch,
-        # only play and benchmark offer it: f is cached per prior alone, so
-        # training under the restriction would overwrite the ordinary fit
-        "hard": getattr(args, "hard", False),
-        "lookahead": args.lookahead,
-        "lookahead_max_branch": args.lookahead_branch,
-    }
-
-
 def score_label(mode, score):
     if mode == ENTROPY:
         return f"{score:.4f} bits of expected information"
@@ -68,7 +44,7 @@ def cmd_play(args):
     data = load_data(mask_last=args.mask_last)
     config = config_from_args(args)
     solver = WordleSolver(data=data, config=config, mode=args.mode, form=args.form,
-                          **solver_kwargs(args))
+                          hard=args.hard, **solver_options(args))
 
     print(f"prior: {config.describe()}")
     print(f"mode:  {args.mode}" + (", hard" if args.hard else ""))
@@ -164,7 +140,7 @@ def cmd_train(args):
         tol=args.tol,
         seed=args.seed,
         use_rust=args.rust,
-        solver_options=solver_kwargs(args),
+        solver_options=solver_options(args),
     )
     return 0
 
@@ -177,7 +153,7 @@ def cmd_benchmark(args):
         for deadline in ((True, False) if args.no_deadline else (True,)):
             print(f"\n=== {mode}, last guess restricted: {deadline} ===")
             solver = WordleSolver(data=data, config=config, mode=mode, form=args.form,
-                                  **solver_kwargs(args))
+                                  hard=args.hard, **solver_options(args))
             training.evaluate(solver, n_games=args.games, seed=args.seed, deadline=deadline)
     return 0
 
@@ -194,7 +170,7 @@ def cmd_compare(args):
         holdout_games=args.holdout_games,
         seed=args.seed,
         max_iters=args.max_iters,
-        solver_options=solver_kwargs(args),
+        solver_options=solver_options(args),
     )
     return 0
 

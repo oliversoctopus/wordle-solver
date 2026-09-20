@@ -16,9 +16,7 @@ import common
 from priors import PriorConfig, build_weights
 from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED,
                     WordleSolver, sample_answers)
-from wordle_data import load_data
-
-MAX_GUESSES = 6
+from wordle_data import MAX_GUESSES, load_data
 
 # the four toggle combinations the two tables blend over, in the README's order
 TOGGLE_CONFIGS = [PriorConfig(repeat=r, curation=c)

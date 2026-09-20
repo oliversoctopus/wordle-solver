@@ -22,6 +22,8 @@ CURATED_PATH = os.path.join(DATA_DIR, "wordles.json")
 NONCURATED_PATH = os.path.join(DATA_DIR, "nonwordles.json")
 SOLUTIONS_PATH = os.path.join(DATA_DIR, "solutions.json")
 
+MAX_GUESSES = 6
+
 # "GGGGG" as a base-3 number with N=0, Y=1, G=2
 WIN_PATTERN = 242
 N_PATTERNS = 243

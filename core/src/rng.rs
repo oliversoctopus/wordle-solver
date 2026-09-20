@@ -60,9 +60,9 @@ fn seed_pool(seed: u64) -> [u32; POOL_SIZE] {
         }
     }
     for &word in entropy.iter().skip(POOL_SIZE) {
-        for i_dst in 0..POOL_SIZE {
+        for slot in pool.iter_mut() {
             let mixed = hashmix(word, &mut hash_const);
-            pool[i_dst] = mix(pool[i_dst], mixed);
+            *slot = mix(*slot, mixed);
         }
     }
     pool

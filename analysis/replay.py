@@ -10,7 +10,6 @@ shapes are worth together* and *What each prior is worth on real answers*.
 """
 
 import argparse
-import copy
 import itertools
 import time
 
@@ -108,15 +107,8 @@ CWIDTH = max(len(label) for label in CONTRASTS) + 1
 TWIDTH = max(WIDTH, CWIDTH) if args.all_priors else WIDTH
 
 
-def as_of(t):
-    """`data` with its answer history truncated to strictly before puzzle t."""
-    view = copy.copy(data)
-    view.past_solutions = data.past_solutions[:t]
-    return view
-
-
 def guesses(config, t, answer):
-    solver = WordleSolver(data=as_of(t), config=config)
+    solver = WordleSolver(data=common.as_of(data, t), config=config)
     out = solver.play(data.word2ind[answer])
     return len(out[0] if isinstance(out, tuple) else out)
 

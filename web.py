@@ -30,24 +30,22 @@ from exact import DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH
 from priors import PriorConfig, regime_stats
 from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
                     DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED, MODES,
-                    WordleSolver)
+                    WordleSolver, solver_options)
 # the terminal game's answer-drawing and emoji grid, so both front ends deal
 # the same answers and print the same thing at the end
 from wordle_game import TILE_BLOCK, pick_random_answer
-from wordle_data import (FEEDBACK_TABLE_PATH, WIN_PATTERN, load_data,
+from wordle_data import (FEEDBACK_TABLE_PATH, MAX_GUESSES, TILE_VALS,
+                         WIN_PATTERN, feedback_to_num, load_data,
                          num_to_feedback, record_through, score_guess)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(HERE, "web")
 
-MAX_GUESSES = 6
 MAX_SESSIONS = 200          # oldest are dropped; a session is a few dozen bytes
 MAX_LISTED_CANDIDATES = 80  # possible answers sent to the page, likeliest first
 MAX_LISTED_MATCHES = 120    # words the finder lists, best first by its sort
 MAX_LISTED_SIBLINGS = 40    # words sharing a guess's split, likeliest first
 MAX_BODY = 64 * 1024
-
-TILE_VALS = {"N": 0, "Y": 1, "G": 2}
 
 # how the word finder can order what it found, and which way round each runs.
 # The names are the page's, as the two mode names are: this end only decides
@@ -256,10 +254,7 @@ def parse_pattern(raw):
         raise SolverError("No feedback given for that guess")
     if len(tiles) != 5 or any(t not in TILE_VALS for t in tiles):
         raise SolverError("Feedback needs five tiles, each gray, yellow or green")
-    num = 0
-    for tile in tiles:
-        num = num * 3 + TILE_VALS[tile]
-    return num
+    return feedback_to_num("".join(tiles))
 
 
 # ----------------------------------------------------------------------- state
@@ -859,21 +854,6 @@ def build_parser():
                         help="cost of running out of turns, on top of the six spent "
                              "(default %(default)s; 1.0 is risk neutral)")
     return parser
-
-
-def solver_options(args):
-    """How every solver this server builds is configured, as `wordle_solver`'s
-    ``solver_kwargs`` is for the terminal.  The two have to agree where they
-    overlap, and `tests/front_ends_agree.py` is what says so."""
-    return {
-        "use_exact": not args.no_exact,
-        "exact_max": args.exact_max,
-        "loss_penalty": args.loss_penalty,
-        "exact_max_branch": None if args.exact_branch <= 0 else args.exact_branch,
-        "exact_root_branch": args.exact_root_branch,
-        "lookahead": args.lookahead,
-        "lookahead_max_branch": args.lookahead_branch,
-    }
 
 
 def main(argv=None):

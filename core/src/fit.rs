@@ -71,11 +71,11 @@ fn qr_solve(mut a: Vec<Vec<f64>>, mut b: Vec<f64>) -> Vec<f64> {
             continue;
         }
 
-        for c in j..k {
-            let dot = pairwise_of(m - j, |t| v[t + j] * a[c][t + j]);
+        for column in a.iter_mut().take(k).skip(j) {
+            let dot = pairwise_of(m - j, |t| v[t + j] * column[t + j]);
             let factor = 2.0 * dot / vv;
             for i in j..m {
-                a[c][i] -= factor * v[i];
+                column[i] -= factor * v[i];
             }
         }
         let dot = pairwise_of(m - j, |t| v[t + j] * b[t + j]);

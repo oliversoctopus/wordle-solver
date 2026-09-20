@@ -111,6 +111,14 @@ pub const RESCAN_MAX: usize = 128;
 /// 12,947 indices each time is pure waste -- `kernels.py` caches the same array
 /// in `_ALL_ROWS` for the same reason. The length check covers the one case a
 /// single process could hold two word lists; it has never happened here.
+/// The guesses to score: `pool`, or every row of the table.
+fn resolve_pool(pool: Option<&[usize]>, n: usize) -> std::borrow::Cow<'_, [usize]> {
+    match pool {
+        Some(p) => std::borrow::Cow::Borrowed(p),
+        None => all_rows(n),
+    }
+}
+
 pub(crate) fn all_rows(n: usize) -> std::borrow::Cow<'static, [usize]> {
     static CACHE: std::sync::OnceLock<Vec<usize>> = std::sync::OnceLock::new();
     let cached = CACHE.get_or_init(|| (0..n).collect());
@@ -138,18 +146,11 @@ pub fn ig_all(
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
     let _span = Span::new(0);
-    let all;
-    let pool: &[usize] = match pool {
-        Some(p) => p,
-        None => {
-            all = all_rows(source.n_guesses());
-            &all
-        }
-    };
+    let pool = resolve_pool(pool, source.n_guesses());
     let m = candidates.len();
     let total: f64 = weights.iter().sum();
 
-    scatter(pool, pool.len().saturating_mul(m), |part, out| {
+    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
         let mut mass = [0.0f64; N_PATTERNS];
         for (slot, &guess) in part.iter().enumerate() {
             for i in 0..m {
@@ -180,6 +181,34 @@ pub fn ig_all(
     })
 }
 
+/// Guesses still needed from two candidates, the likelier one played first.
+#[inline]
+pub(crate) fn two_candidates(p_max: f64) -> f64 {
+    2.0 - p_max
+}
+
+/// First minimum, as numpy's argmin takes it on ties.
+pub(crate) fn argmin(values: &[f64]) -> usize {
+    let mut best = 0;
+    for (i, &v) in values.iter().enumerate() {
+        if v < values[best] {
+            best = i;
+        }
+    }
+    best
+}
+
+/// First maximum, as numpy's argmax takes it on ties.
+pub(crate) fn argmax(values: &[f64]) -> usize {
+    let mut best = 0;
+    for (i, &v) in values.iter().enumerate() {
+        if v > values[best] {
+            best = i;
+        }
+    }
+    best
+}
+
 /// Guesses still needed from one bucket. One and two candidates are worth
 /// exactly 1 and `2 - p_max`, so the estimator is only consulted above that.
 #[inline]
@@ -195,8 +224,7 @@ pub(crate) fn bucket_guesses(
         return 1.0;
     }
     if count == 2.0 {
-        // guess the likelier one; if wrong, the other is now known
-        return 2.0 - heaviest / mass;
+        return two_candidates(heaviest / mass);
     }
     f_eval_x(mass.log2() - wlw / mass, params, form)
 }
@@ -218,19 +246,12 @@ pub fn expected_guesses_all(
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
     let _span = Span::new(1);
-    let all;
-    let pool: &[usize] = match pool {
-        Some(p) => p,
-        None => {
-            all = all_rows(source.n_guesses());
-            &all
-        }
-    };
+    let pool = resolve_pool(pool, source.n_guesses());
     let m = candidates.len();
     let total: f64 = weights.iter().sum();
     let wlw = w_log_w(weights);
 
-    scatter(pool, pool.len().saturating_mul(m), |part, out| {
+    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
         let mut buckets = Buckets::new();
         for (slot, &guess) in part.iter().enumerate() {
             for i in 0..m {
@@ -337,18 +358,11 @@ pub fn two_turn_scores(
     pool: Option<&[usize]>,
 ) -> Vec<f64> {
     let _span = Span::new(2);
-    let all;
-    let pool: &[usize] = match pool {
-        Some(p) => p,
-        None => {
-            all = all_rows(source.n_guesses());
-            &all
-        }
-    };
+    let pool = resolve_pool(pool, source.n_guesses());
     let m = candidates.len();
     let total: f64 = weights.iter().sum();
 
-    scatter(pool, pool.len().saturating_mul(m), |part, out| {
+    scatter(&pool, pool.len().saturating_mul(m), |part, out| {
         let mut mass = [0.0f64; N_PATTERNS];
         let mut heaviest = [0.0f64; N_PATTERNS];
         for (slot, &guess) in part.iter().enumerate() {
@@ -502,14 +516,7 @@ pub fn same_split(
     pool: Option<&[usize]>,
 ) -> Vec<usize> {
     let _span = Span::new(5);
-    let all;
-    let pool: &[usize] = match pool {
-        Some(p) => p,
-        None => {
-            all = all_rows(source.n_guesses());
-            &all
-        }
-    };
+    let pool = resolve_pool(pool, source.n_guesses());
     // the seventh of the numba kernels, and parallel there too
     let keep = map_guesses(pool.len(), pool.len() * candidates.len(), |slot| {
         let other = pool[slot];

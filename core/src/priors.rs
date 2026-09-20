@@ -46,6 +46,25 @@ pub enum CurationShape {
     Wordlebot,
 }
 
+impl RepeatShape {
+    pub fn name(self) -> &'static str {
+        match self {
+            RepeatShape::Uniform => "uniform",
+            RepeatShape::Binned => "binned",
+        }
+    }
+}
+
+impl CurationShape {
+    pub fn name(self) -> &'static str {
+        match self {
+            CurationShape::Uniform => "uniform",
+            CurationShape::Frequency => "frequency",
+            CurationShape::Wordlebot => "wordlebot",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PriorConfig {
     pub repeat: bool,

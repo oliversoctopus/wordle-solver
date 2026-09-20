@@ -14,12 +14,9 @@ import argparse
 import numpy as np
 
 import common
-from memo import Memo
 from priors import ALL_CONFIGS, PriorConfig
 from solver import ENTROPY, EXPECTED, MAX_TURNS, WordleSolver
-from wordle_data import load_data, num_to_feedback
-
-MAX_GUESSES = 6
+from wordle_data import MAX_GUESSES, load_data, num_to_feedback
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--mode", choices=(EXPECTED, ENTROPY), default=EXPECTED)

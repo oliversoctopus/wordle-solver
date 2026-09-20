@@ -16,9 +16,7 @@ import common
 from priors import PriorConfig
 from solver import (DEFAULT_LOOKAHEAD_BRANCH, EXPECTED, WordleSolver,
                     sample_answers)
-from wordle_data import load_data
-
-MAX_GUESSES = 6
+from wordle_data import MAX_GUESSES, load_data
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--games", type=int, default=5000, help="answers per prior")

@@ -127,7 +127,7 @@ def _bucket(mass, count, wlw, heaviest, params, codes, knots, base):
     if count == 1.0:
         return 1.0
     if count == 2.0:
-        return 2.0 - heaviest / mass
+        return kernels.two_candidates(heaviest / mass)
     return f_eval_x(np.log2(mass) - wlw / mass, params, codes, knots, base)
 
 

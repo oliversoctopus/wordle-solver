@@ -10,7 +10,6 @@ SOLVER_EXPLAINED 14.1.
 """
 
 import argparse
-import copy
 import time
 
 import numpy as np
@@ -43,13 +42,6 @@ SHIPPED = PriorConfig(repeat_shape="binned", curation_shape="wordlebot")
 FLAT_REPEAT = PriorConfig(repeat_shape="uniform", curation_shape="wordlebot")
 
 
-def as_of(t):
-    """`data` with its answer history truncated to strictly before puzzle t."""
-    view = copy.copy(data)
-    view.past_solutions = data.past_solutions[:max(t, 0)]
-    return view
-
-
 def total_variation(a, b):
     """Half the L1 distance, i.e. the share of the mass that sits elsewhere."""
     return 0.5 * np.abs(np.asarray(a) - np.asarray(b)).sum()
@@ -71,9 +63,9 @@ repeat, offlist = [], []
 seen = set(words[:START])
 for t in range(START, END):
     word = words[t]
-    fresh = build_weights(as_of(t - BASE), SHIPPED)
+    fresh = build_weights(common.as_of(data, t - BASE), SHIPPED)
     for lag in LAGS:
-        view = as_of(t - lag)
+        view = common.as_of(data, t - lag)
         runs[lag].append(guesses(view, word))
         shift[lag].append(total_variation(build_weights(view, SHIPPED), fresh))
     repeat.append(word in seen)

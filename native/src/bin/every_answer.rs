@@ -126,7 +126,7 @@ fn sweep<S: wordle_core::source::Source>(
     let lengths = if options.serial {
         every_answer(&mut build(), MAX_GUESSES)
     } else {
-        every_answer_across_cores(n_words, MAX_GUESSES, &build)
+        every_answer_across_cores(n_words, MAX_GUESSES, build)
     };
     let mut solver = build();
     let opening = solver.best_guess(&(0..n_words).collect::<Vec<_>>(), Some(MAX_GUESSES));
