@@ -5,7 +5,7 @@ python tests/run.py           a few seconds, needs nothing loaded
 python tests/run.py --full    also the parts that load the 167 MB table
 ```
 
-Eleven checks over ten files here and one at the root. None asserts a number written by hand: each runs over inputs nobody chose and checks against a second implementation, the answer record, or a property that holds of every board. `anchors.py` is the exception, and pins the chain to facts from outside the repository.
+Eleven checks over ten files here and one at the root. None asserts a number written by hand. Each runs over inputs nobody chose and checks against a second implementation, the answer record, or a property that holds of every board. `anchors.py` is the exception, and pins the chain to facts from outside the repository.
 
 ## `board.test.js` — the solve board's editing rules
 
@@ -17,7 +17,7 @@ node tests/board.test.js [walks] [edits]     default 200 walks of 60
 
 ## `front_ends_agree.py` — the page and the terminal ask the same question
 
-`wordle_solver.py play` builds a `PriorConfig` from flags and `web.py` builds one from a JSON body. Each parser is the other's oracle: the shared flags start in the same place, all four switch combinations name the same prior, and the solver is built with the same options. `--full` also compares the recommendation over several boards, given as an answer and the words played at it, with patterns from `score_guess`.
+`wordle_solver.py play` builds a `PriorConfig` from flags and `web.py` builds one from a JSON body. Each parser is the other's oracle. The shared flags start in the same place, all four switch combinations name the same prior, and the solver is built with the same options. `--full` also compares the recommendation over several boards, given as an answer and the words played at it, with patterns from `score_guess`.
 
 ## `splits.py` — one word per split, and the words it stands for
 
@@ -29,7 +29,7 @@ python tests/splits.py --games 8     four games per mode by default
 
 ## `scoring.py` — each scoring rule is what it claims to be
 
-Information gain, expected guesses under `f`, and information gain with a price on being a possible answer share one path. The price is recomputed from the prior weights with numpy; switching it off must leave the mode bit-identical; a pooled score must equal the full pass restricted to that pool; and the ranking's first entry must be the guess `best_guess` plays, at the same value. Needs the table.
+Information gain, expected guesses under `f`, and information gain with a price on being a possible answer share one path. The price is recomputed from the prior weights with numpy. Switching it off must leave the mode bit-identical, a pooled score must equal the full pass restricted to that pool, and the ranking's first entry must be the guess `best_guess` plays, at the same value. Needs the table.
 
 ```
 python tests/scoring.py --games 6     three games per mode by default
@@ -49,15 +49,15 @@ The estimator cache is keyed on the `PriorConfig` alone, so `solutions.py --writ
 
 ## `doc_refs.py` — every pointer into the documents and the code resolves
 
-A reference to a document names its heading, as `README *Results*`, and matches on a prefix; `SOLVER_EXPLAINED` is also numbered, so `§12` resolves against that numbering. A reference to code names a symbol, as `priors.build_weights` or `source::Columns`; the Python is read with `ast` and the Rust matched against its item declarations, and `EXTERNAL` lists the few names that belong to neither. Whitespace is collapsed first, so a title split across a docstring's line break still matches. It cannot tell that a pointer lands on the right section, only on a real one.
+A reference to a document names its heading, as `README *Results*`, and matches on a prefix. `SOLVER_EXPLAINED` is also numbered, so `§12` resolves against that numbering. A reference to code names a symbol, as `priors.build_weights` or `source::Columns`. The Python is read with `ast` and the Rust matched against its item declarations, and `EXTERNAL` lists the few names that belong to neither. Whitespace is collapsed first, so a title split across a docstring's line break still matches. It cannot tell that a pointer lands on the right section, only on a real one.
 
 ## `doc_numbers.py` — every figure the documents quote is the one its script recorded
 
-At the repository root, since it is also the tool that rewrites the documents. Each script in `analysis/` records its figures to `analysis/results/<script>.json`, and the documents mark each figure with an HTML comment naming the key. Run bare it fails on any figure that differs from its results file; `--write` rewrites them and lists what moved, which is the list of sentences to reread.
+At the repository root, since it is also the tool that rewrites the documents. Each script in `analysis/` records its figures to `analysis/results/<script>.json`, and the documents mark each figure with an HTML comment naming the key. Run bare it fails on any figure that differs from its results file. `--write` rewrites them and lists what moved, which is the list of sentences to reread.
 
 ## `rust_parity.py` — the Rust core agrees with the Python
 
-Each ported piece runs against the Python on the same inputs. The coloring rule is checked against every entry of `feedback_table.npy`. The prior weights are compared per configuration. `f` is checked over a grid twice per form, on synthetic coefficients and on the cached fit. The training draw is compared exactly, index by index, and the least-squares solve on a tolerance over three datasets built to reach its awkward paths; one round of policy iteration is then run both ways, and the check stops there, since the two fits differ in their last bits and diverge legitimately afterwards. The kernels run over candidate sets Python builds, straddling the `_RESCAN_MAX` and `MAX_PACKED` thresholds. The split helpers are compared in order. The endgame search is checked over positions played out two plies deep, at every turn count and under three arms, and must return the identical guess, value and ranking. The solver dispatch is checked for which branch answers, across six arms. The endpoints are compared leaf by leaf over seven settings and eight boards, six of them one row behind an opening so the precomputed rankings are exercised. The messages are compared word for word across nine refusals. The letter odds are the one field compared on a tolerance, since `web.py` computes them with a BLAS product. `--every-answer` plays all 12,947 words both ways and diffs the lengths. It skips when nothing is built.
+Each ported piece runs against the Python on the same inputs. The coloring rule is checked against every entry of `feedback_table.npy`. The prior weights are compared per configuration. `f` is checked over a grid twice per form, on synthetic coefficients and on the cached fit. The training draw is compared exactly, index by index, and the least-squares solve on a tolerance over three datasets built to reach its awkward paths. One round of policy iteration is then run both ways, and the check stops there, since the two fits differ in their last bits and diverge legitimately afterwards. The kernels run over candidate sets Python builds, straddling the `_RESCAN_MAX` and `MAX_PACKED` thresholds. The split helpers are compared in order. The endgame search is checked over positions played out two plies deep, at every turn count and under three arms, and must return the identical guess, value and ranking. The solver dispatch is checked for which branch answers, across six arms. The endpoints are compared leaf by leaf over seven settings and eight boards, six of them one row behind an opening so the precomputed rankings are exercised. The messages are compared word for word across nine refusals. The letter odds are the one field compared on a tolerance, since `web.py` computes them with a BLAS product. `--every-answer` plays all 12,947 words both ways and diffs the lengths. It skips when nothing is built.
 
 ## `wasm_api.test.js` — the static build's shim keeps the page's contract
 
