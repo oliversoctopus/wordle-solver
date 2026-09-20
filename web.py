@@ -387,8 +387,8 @@ def build_state(pool, session_id, settings, rows, answer=None):
         state["recommendation"] = {
             **describe_guess(solver, word, score, candidates),
             "exact": exact,
-            # a guess that cannot be the answer is still often the right one;
-            # say which it is
+            # whether the pick could be the answer; a non-candidate is often the
+            # right play
             "possible": bool((candidates == pick).any()),
             "win_probability": float(solver.win_probability(candidates, pick)),
         }

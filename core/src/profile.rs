@@ -1,7 +1,7 @@
 //! Where a sweep's time goes, when built with `--features profile`.
 //!
-//! One instrumented run settles where the time goes, so the instrumentation
-//! lives here instead of being pasted in and deleted each time.
+//! The instrumentation lives here so a run can be timed without editing the
+//! kernels.
 
 /// The entry points worth timing separately.
 pub const NAMES: [&str; 8] = [

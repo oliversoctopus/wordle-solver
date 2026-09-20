@@ -1,9 +1,8 @@
 //! A small JSON reader, so the core keeps its promise of no dependencies.
 //!
-//! Everything it parses is machine-written by this repository -- the word
-//! lists, the answer record, the two weight tables -- so it aims at being
-//! correct on that rather than at being a general library. It handles the
-//! standard escapes, since a wrong string is worse than a slow parse.
+//! Everything it parses is machine-written by this repository: the word
+//! lists, the answer record, the two weight tables. It aims at correctness on
+//! that input, not at generality, and handles the standard escapes.
 
 use std::collections::HashMap;
 use std::fmt;

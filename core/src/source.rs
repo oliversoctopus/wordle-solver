@@ -4,8 +4,8 @@
 //! build has no table and scores the pair on the spot. `README.md`
 //! § *Without a server* has what live scoring costs.
 //!
-//! A generic parameter and not a trait object: the inner loop runs up to 167
-//! million times, and a vtable lookup there would cost more than the work.
+//! A generic parameter, since the inner loop runs up to 167 million times and
+//! a vtable lookup there would cost more than the work.
 
 use crate::feedback::score_guess;
 use crate::words::WordList;
@@ -72,8 +72,8 @@ impl Table {
 
     /// Reads `feedback_table.npy` where `feedback_table.py` has left one.
     ///
-    /// Faster than `build` by enough to matter for a process short enough to
-    /// show it, an analysis script shelling out per sweep above all. The
+    /// Faster than `build`, which matters to a short process such as an
+    /// analysis script shelling out per sweep. The
     /// on-disk form is numpy's: a magic string, a header naming dtype and
     /// shape, then the bytes in C order.
     #[cfg(not(target_arch = "wasm32"))]

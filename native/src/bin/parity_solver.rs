@@ -7,7 +7,7 @@
 //!     parity_solver <repo root> <sets file> <output directory> [arm masks]
 //!
 //! The masks are one comma-separated bitmask per set, saying which arms visit
-//! it; Python decides and this obeys. Absent, every arm visits every set.
+//! it. Absent, every arm visits every set.
 
 use std::env;
 use std::fs;

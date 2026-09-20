@@ -1,8 +1,8 @@
 // The solver itself, off the page's thread.
 //
 // A wide position costs long enough that, run on the main thread, the page
-// cannot repaint, scroll or accept a keystroke through it.  The work is the
-// same length here; what changes is that the page stays alive through it.
+// cannot repaint, scroll or accept a keystroke through it.  The work takes
+// as long here, and the page stays responsive through it.
 //
 // Marshalling is by hand because the module has no wasm-bindgen: ask it for a
 // buffer, write UTF-8 in, call handle, read the reply out, free both.

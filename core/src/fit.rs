@@ -2,10 +2,10 @@
 //!
 //! The basis is routinely rank deficient: a spline hinge beyond the widest
 //! position seen is a column of zeros. numpy answers with an SVD and a
-//! minimum-norm solution, landing that column on zero; this drops such
-//! columns and solves the full-rank remainder by Householder QR, the same
-//! answer by a shorter route. It agrees with numpy closely and not bitwise,
-//! so the fit is compared on a tolerance in `tests/rust_parity.py`.
+//! minimum-norm solution, landing that column on zero. This drops such
+//! columns and solves the full-rank remainder by Householder QR. It agrees
+//! with numpy closely and not bitwise, so the fit is compared on a tolerance
+//! in `tests/rust_parity.py`.
 
 use crate::estimator::{term_value, Form};
 use crate::sum::pairwise_of;

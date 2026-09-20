@@ -485,8 +485,8 @@ fn build_state(
         );
         entry
             .bool("exact", exact)
-            // a guess that cannot be the answer is still often the right one;
-            // say which it is
+            // whether the pick could be the answer; a non-candidate is often the
+            // right play
             .bool("possible", candidates.contains(&pick))
             .num("win_probability", solver.win_probability(&candidates, pick));
         entry.end();

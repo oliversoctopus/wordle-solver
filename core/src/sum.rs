@@ -1,8 +1,7 @@
 //! One float reduction, shared with the Python.
 //!
-//! `np.sum` adds pairwise, which is both more accurate than left to right and
-//! harder to reproduce; this transcribes numpy's `pairwise_sum_DOUBLE` so the
-//! two implementations reduce a vector to the same float. `kernels.rs` is the
+//! `np.sum` adds pairwise. This transcribes numpy's `pairwise_sum_DOUBLE` so
+//! the two implementations reduce a vector to the same float. `kernels.rs` is the
 //! exception and stays naive, matching the numba loop. numpy's BLAS dot
 //! products cannot be matched: `weights @ lengths` reduces in whatever order
 //! the shipped BLAS chooses.
