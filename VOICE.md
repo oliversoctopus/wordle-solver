@@ -34,6 +34,12 @@ The speaker says which part matters and which is a detail, so the reader knows w
 
 A story is told in order, with the moment of being wrong left in. Hamming stormed into Bode's office, got his answer, and slunk out. The `fastmath` bug, the `sqrt` trap and the superadditivity error are stories of that kind, and each has such a moment. What stays banned is the document talking about its own edits. The first is the project's history. The second is the file's.
 
+## The documentation files
+
+`README.md`, `analysis/README.md`, `tests/README.md` and `ABOUT_SOLVER_EXPLAINED.md` are references. Their reader arrives at one section from a search or a link, wants one thing, and leaves. Everything under *Reporting a result* carries over: the figure once and then what it means, what one would expect and what happened, the candidate causes offered when none was measured, and an example in place of a figure of speech. The whiteboard does not carry over. A reference has no room for the speaker's surprise, so "I" appears only where a choice needs an owner, "we" only where reader and writer are looking at the same table, and a contraction only where the sentence is stiff without one.
+
+Two habits belong to the reference alone. A list is formatted as a list, whether of scripts, rules or fixed points, and a paragraph naming four things in a row is a list that has not been formatted yet. A grid of figures is a table, and a sentence strung with figures is usually a table row that has not been laid out. The procedural sections, on the page, the board and the editor, already read as a calm person pointing at one thing per sentence, and they are left as they are.
+
 ## Four pairs
 
 Each pair shows a paragraph as it stands and as the speaker above would write it. The rewrites drop the bound figures where the words carry them, and the document versions carry the markers `doc_numbers.py` needs.

@@ -2,8 +2,9 @@
 
 Scans every document, comment and docstring for the phrases CLAUDE.md *Voice*
 bans, for headers, docstrings and comment blocks over their line limits, for
-measurements and dates in source comments, for CLAUDE.md's size, and for the
-density of dashes, "rather than" and short closing sentences in a document.
+measurements and dates in source comments, for CLAUDE.md's size, for the
+density of dashes, "rather than" and short closing sentences in a document,
+and for sentence lengths too uniform to be a person's.
 
     python tests/voice.py                    the repo
     python tests/voice.py PATH...            these files or directories
@@ -39,6 +40,10 @@ DENSITY = [
 CLOSER_WORDS = 4       # a closing sentence this short is a punchline
 CLOSERS_PER_K = 1.0
 DENSITY_FLOOR = 2
+
+# sentence length varies at least this much in every writer VOICE.md names
+LENGTH_SPREAD_FLOOR = 0.45
+LENGTH_SPREAD_MIN_SENTENCES = 30
 
 # (pattern, rule name); applied to prose and to comments alike
 VOICE = [
@@ -128,15 +133,22 @@ def density_hits(lines, rule_list):
             hits.append(Hit(1, f"{count} {rule} in prose, limit {int(limit)}", ""))
     if rule_list:
         return hits
-    closers = 0
+    closers, lengths = 0, []
     for line in prose:
         plain = re.sub(r"`[^`]*`", "x", line).rstrip()
         sentences = re.split(r"(?<=[.!?])\s+", plain)
         if len(sentences) > 1 and len(sentences[-1].split()) <= CLOSER_WORDS:
             closers += 1
+        lengths += [len(s.split()) for s in sentences if s.strip()]
     limit = max(DENSITY_FLOOR, -(-CLOSERS_PER_K * words // 1000))
     if closers > limit:
         hits.append(Hit(1, f"{closers} short closing sentences, limit {int(limit)}", ""))
+    if len(lengths) >= LENGTH_SPREAD_MIN_SENTENCES:
+        mean = sum(lengths) / len(lengths)
+        spread = (sum((n - mean) ** 2 for n in lengths) / len(lengths)) ** 0.5 / mean
+        if spread < LENGTH_SPREAD_FLOOR:
+            hits.append(Hit(1, f"sentence lengths vary by {spread:.2f} of the mean, "
+                               f"floor {LENGTH_SPREAD_FLOOR}", ""))
     return hits
 
 
