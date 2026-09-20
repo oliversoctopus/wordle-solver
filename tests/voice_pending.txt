@@ -1,4 +1,1 @@
 # files the voice check has not yet been applied to; tests/voice.py fails once one is clean
-ABOUT_SOLVER_EXPLAINED.md
-README.md
-SOLVER_EXPLAINED.md
