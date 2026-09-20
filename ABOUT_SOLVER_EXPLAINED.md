@@ -119,7 +119,7 @@ The figures in it come from the same runs as `README.md`'s, so a refit of the es
 
 This document decays in a specific way. Findings get appended instead of absorbed. A paragraph states a result, a later paragraph opens "under the shipped shapes the same decomposition comes out…", and a third explains which of the two to believe. Each addition is reasonable on its own. The sum is a changelog, and the reader ends up reconstructing the project's history to extract its conclusions.
 
-These rules stop it.
+These rules stop it. They say where a sentence goes; `VOICE.md` says how it should sound, and is the file to read before writing one.
 
 **Say what is true now, in the place it belongs.** When a number moves, edit the sentence that carries it. Do not add a paragraph saying it moved. If two paragraphs disagree, one of them is a patch and should not exist.
 

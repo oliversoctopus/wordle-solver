@@ -23,7 +23,7 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 ## Voice
 
-Every sentence in this repo, in docs, comments, commit messages and memories, states a fact and stops. `tests/voice.py` bans the phrases: a trailing justification ("…, which is what lets X"), evaluative filler ("genuinely"), "X rather than Y" where Y was never an option, the "Not X. Y." reversal, and narrated history ("used to", dates of edits).
+Every sentence in this repo states a fact and stops, and `SOLVER_EXPLAINED.md` follows `VOICE.md` above that floor. `tests/voice.py` bans the phrases: a trailing justification ("…, which is what lets X"), evaluative filler ("genuinely"), "X rather than Y" where Y was never an option, the "Not X. Y." reversal, and narrated history ("used to", dates of edits).
 
 The check is a floor. Prose that clears it still reads as performed when it has these, so read each paragraph back:
 
