@@ -65,7 +65,7 @@ Each ported piece runs against the Python on the same inputs. The coloring rule 
 
 ## `voice.py` — the voice and comment rules
 
-`CLAUDE.md` § *Voice* and § *Conventions* are checked here. The script scans every document, comment and docstring, the Cargo manifests and the git dotfiles included, for the banned phrases, and flags a file header or a docstring over ten lines, a run of plain comment lines over two, a measurement or an edit date in a source comment, and a `CLAUDE.md` over 1,500 words. A quoted phrase does not count, so a rule may name what it bans.
+`CLAUDE.md` § *Voice* and § *Conventions* are checked here. The script scans every document, comment and docstring, the Cargo manifests and the git dotfiles included, for the banned phrases, and flags a file header or a docstring over ten lines, a run of plain comment lines over two, a measurement or an edit date in a source comment, and a `CLAUDE.md` over 1,500 words. It also counts em-dashes, "rather than" and short closing sentences per thousand words of a document's prose, against ceilings that the rewritten documents sit well under. A quoted phrase does not count, so a rule may name what it bans.
 
 ```
 python tests/voice.py                  the repo

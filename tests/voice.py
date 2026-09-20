@@ -2,7 +2,8 @@
 
 Scans every document, comment and docstring for the phrases CLAUDE.md *Voice*
 bans, for headers, docstrings and comment blocks over their line limits, for
-measurements and dates in source comments, and for CLAUDE.md's size.
+measurements and dates in source comments, for CLAUDE.md's size, and for the
+density of dashes, "rather than" and short closing sentences in a document.
 
     python tests/voice.py                    the repo
     python tests/voice.py PATH...            these files or directories
@@ -29,6 +30,15 @@ HEADER_LINES = 10      # a file header says what the module is
 DOC_LINES = 10         # a docstring or doc comment says what the item does
 BLOCK_LINES = 2        # a comment is one or two lines
 CLAUDE_WORDS = 1500    # CLAUDE.md is a rule list
+
+# cadence ceilings per thousand words of prose, with a floor for short documents
+DENSITY = [
+    (re.compile("—"), "em-dashes", 0.5),
+    (re.compile(r"\brather than\b"), "rather than", 0.5),
+]
+CLOSER_WORDS = 4       # a closing sentence this short is a punchline
+CLOSERS_PER_K = 1.0
+DENSITY_FLOOR = 2
 
 # (pattern, rule name); applied to prose and to comments alike
 VOICE = [
@@ -105,6 +115,31 @@ def doc_hit(start, length):
 
 # ------------------------------------------------------------------ readers
 
+def density_hits(lines, rule_list):
+    """Dashes, "rather than" and short closing sentences per thousand words."""
+    prose = [line for _, line in lines
+             if line.strip() and not line.lstrip().startswith(("|", "$$", ">"))]
+    words = sum(len(line.split()) for line in prose)
+    hits = []
+    for pattern, rule, per_k in DENSITY:
+        count = sum(len(pattern.findall(line)) for line in prose)
+        limit = max(DENSITY_FLOOR, -(-per_k * words // 1000))
+        if count > limit:
+            hits.append(Hit(1, f"{count} {rule} in prose, limit {int(limit)}", ""))
+    if rule_list:
+        return hits
+    closers = 0
+    for line in prose:
+        plain = re.sub(r"`[^`]*`", "x", line).rstrip()
+        sentences = re.split(r"(?<=[.!?])\s+", plain)
+        if len(sentences) > 1 and len(sentences[-1].split()) <= CLOSER_WORDS:
+            closers += 1
+    limit = max(DENSITY_FLOOR, -(-CLOSERS_PER_K * words // 1000))
+    if closers > limit:
+        hits.append(Hit(1, f"{closers} short closing sentences, limit {int(limit)}", ""))
+    return hits
+
+
 def scan_markdown(text, name):
     lines, in_fence, skipping = [], False, False
     for number, line in enumerate(text.split("\n"), start=1):
@@ -123,6 +158,7 @@ def scan_markdown(text, name):
         line = re.sub(r"<!--.*?-->", "", line)
         lines.append((number, line))
     hits = voice_hits(lines)
+    hits += density_hits(lines, rule_list=name == "CLAUDE.md")
     if name == "CLAUDE.md":
         words = len(text.split())
         if words > CLAUDE_WORDS:
