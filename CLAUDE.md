@@ -23,17 +23,21 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 ## Voice
 
-Every sentence in this repo, in docs, comments, commit messages and memories: state the fact and stop. These patterns are banned.
+Every sentence in this repo, in docs, comments, commit messages and memories, states a fact and stops. `tests/voice.py` bans the phrases: a trailing justification ("…, which is what lets X"), evaluative filler ("genuinely"), "X rather than Y" where Y was never an option, the "Not X. Y." reversal, and narrated history ("used to", dates of edits).
 
-* A trailing justification: "…, which is what lets X", "…, and that is deliberate", "…, which is the whole point", "…, and it was not a small one".
-* Evaluative filler: "worth knowing", "worth stating", "genuinely", "honest", "quietly", "merely".
-* "X rather than Y" when Y was never an option.
-* Rhetorical reversal: "Not X. Y." and "It is not X but Y."
-* Narrated history in current text: "used to", "until now", "has since", "was tried", dates of edits.
+The check is a floor. Prose that clears it still reads as performed when it has these, so read each paragraph back:
 
-The test: delete every clause after a comma. If the reader lost nothing, the clause goes. A rule is one line. A comment is one or two. A section that argues belongs in `README.md`, not here.
+* A short line closing a paragraph.
+* A word stressed in italics.
+* A colon before anything but a list.
+* A dash aside.
+* "X, not Y" where Y was never live.
+* A run of short sentences where one sentence would carry the relation.
+* A sentence that announces the next one.
 
-Before finishing a change to prose or comments, reread the diff against this section and *Conventions*.
+Write the sentence a careful person would put in an email. A rule is one line. A comment is one or two.
+
+Before finishing, reread the diff against this section and *Conventions*.
 
 ## Running it
 
@@ -52,7 +56,7 @@ python editor.py                  rewrite what the site says, on :8001/editor
 * Startup loads the 167 MB table and compiles the numba kernels. `web.py` warms both in the background; poll `/api/status` until `ready`.
 * `play` stays because `tests/front_ends_agree.py` diffs its parser against `web.py`'s. `web.py` imports `wordle_game.TILE_BLOCK` and `wordle_game.pick_random_answer`.
 * `WORDLE_FUSED=1` is a speed knob and changes no score. `WORDLE_ROOT_BRANCH=50` narrows the ranked node's branch cap and moves the runners-up; WASM has no environment. README *The exact endgame*.
-* The solver sits behind one lock. The kernels already use every core.
+* The solver sits behind one lock. The kernels use every core.
 * Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`, whose message names the `train` command that makes one. Entropy mode needs no fit.
 * **A refit invalidates `site/`.** `build_site` bakes the openings into `site/openings.json`. Rerun `./build_site.sh` after any refit before reading a parity failure as a port bug. It calls bare `python`, so have `.venv` on PATH.
 
