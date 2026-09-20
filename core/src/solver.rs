@@ -367,9 +367,8 @@ impl<'a, S: Source> Solver<'a, S> {
 
     /// `[(mass, members), ...]` over the non-winning feedback buckets.
     fn partition(&self, guess: usize, candidates: &[usize]) -> Vec<(f64, Vec<usize>)> {
-        // One pass for the patterns and one for the distinct ones, rather than
-        // 243 vectors of which nearly all stay empty. The Python reaches the
-        // same shape with a single argsort.
+        // one pass for the patterns and one for the distinct ones; the Python reaches the
+        // same shape with a single argsort
         let scored: Vec<u8> = candidates
             .iter()
             .map(|&c| self.source.score(guess, c))
@@ -401,9 +400,7 @@ impl<'a, S: Source> Solver<'a, S> {
         if m == 1 {
             return 1.0;
         }
-        // the exact search gives a true value here, but the lookahead reaches
-        // these sub-positions tens of thousands of times, so how far it is
-        // allowed to reach *inside* the search is its own knob
+        // how far the exact search may reach inside a lookahead sub-position; its own knob
         if self.exact_applies(m, turns, Some(self.lookahead_exact_max)) {
             match self.exact.solve(candidates, turns) {
                 Ok((_, value)) => {

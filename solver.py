@@ -22,9 +22,8 @@ DERIVED_WIN_BONUS = 2.0
 
 DEFAULT_DEADLINE = MAX_GUESSES
 
-# largest candidate set the exact endgame search is allowed to take on when
-# three or more turns remain; with two or fewer it is always used, since it
-# costs no more than scoring the guesses heuristically
+# largest candidate set the exact endgame search takes on with three or more turns
+# left; with two or fewer it is always used
 DEFAULT_EXACT_MAX = 60
 
 # how many guesses the lookahead expands at each node it reaches
@@ -57,33 +56,13 @@ def solver_options(args):
 class WordleSolver:
     """Chooses guesses under a given prior, in one of two modes.
 
-    ``entropy``   greedily maximize expected information gain, and nothing
-                  else: being a possible answer earns a guess no credit here.
-    ``expected``  minimize E(g, S) = 1 + sum_{r != GGGGG} p_r f(n_r), using the
-                  estimator fitted for this prior combination.
-
-    Both are only fallbacks: when the candidate set is small enough, or few
-    enough turns remain, the guess comes from the exact search in exact.py
-    instead, which needs no estimator and subsumes the last-turn rule.  Where
-    the search does not reach, one guess left still means the guess is
-    restricted to words that could actually be the answer, since information is
-    worthless on the last turn.
-
-    ``lookahead`` puts an expectimax above that under a branch cap of its own,
-    expanding the best ``lookahead_max_branch`` guesses at each node and scoring
-    each by what its buckets are really worth rather than by f alone.  The cap
-    is a fan-out per node, not a frontier of fixed size, so a second ply
-    multiplies the work by the cap again.  It is off by default; README
-    *Lookahead* has what one ply buys and what it costs.
-
-    ``hard`` restricts every guess to a word that could still be the answer,
-    which is a strictly smaller choice than the ~13k words the solver usually
-    picks from; f is still the one fitted for unrestricted play, so its estimates
-    are optimistic under the restriction.
-
-    ``win_bonus`` pays entropy mode ``a`` bits for a guess that could itself be
-    the answer, giving the reference policy IG(g) + a*p_win(g) that README
-    *Results* measures against.  At the default 0 the mode is unchanged.
+    ``entropy`` maximizes expected information gain; ``expected`` minimizes
+    E(g, S) = 1 + sum_{r != GGGGG} p_r f(n_r) with the estimator fitted for
+    this prior.  Both hand the guess to the exact search where it is affordable
+    and restrict the last guess to a possible answer.  ``lookahead`` puts a
+    branch-capped expectimax above that, ``hard`` restricts every guess to a
+    possible answer, and ``win_bonus`` pays entropy mode ``a`` bits for a guess
+    that could be the answer.  README *Lookahead*, *Hard mode*, *Results*.
     """
 
     def __init__(self, data=None, config=None, mode=EXPECTED, params=None,
@@ -338,9 +317,7 @@ class WordleSolver:
         m = candidates.shape[0]
         if m == 1:
             return 1.0
-        # the exact search gives a true value here, but the lookahead reaches
-        # these sub-positions tens of thousands of times, so how far it is
-        # allowed to reach *inside* the search is its own knob
+        # how far the exact search may reach inside a lookahead sub-position; its own knob
         if self._exact_applies(m, turns, cap=self.lookahead_exact_max):
             try:
                 value = self.exact.solve(candidates, turns)[1]
@@ -369,9 +346,8 @@ class WordleSolver:
 
         pool = self.guess_pool(candidates)
         scores = self.score_all(candidates, pool=pool)
-        # stable, for the reason ExactEndgame._branch_order gives: a tie decides
-        # which guesses the branch cap keeps, so the rule has to be one the Rust
-        # can spell too
+        # stable, so a tie goes to the lower index, the rule ExactEndgame._branch_order
+        # and the Rust share
         branch = np.argsort(scores, kind="stable")[:self.lookahead_max_branch]
         total = float(self.weights[candidates].sum())
 

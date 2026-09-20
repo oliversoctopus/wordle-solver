@@ -228,9 +228,8 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
             return Ok(cached);
         }
 
-        // the same two-turn position is reached along many different guess
-        // orders -- four calls in five are repeats -- so even the closed form
-        // is memoized, and runs once per distinct position
+        // memoized like any other position: the same two-turn position is reached along
+        // many guess orders
         if turns == 2 {
             let weights = self.slice_weights(candidates);
             let pool = if self.hard { Some(candidates) } else { None };
@@ -412,10 +411,8 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         turns: usize,
         cutoff: f64,
     ) -> Result<f64, BudgetExceeded> {
-        // Patterns once, then the distinct ones in ascending order, which is
-        // what np.unique gives the Python.  A map keyed on the pattern would
-        // allocate per bucket and this is the search's hot recursion; the sets
-        // here are small enough that a sort and a scan beat hashing.
+        // patterns once, then the distinct ones in ascending order, as np.unique gives the
+        // Python; a sort and a scan, with no map allocated in the hot recursion
         let scored: Vec<u8> = candidates
             .iter()
             .map(|&c| fb.score(guess, c))
@@ -516,16 +513,11 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
 
     /// Guesses in the order the search should try them, capped.
     ///
-    /// The bounds tie in bulk -- a position can hold a thousand splits at one
-    /// value -- so which of them the cap keeps rests entirely on the tie-break,
-    /// and it has to be one `exact.py` can spell too. Word index is that, over
-    /// the bound rounded to `BRANCH_TIE_TOL`: `np.argsort(kind="stable")` on
-    /// the same key on the far side.
-    ///
-    /// Rounded and not floored because the ties sit on whole values like 2.0,
-    /// which a floor would run a bucket edge through; spelled `floor(x + 0.5)`
-    /// because numpy rounds a half to even where Rust rounds it away from zero,
-    /// and floor is IEEE in both.
+    /// The bounds tie in bulk, so which splits the cap keeps rests on the
+    /// tie-break, and it has to be one `exact.py` spells too: word index over
+    /// the bound rounded to `BRANCH_TIE_TOL`, as `floor(x + 0.5)`, which numpy
+    /// and Rust agree on where `round` does not. README *Keeping the port in
+    /// step*.
     fn branch_order(&self, bounds: &[f64], cap: Option<usize>) -> Vec<usize> {
         let mut order: Vec<usize> = (0..bounds.len()).collect();
         let key = |i: usize| (bounds[i] / BRANCH_TIE_TOL + 0.5).floor();

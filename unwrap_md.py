@@ -17,9 +17,8 @@ SKIP_DIRS = {".venv", ".git", "node_modules", "__pycache__"}
 
 LIST_RE = re.compile(r"^(\s*)([-*+]|\d+\.)\s+")
 RULE_RE = re.compile(r"-{3,}|\*{3,}|_{3,}")
-# A heading needs whitespace after the hashes, so a paragraph wrapping onto
-# "#1-#297 (median #116)" is prose.  Matching a bare "#" hid the one wrapped
-# paragraph left in the repo, by reading its second line as a new block.
+# a heading needs whitespace after the hashes; a paragraph wrapping onto
+# "#1-#297 (median #116)" is prose
 HEADING_RE = re.compile(r"#{1,6}(\s|$)")
 
 
@@ -74,9 +73,8 @@ def unwrap(text):
 
         match = LIST_RE.match(line)
         if match:
-            # CommonMark lets an ordered list interrupt a paragraph only at
-            # "1.", so a sentence wrapping onto "18. If those still come out"
-            # is prose.  Inside an open list any marker starts the next item.
+            # CommonMark lets an ordered list interrupt a paragraph only at "1."; inside an
+            # open list any marker starts the next item
             ordered = match.group(2).endswith(".")
             if ordered and buf and not prefix and match.group(2) != "1.":
                 buf.append(stripped)

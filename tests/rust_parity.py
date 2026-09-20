@@ -21,8 +21,7 @@ TARGET = os.path.join(ROOT, "target", "release")
 sys.path.insert(0, ROOT)
 
 # between the noise a BLAS reduction opens and the closest pair of distinct
-# scores over a scan; absolute as well as relative, since a score of exactly
-# zero is an ordinary answer
+# scores; absolute as well as relative, since a score of exactly zero is ordinary
 ATOL = 1e-11
 RTOL = 1e-11
 
@@ -398,9 +397,8 @@ def check_exact(report):
                     guess, value = search.solve(s, turns)
                     got_guess, got_value = next_int(), next_floats(1)[0]
                     worst = max(worst, gap([got_value], [value]))
-                    # a position routinely has several optimal guesses; both
-                    # sides break the tie by word index, so this finds nothing,
-                    # and stays to price a divergence by what the guess is worth
+                    # a position routinely has several optimal guesses; both sides break the tie by
+                    # word index, so this finds nothing and stays to price a divergence
                     if got_guess != guess:
                         mine = search._evaluate(int(got_guess), s, weights[s],
                                                 weights[s].sum(), turns, np.inf)
@@ -472,9 +470,8 @@ def check_solver(report):
     sets.append(np.arange(data.n_words, dtype=np.int64))
     sets.extend(_endgame_sets(data, wanted=4))
 
-    # Which arms visit each set, one bit per arm.  Everything narrow goes to
-    # all six; the opening, a constant per setting, goes to one arm per mode.
-    # Rust reads these, so the rule lives here alone.
+    # which arms visit each set, one bit per arm: everything narrow goes to all six,
+    # the opening to one arm per mode.  The Rust reads these, so the rule lives here.
     every_arm = (1 << len(arms)) - 1
     wide_arms = (1 << 0) | (1 << 4)
     masks = [wide_arms if s.size == data.n_words else every_arm for s in sets]
@@ -592,9 +589,8 @@ def check_every_answer(report):
         data = load_data()
         config = priors.PriorConfig()
         solver = WordleSolver(data=data, config=config, fused=False)
-        # the oracle has to be the Python loop: `common.every_answer` hands the
-        # sweep to this very binary where it can, and a check comparing it
-        # against itself would pass whatever either side did
+        # the oracle has to be the Python loop: `common.every_answer` hands the sweep to
+        # this very binary where it can
         os.environ["WORDLE_NO_RUST"] = "1"
         try:
             mine = every_answer(solver)
@@ -615,9 +611,8 @@ def check_every_answer(report):
         report(f"mean apart by {abs(got_mean - mean):.2e}, "
                f"loss by {abs(got_loss - loss):.2e}")
 
-        # A different tolerance: where a position has several optimal guesses
-        # the two take different ones and land on the same expected value by
-        # another route.  What must not move is anything the documents quote.
+        # a looser tolerance: with several optimal guesses the two take different ones and
+        # land on the same value by another route.  Nothing the documents quote may move.
         if abs(got_mean - mean) > 1e-5 * mean or abs(got_loss - loss) > 1e-5:
             report("the weighted figures moved by more than the documents' precision")
             return False
@@ -691,13 +686,10 @@ def check_messages(report):
     """The two implementations word an error the same way.
 
     Every message the page can show is written twice, once in ``web.py`` and
-    once in the Rust the static build answers from.  ``/editor`` lists both
-    copies, so a rewrite has to be made twice; this is what notices when it was
-    made once.
-
-    The Python side is driven in process rather than over HTTP: a handler
-    raises before it ever writes a reply, so a bare instance with the pool on
-    it is enough to reach the message.
+    once in the Rust the static build answers from, so a rewrite has to be
+    made twice; this notices when it was made once.  The Python side is driven
+    in process: a handler raises before it writes a reply, so a bare instance
+    with the pool on it reaches the message.
     """
     import web
     from wordle_data import score_guess
@@ -843,9 +835,8 @@ def check_api(report):
         {"answer": "fogey"},
         {"answer": "pouch", "mode": "entropy"},
     ]
-    # Two rows of each opening the prior switches can produce, since a board
-    # starting on that word is served from `openings.json`.  One wide pattern
-    # each and one narrow enough to reach the exact endgame.
+    # two rows of each opening the prior switches can produce, since a board starting
+    # on that word is served from `openings.json`: one wide pattern and one narrow
     played = [[],
               [("salet", "NYNYN")], [("salet", "GYNNY")],
               [("tares", "NYNYN")], [("tares", "NYYNY")],
@@ -902,10 +893,8 @@ def check_api(report):
             for key in ("session", "elapsed_ms"):
                 mine.pop(key, None)
                 got.pop(key, None)
-            # "the 80 likeliest" is ambiguous when more than 80 words tie, and
-            # most of them do: numpy's argsort is not stable, so which of the
-            # tied ones it lists is arbitrary.  What has to match is the
-            # weights, the meaning of likeliest.
+            # "the 80 likeliest" is ambiguous when more than 80 words tie, and numpy's argsort
+            # is not stable; what has to match is the weights
             for reply in (got, mine):
                 reply["possible_answers"] = [float(solver_weights[data.word2ind[w]])
                                              for w in reply["possible_answers"]]
@@ -1060,13 +1049,11 @@ def check_train(report):
     """The seed round of policy iteration, against ``train``.
 
     Everything up to and including the first fit: the answers drawn, the games
-    played under greedy entropy, the states recorded from them and the
-    parameters fitted to those states. That is as far as the two can be held to
-    each other. Past the fit they walk different paths -- the least-squares
-    solves differ in the last bits, and acting greedily on the result turns that
-    into a differently broken tie, a different rollout and a different next fit.
-    Even this round's own holdout is downstream of it, being played with the
-    fitted parameters, so what is compared here stops at the fit.
+    played under greedy entropy, the states recorded and the parameters fitted
+    to them.  Past the fit the two walk different paths: the least-squares
+    solves differ in the last bits, and acting greedily on the result turns
+    that into a different tie, rollout and next fit.  Even this round's holdout
+    is played with the fitted parameters, so the comparison stops at the fit.
     """
     path = binary("train")
     if path is None:
@@ -1163,9 +1150,8 @@ CHECKS = [
 ]
 
 
-# The whole sweep, an acceptance test for the port.  The checks above settle
-# that the guesses are bit-identical; this permits games to diverge and fails
-# only when the weighted mean moves.  A fifth of the runtime, so asked for.
+# the whole sweep, an acceptance test for the port: games may diverge and this
+# fails only when the weighted mean moves.  A large share of the runtime, so asked for.
 ACCEPTANCE = [
     ("every answer",
      "the whole sweep reproduces the mean and loss probability README quotes",

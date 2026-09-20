@@ -39,9 +39,8 @@ let finder = { letters: ["", "", "", "", ""], pattern: [0, 0, 0, 0, 0],
                row: "answer", col: 0 };
 let found = null;
 
-/* Where the keys land.  ``atEnd`` marks the cursor as sitting past the last
-   letter rather than on it, which is the difference between typing to correct
-   the fifth tile and typing to start the word again. */
+/* Where the keys land.  ``atEnd`` marks the cursor as past the last letter rather
+   than on it: correcting the fifth tile against starting the word again. */
 let cursor = { row: 0, col: 0, atEnd: false };
 
 const emptyRow = () => ({ letters: ["", "", "", "", ""], pattern: [0, 0, 0, 0, 0] });
@@ -450,9 +449,8 @@ function renderPlayBoard() {
   }
 }
 
-/* Two rows that do not describe each other: the letters are the answer, and the
-   colors are a pattern some other word produced against it.  There is no ghost
-   and nothing is grayed out, since a gray tile is a pattern rather than a gap. */
+/* The letters are the answer and the colors a pattern some other word produced
+   against it; no ghost and nothing grayed out, since a gray tile is a pattern. */
 function renderFinderBoard() {
   const answer = $("finder-answer");
   const pattern = $("finder-pattern");
@@ -663,9 +661,8 @@ function playGuess() {
 
 function askHint() {
   if (busy || !game || game.over) return;
-  // every setting goes with the request rather than being fixed when the game
-  // was dealt, priors included, so changing one just re-asks.  The answer was
-  // drawn under whatever was on at the time and stays what it is.
+  // every setting goes with the request, priors included, so changing one re-asks;
+  // the answer was drawn under whatever was on at the time and stays
   request("/api/game/hint", { ...settings(), session: game.session }, (payload) => {
     hint = payload;
     renderPlayPanel();
@@ -1420,9 +1417,8 @@ function onArrow(dRow, dCol) {
 
 /* ------------------------------------------------------------------ start */
 
-/* space and the arrows would scroll the page or press whatever button was last
-   clicked, so they are taken over -- but only while nothing that legitimately
-   wants them has focus. */
+/* Space and the arrows would scroll the page or press the last-clicked button, so
+   they are taken over while nothing that wants them has focus. */
 const KEEPS_KEYS = "input, select, textarea, summary, a, [contenteditable]";
 
 function wire() {
@@ -1460,9 +1456,8 @@ function wire() {
   onClick("find", findWords);
   onClick("finder-clear", clearPattern);
 
-  // every one of these changes what the solver is asked, not where you are, so
-  // nothing is thrown away: the board re-runs over the rows it has, the game
-  // keeps its answer, and the finder re-sorts what it found
+  // every one of these changes what the solver is asked, not where you are: the
+  // board re-runs over its rows, the game keeps its answer, the finder re-sorts
   for (const id of ["opt-repeat", "opt-curation", "opt-mode", "opt-form", "opt-hard"]) {
     $(id).addEventListener("change", () => {
       staleBoard = true;

@@ -283,9 +283,8 @@ _PY_LEAD = re.compile(
     r"|Game\([^()]*,\s*$"
 )
 
-# The Rust says the same things the Python server does, and the static build
-# says them instead of it.  Every user-visible message there leaves through an
-# Err or through a field of the reply, so those are what mark one.
+# the Rust says what the Python server says; every user-visible message there
+# leaves through an Err or a field of the reply, so those mark one
 _RS_LEAD = re.compile(
     r"Err\(\s*(?:format!\(\s*)?$"
     r"|\.ok_or\(\s*$"
@@ -294,9 +293,8 @@ _RS_LEAD = re.compile(
     r"|error_json\(&\s*(?:format!\(\s*)?$"
     r"|\bsource\s*=\s*(?:format!\(\s*)?$"
 )
-# ...or wherever a message is built inside the statement that says what it is
-# for: a closure body, a match arm, either half of an if.  As in JS, the thing
-# that marks it as text is then lines above rather than on its own line.
+# ...or inside the statement that says what it is for: a closure body, a match
+# arm, either half of an if; the marker is then lines above, as in JS
 _RS_ARM = re.compile(r"format!\(\s*$|=>\s*$|\{\s*$|,\s*$")
 _RS_TEXTY = re.compile(r"Err\(|ok_or|map_err|error_json|\b(?:source|progress)\s*=")
 
@@ -572,15 +570,12 @@ class Wording:
     def message(self, text):
         """An override for a string this process is about to send.
 
-        The server's own literals were compiled long before any edit, so they
-        are matched on the way out rather than at the point they were written.
-        That means matching against the finished message, values and all: a
-        literal like ``Row {row} is empty`` becomes a pattern, and whatever it
-        captured is put back into the rewritten version.
-
-        Matching is by content, so a message written twice in web.py is one
-        thing to edit rather than two.  Everything the *page* says goes through
-        ``served`` instead, which is per-occurrence.
+        The server's literals were compiled before any edit, so a message is
+        matched on the way out, values and all: a literal like ``Row {row} is
+        empty`` becomes a pattern, and what it captured is put back into the
+        rewritten version.  Matching is by content, so a message written twice
+        in web.py is one thing to edit.  What the *page* says goes through
+        ``served`` instead, per occurrence.
         """
         with self.lock:
             if not self.overrides:

@@ -13,9 +13,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 OUT="${1:-site}"
 
-# Vercel keeps the link between this directory and its project in .vercel/, and
-# a rebuild would throw it away -- carry it across, or every deploy after the
-# first one asks to set the project up again.
+# carry the Vercel project link in .vercel/ across the rebuild
 LINK=""
 if [ -d "$OUT/.vercel" ]; then
     LINK=$(mktemp -d)
@@ -44,9 +42,8 @@ cp data/wordles.json data/solutions.json data/answer_like.json \
    data/wordlebot_weights.json "$OUT/data/"
 cp data/derived/ind2word.json "$OUT/data/derived/"
 
-# The page and the script go through wording.py rather than being copied, so a
-# rewrite saved in the editor and not yet written into the code still ships.
-# The shim goes in ahead of app.js, so fetch is already routed by its first call.
+# the page and app.js go through wording.py, so a rewrite saved in the editor
+# ships; the fetch shim goes in ahead of app.js
 python - "$OUT" <<'PY'
 import io, os, sys
 
@@ -68,10 +65,8 @@ if applied:
     print(f"  {applied} rewrite{'' if applied == 1 else 's'} from wording.json")
 PY
 
-# Vercel reads .gitignore when a deployment has no .vercelignore, and site/ is
-# gitignored, so without this an upload from here could come out empty.  The
-# two exclusions are the CLI's own leavings rather than anything built: the
-# project link, and an OIDC token that has no business being served.
+# Vercel reads .gitignore when there is no .vercelignore, and site/ is gitignored;
+# the two exclusions are the CLI's own files, the project link and an OIDC token
 {
     echo '# everything built here is meant to deploy; these two are not built'
     echo '.vercel'

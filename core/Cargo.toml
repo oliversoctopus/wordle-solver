@@ -12,9 +12,7 @@ profile = []
 
 [dependencies]
 
-# Native only, and deliberately so: the WASM build must stay dependency-free,
-# and threads there need SharedArrayBuffer and COOP/COEP headers anyway. What
-# this buys is a thread pool that is already up -- spawning per call costs more
-# than the work, since the kernels are called constantly on small candidate sets.
+# native only: the WASM build stays dependency-free, and threads there need
+# SharedArrayBuffer and COOP/COEP headers.  A pool already up beats spawning per call.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rayon = "1"

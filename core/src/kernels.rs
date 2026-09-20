@@ -339,17 +339,11 @@ impl Buckets {
 
 /// Exact expected score of every pooled guess when two turns remain.
 ///
-/// With one turn left the best available in a bucket is its heaviest member,
-/// worth `1 + (1 - p_max) * penalty`, so two-turn play needs no estimator:
-///
-/// ```text
-/// V(g, 2) = 1 + (A + (A - B) * penalty) / total
-/// ```
-///
-/// with `A` the mass and `B` the sum of bucket maxima over the non-winning
-/// buckets. Called with `penalty = min(loss_penalty, 1)` this is also a valid
-/// lower bound on the value at any larger number of turns, and the exact
-/// search prunes with it.
+/// With one turn left a bucket is worth `1 + (1 - p_max) * penalty`, so
+/// `V(g, 2) = 1 + (A + (A - B) * penalty) / total`, with `A` the mass and
+/// `B` the sum of bucket maxima over the non-winning buckets. With
+/// `penalty = min(loss_penalty, 1)` it is also a lower bound on the value at
+/// any larger number of turns, and the exact search prunes with it.
 pub fn two_turn_scores(
     source: &impl Source,
     candidates: &[usize],

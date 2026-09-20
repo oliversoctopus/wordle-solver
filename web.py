@@ -47,9 +47,8 @@ MAX_LISTED_MATCHES = 120    # words the finder lists, best first by its sort
 MAX_LISTED_SIBLINGS = 40    # words sharing a guess's split, likeliest first
 MAX_BODY = 64 * 1024
 
-# how the word finder can order what it found, and which way round each runs.
-# The names are the page's, as the two mode names are: this end only decides
-# what they mean.
+# how the word finder can order what it found, and which way round each runs;
+# the names are the page's
 FINDER_SORTS = {"left": 1, "bits": -1, "weight": -1, "alpha": 1}
 DEFAULT_SORT = "left"
 
@@ -487,14 +486,11 @@ def game_hint(pool, game, settings):
 def find_guesses(pool, answer, pattern, config, sort):
     """Every word that would have come back as ``pattern`` against ``answer``.
 
-    The feedback table already holds the answer, so the search is one column of
-    it rather than a scoring pass: ``feedback_table[:, answer]`` is what each
-    word in the list scores against this one word.
-
-    Each match is then measured three ways, none of which depend on the pattern
-    having been seen -- ``left`` is how many words would still be possible after
-    it, ``bits`` is what the guess reveals on average over every answer, and
-    ``weight`` is the prior's own chance that the guess is itself the answer.
+    ``feedback_table[:, answer]`` is what each word scores against this one
+    word, so the search is one column of the table.  Each match is measured
+    three ways: ``left`` is how many words would still be possible after it,
+    ``bits`` what the guess reveals on average over every answer, and
+    ``weight`` the prior's own chance that the guess is the answer.
     """
     started = time.perf_counter()
     with pool.lock:

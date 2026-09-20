@@ -1,1 +1,0 @@
-# files the voice check has not yet been applied to; tests/voice.py fails once one is clean

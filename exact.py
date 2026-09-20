@@ -91,12 +91,9 @@ class ExactEndgame:
         position, best first, each score as true as ``solve``'s.
 
         The k-th best value stands in for the incumbent, so a guess is still
-        abandoned the moment it cannot make the list.  Asking for several
-        therefore costs more than asking for one -- the cutoff is looser, so
-        fewer guesses die on their bound -- and much less than ranking the pool.
-
-        Guesses are the search's own representatives: one word per distinct
-        split, since the others are the same guess by another name.
+        abandoned the moment it cannot make the list; asking for several costs
+        more than asking for one and much less than ranking the pool.  One
+        word stands for each distinct split.
         """
         self.searches += 1
         self.nodes = 0
@@ -127,9 +124,8 @@ class ExactEndgame:
         if cached is not None:
             return cached
 
-        # the same two-turn position is reached along many different guess
-        # orders -- four calls in five are repeats -- so it is memoized like any
-        # other, and the closed form below runs once per distinct position
+        # memoized like any other position: the same two-turn position is reached along
+        # many guess orders
         if turns == 2:
             pool = candidates if self.hard else None
             scores = fused_kernels.two_turn_scores(
@@ -172,9 +168,8 @@ class ExactEndgame:
         if m == 1:
             return [(int(candidates[0]), 1.0)]
         if turns <= 1:
-            # every word that cannot be the answer loses alike, so the ranking
-            # here is the candidates by weight and nothing else.  Stable, so
-            # that equal weights leave the winner the one ``_solve`` names
+            # every non-candidate loses alike, so the ranking is the candidates by weight;
+            # stable, so equal weights leave the winner where ``_solve`` has it
             order = np.argsort(-weights, kind="stable")[:k]
             return [(int(candidates[i]),
                      1.0 + (1.0 - float(weights[i] / total)) * self.loss_penalty)
@@ -187,9 +182,8 @@ class ExactEndgame:
                      kernels.two_candidates(float(weights[i] / total)))
                     for i in order]
         if turns == 2:
-            # the closed form scores every guess rather than the distinct
-            # splits, so the ranking is deduped on the way out; the winner is
-            # left where it is, which is where ``_solve`` has it
+            # the closed form scores every guess, so the ranking is deduped on the way out;
+            # the winner stays where ``_solve`` has it
             pool = candidates if self.hard else None
             scores = fused_kernels.two_turn_scores(
                 self.feedback_table, self.transposed, candidates, weights,
@@ -232,19 +226,12 @@ class ExactEndgame:
 
     def _branch_order(self, bounds, cap):
         """Splits in the order to try them, best bound first, keeping the best
-        ``cap``.  Where the dedupe already did its job the cap never binds, so
-        the endgame stays exact and only the wide positions are truncated.
+        ``cap``.  Where the dedupe already did its job the cap never binds.
 
-        Ordered on the bound rounded to ``BRANCH_TIE_TOL`` and stable, so a tie
-        goes to the lower word index rather than to whatever quicksort leaves it
-        at.  The bounds tie in bulk -- a position can hold a thousand splits at
-        one value -- so which of them the cap keeps rests entirely on this, and
-        ``exact.rs`` has to be able to spell the same rule.
-
-        Rounded rather than floored because the ties sit on whole values like
-        2.0, which a floor would put a bucket edge through; ``floor(x + 0.5)``
-        rather than ``round`` because numpy rounds a half to even and Rust
-        rounds it away from zero, where floor is IEEE in both.
+        Ordered on the bound rounded to ``BRANCH_TIE_TOL`` and stable, so a
+        tie goes to the lower word index; ``exact.rs`` spells the same rule.
+        Rounded as ``floor(x + 0.5)``, which numpy and Rust agree on where
+        ``round`` does not.  README *Keeping the port in step*.
         """
         keys = np.floor(np.asarray(bounds, dtype=np.float64) / BRANCH_TIE_TOL
                         + 0.5)

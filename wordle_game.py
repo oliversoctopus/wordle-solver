@@ -21,9 +21,8 @@ ALPHABET = "abcdefghijklmnopqrstuvwxyz"
 
 RESET = "\x1b[0m"
 
-# 24-bit copies of the emoji's own colors.  The palette's bright yellow is far
-# paler than U+1F7E8 (#F9F1A5 against #FFB02E on this console), so the gold is
-# spelled out rather than left to the terminal to choose.
+# 24-bit copies of the emoji's own colors; the palette's yellow is far paler than
+# U+1F7E8, so the gold is spelled out
 GOLD = (255, 176, 46)      # as U+1F7E8
 LEAF = (0, 210, 106)       # as U+1F7E9
 SLATE = (120, 124, 126)    # Wordle's own gray; U+2B1B would be near-invisible
@@ -40,9 +39,8 @@ def wash(rgb):
 GREEN, YELLOW, GRAY = "\x1b[30;102m", "\x1b[30m" + wash(GOLD), "\x1b[30;47m"
 TILE_COLOR = {"G": GREEN, "Y": YELLOW, "N": GRAY}
 
-# The share grid is drawn as blocks of color, since the console sets the emoji
-# ragged.  A square tile is three cells wide: a full line plus U+2580 over the
-# top half of the next, and the half-line left over is the gap below.
+# the share grid is blocks of color, since the console sets the emoji ragged: a
+# full line plus U+2580 over the top half of the next, the half-line left the gap
 BLOCK_RGB = {"G": LEAF, "Y": GOLD, "N": SLATE}
 TILE_BLOCK = {"G": "\U0001F7E9", "Y": "\U0001F7E8", "N": "⬛"}
 

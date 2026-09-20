@@ -162,14 +162,11 @@ def as_of(data, t):
 def every_answer(solver, max_guesses=MAX_GUESSES):
     """Guesses taken with each of the 12,947 words in turn as the answer.
 
-    The solver is deterministic, so a game's outcome is a pure function of the
-    answer: this is the entire sample space, not a draw from it.  A loss counts
-    as one guess over the limit, the convention every measured result here uses.
-
-    Answered by the Rust where it was built and can reproduce these settings,
-    which is most of a sweep-driven script's wall clock; ``WORDLE_NO_RUST=1``
-    forces the loop below.  The two return the same lengths and
-    ``tests/rust_parity.py --every-answer`` is what says so.
+    The solver is deterministic, so this is the entire sample space, not a
+    draw from it.  A loss counts as one guess over the limit, the convention
+    every measured result here uses.  Answered by the Rust where it was built
+    and can reproduce these settings; ``WORDLE_NO_RUST=1`` forces the loop
+    below.  ``tests/rust_parity.py --every-answer`` holds the two together.
     """
     lengths = rust.every_answer(solver, max_guesses)
     if lengths is not None:
@@ -190,9 +187,8 @@ def exact_stats(lengths, weights, max_guesses=MAX_GUESSES):
 
 
 # ------------------------------------------------- positions and their values
-#
-# The shared parts of `lookahead_accuracy.py` and `exact_decisions.py`: what a
-# position is worth, computed by playing the policy out rather than estimated.
+# what a position is worth, played out; shared by lookahead_accuracy.py and
+# exact_decisions.py
 
 # a deadline-free playout ends when one candidate is left, so this is a backstop
 # against a bug rather than a real limit
@@ -317,8 +313,7 @@ def header(title):
 
 # ---------------------------------------------------------------- results
 # `record(key, value)` at the print site; the values land in
-# `analysis/results/<script>.json` when the script exits cleanly, merged into
-# whatever an earlier run with other flags left.
+# `analysis/results/<script>.json` on a clean exit, merged into an earlier run's
 
 RESULTS_DIR = os.path.join(HERE, "results")
 _RECORDED = {}

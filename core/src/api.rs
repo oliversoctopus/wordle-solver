@@ -455,9 +455,8 @@ fn build_state(
 
     let guesses_left = MAX_GUESSES - rows.len();
 
-    // Lent for the length of this request and handed back at the end. Nothing
-    // below depends on the memo being empty or full; it only decides whether
-    // a position already seen is worked out again.
+    // lent for the length of this request and handed back at the end; it only decides
+    // whether a position already seen is worked out again
     let held = settings_key(
         &settings.config,
         settings.mode,
@@ -826,9 +825,8 @@ fn game_hint(body: &Value) -> Result<String, String> {
         Ok(game.clone())
     })??;
 
-    // every setting comes with the request rather than being fixed when the
-    // game was dealt, so changing one rethinks the advice for the position you
-    // are in instead of dealing a new answer
+    // every setting comes with the request, so changing one rethinks the advice for
+    // this position instead of dealing a new answer
     let weights = loaded.weights_for(&settings.config)?;
     let (form, params) = fit_for_mode(loaded, &settings)?;
     let source = loaded.source();
@@ -1095,10 +1093,8 @@ fn find(body: &Value) -> Result<String, String> {
         .filter(|&guess| words.score(guess, answer) == pattern)
         .collect();
 
-    // `left` is the size of one bucket and `bits` the entropy over all of them,
-    // so both come out of one sweep per match. The guess's letters are hoisted
-    // as the kernels hoist theirs; fetching them per candidate costs more than
-    // the scoring.
+    // `left` is one bucket's size and `bits` the entropy over all of them, one sweep
+    // per match; the guess's letters are hoisted as the kernels hoist theirs
     let mut measured: Vec<(usize, f64, usize)> = Vec::with_capacity(matches.len());
     // the sweep below stands in for `kernels.ig_all`, so the mass is summed the
     // way that kernel sums it -- left to right, not through `sum::pairwise`

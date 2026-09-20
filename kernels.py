@@ -14,14 +14,11 @@ from numba import get_num_threads, njit, prange
 from estimator import f_eval_x
 from wordle_data import N_PATTERNS, WIN_PATTERN  # 243, and "GGGGG" = 242
 
-# guesses handed to one parallel work unit: small enough that a short pool still
-# spreads across the threads, large enough that the per-block allocation is lost
-# in the noise
+# guesses handed to one parallel work unit
 _MAX_BLOCK = 64
 
-# at or above this many candidates the reduce sweeps all 243 patterns; below it,
-# it walks the candidates a second time instead.  SOLVER_EXPLAINED §8 has why
-# the threshold sits here.
+# at or above this many candidates the reduce sweeps all 243 patterns, below it the
+# candidates again (SOLVER_EXPLAINED §8)
 _RESCAN_MAX = 128
 
 _ALL_ROWS = {}
@@ -66,10 +63,8 @@ def _ig(feedback_table, candidates, weights, pool, block):
 
             h = 0.0
             if m < _RESCAN_MAX:
-                # walk the candidates again rather than all 243 patterns: each
-                # bucket is reduced the first time it is reached and zeroed on
-                # the spot, which both clears it for the next guess and stops it
-                # being counted twice
+                # walk the candidates again: each bucket is reduced when first reached and zeroed
+                # on the spot, so it is clear for the next guess and never counted twice
                 for i in range(m):
                     r = feedback_table[guess, candidates[i]]
                     if mass[r] > 0.0:
@@ -254,17 +249,11 @@ def _two_turn(feedback_table, candidates, weights, penalty, pool, block):
 def two_turn_scores(feedback_table, candidates, weights, penalty, pool=None):
     """Exact expected score of every pooled guess when two turns remain.
 
-    With one turn left the best you can do in a bucket is play its heaviest
-    member, worth ``1 + (1 - p_max) * penalty``, so two-turn play needs no
-    estimator at all:
-
-        V(g, 2) = 1 + sum_{r != GGGGG} p_r * (1 + (1 - p_max_r) * penalty)
-                = 1 + (A + (A - B) * penalty) / total
-
-    with A the mass and B the sum of bucket maxima over the non-winning
-    buckets.  Called with ``penalty = min(loss_penalty, 1)`` this is also a
-    valid lower bound on the value at any larger number of turns, and the exact
-    search prunes with it.
+    With one turn left a bucket is worth ``1 + (1 - p_max) * penalty``, so
+    ``V(g, 2) = 1 + (A + (A - B) * penalty) / total``, with A the mass and B
+    the sum of bucket maxima over the non-winning buckets.  With
+    ``penalty = min(loss_penalty, 1)`` it is also a lower bound on the value at
+    any larger number of turns, and the exact search prunes with it.
     """
     pool, block = _resolve_pool(feedback_table.shape[0], pool)
     return _two_turn(feedback_table, candidates, weights, penalty, pool, block)
@@ -360,15 +349,10 @@ def same_split(feedback_table, candidates, guess, pool=None):
 def distinct_partitions(feedback_table, candidates):
     """One representative guess per distinct split of the candidate set.
 
-    Guesses are grouped by a 64-bit hash of their feedback vector.  Sorting the
-    vectors themselves (``np.unique(..., axis=0)``) is a lexicographic sort with
-    a pass per candidate, and costs an order of magnitude more.
-
-    A hash collision would merge two different splits, so each guess is then
-    checked against its group's representative and promoted to one of its own if
-    it really does split differently.  The result is therefore exact, not
-    probabilistic: a collision can only ever cost a redundant representative,
-    never a missing one.
+    Guesses are grouped by a 64-bit hash of their feedback vector, then each
+    is checked against its group's representative and promoted to one of its
+    own if it splits differently.  A collision can only ever cost a redundant
+    representative, never a missing one.
     """
     keys = _partition_hash(feedback_table, candidates)
     first, inverse = np.unique(keys, return_index=True, return_inverse=True)[1:]

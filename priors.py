@@ -20,9 +20,8 @@ from wordle_data import DATA_DIR
 WORDLEBOT_PATH = os.path.join(DATA_DIR, "wordlebot_weights.json")
 ANSWER_LIKE_PATH = os.path.join(DATA_DIR, "answer_like.json")
 
-# the frozen copy the live list is validated against: an old list predicting
-# later answers is the only evidence it is not backfilled.  Nothing plays with
-# it; `wordlebot.py` rebuilds it and `analysis/curation_shapes.py` scores it
+# the frozen copy the live list is validated against; `wordlebot.py` rebuilds it
+# and `analysis/curation_shapes.py` scores it
 WORDLEBOT_SNAPSHOT_DATE = "2023-10-12"
 WORDLEBOT_SNAPSHOT_PATH = os.path.join(
     DATA_DIR, f"wordlebot_weights_{WORDLEBOT_SNAPSHOT_DATE}.json")
@@ -205,9 +204,8 @@ def _curation_shape(data, mask, shape):
         rel[mask] = _answer_like(words)
         return rel
 
-    # 'wordlebot': the mass goes to the words WordleBot considers answerable,
-    # in proportion to its weight, less a hedge spread over everything else.
-    # The hedge stays flat; analysis/curation_shapes.py has why.
+    # 'wordlebot': the mass goes to WordleBot's answerable words in proportion to its
+    # weight, less a flat hedge over everything else (analysis/curation_shapes.py)
     table = _table(WORDLEBOT_PATH)
     listed = np.array([table.get(w, 0.0) for w in words])
     inside = listed > 0.0

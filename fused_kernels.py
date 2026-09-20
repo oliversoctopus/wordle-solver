@@ -17,10 +17,8 @@ import kernels
 from estimator import f_eval_x
 from wordle_data import N_PATTERNS, WIN_PATTERN
 
-# candidate counts the fused path is used for.  Below the floor a position is
-# too cheap for the dispatch to be worth taking; above the ceiling the tile
-# stops fitting in cache and the shipped kernels win.  SOLVER_EXPLAINED
-# *Storing the table the other way round* has where the ceiling comes from.
+# candidate counts the fused path is used for; SOLVER_EXPLAINED *Storing the table
+# the other way round* has where the ceiling comes from
 FUSED_MIN = 13
 FUSED_MAX = 600
 

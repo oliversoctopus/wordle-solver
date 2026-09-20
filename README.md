@@ -190,14 +190,14 @@ The two moves started together because the curated pool is running out: <!--n re
 
 | ids | what they index |
 | --- | --- |
-| 1 to 2287 | the curated words in the order they were first scheduled, which is the order `wordles.json` is stored in, with 22 slots skipped |
-| 2288 to 2309 | where the words displaced by that skip came back |
-| 2310 to 2397 | off-list words, appended in alphabetically sorted batches |
-| 2398 on | the list re-sorted alphabetically, from the regime boundary |
+| 1 to <!--n id_eras.last_curated_id d-->2287 | the curated words in the order they were first scheduled, which is the order `wordles.json` is stored in, with <!--n id_eras.skipped-->22 slots skipped |
+| <!--n id_eras.back_lo d-->2288 to <!--n id_eras.curated d-->2309 | where the words displaced by that skip came back |
+| <!--n id_eras.block_lo d-->2310 to <!--n id_eras.block_hi d-->2397 | off-list words, appended in alphabetically sorted batches |
+| <!--n id_eras.era2_lo d-->2398 on | the list re-sorted alphabetically, from the regime boundary |
 
-The skip is one edit. Twenty-two slots between positions 285 and 526 are never reached, and the words in them, `fanny`, `vomit`, `bobby`, `harry` and the rest, are a content purge, which dates it to the NYT's acquisition. Eighteen were dropped outright, `hasty` and `unlit` were requeued past the end, and `shine` and `gecko` were pulled forward from positions 2265 and 2266 to fill two of the holes. Twenty-two out and twenty-two back in is why the curated region is still exactly 2,309 wide and the off-list appends start at 2310.
+The skip is one edit. <!--n id_eras.purge-->20 slots between positions <!--n id_eras.skip_first d-->285 and <!--n id_eras.skip_last d-->526 are never reached, and the words in them, `fanny`, `vomit`, `bobby`, `harry` and the rest, are a content purge, presumably at the NYT's acquisition. Of those, <!--n id_eras.dropped-->18 were dropped outright and <!--s id_eras.requeued-->`hasty` and `unlit`<!--/s--> were requeued past the end; <!--s id_eras.forward-->`gecko` and `shine`<!--/s--> were pulled forward from positions <!--s id_eras.forward_positions-->2266 and 2265<!--/s--> to fill two of the holes, so <!--n id_eras.skipped-->22 slots are skipped in all. <!--n id_eras.skipped-->22 out and <!--n id_eras.skipped-->22 back in leave the curated region <!--n id_eras.curated ,.0f-->2,309 wide, with the off-list appends starting at <!--n id_eras.block_lo d-->2310.
 
-Nothing was chosen about 2398 either. It is where the end of the list had got to when `cigar` needed an entry its spent slot could not give it, and every repeat carries an era-2 id for that reason. Everything else is still drawn off the old list. The five curated first-uses that took an era-2 id had a free era-1 slot and took a new number anyway, and nothing separates them from the 172 that did not.
+Nothing was chosen about <!--n id_eras.era2_lo d-->2398 either. It is where the end of the list had got to when `cigar` needed an entry its spent slot could not give it, and every repeat carries an era-2 id for that reason. Everything else is still drawn off the old list. The <!--n id_eras.era2_first_uses-->5 curated first-uses that took an era-2 id had a free era-1 slot and took a new number anyway, and nothing separates them from the <!--n id_eras.era1_first_uses-->172 that did not.
 
 ### What each prior is worth on real answers
 

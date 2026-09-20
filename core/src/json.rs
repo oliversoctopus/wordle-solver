@@ -420,9 +420,8 @@ impl<'a> Object<'a> {
 mod write_tests {
     use super::*;
 
-    // The control characters have to leave as two-character escapes, not as
-    // themselves: a raw newline inside a JSON string is invalid, and every
-    // parser but this one's would reject it.
+    // control characters leave as two-character escapes; a raw newline inside a JSON
+    // string is invalid
     #[test]
     fn escapes_survive_a_round_trip() {
         let awkward = "a\"b\\c\nd\te\r\u{1}f";

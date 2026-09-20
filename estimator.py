@@ -100,13 +100,11 @@ FORMS = {f.name: f for f in [
           "a + b*(1-1/n)"),
 ]}
 
-# fitted when no form is asked for: tied for the smallest out-of-sample gap and
-# the best form on both of the priors that ship, at three terms rather than six
-# (analysis/form_default.py)
+# fitted when no form is asked for (analysis/form_default.py; README *Which form is
+# the default*)
 DEFAULT_FORM = "saturating"
 
-# what `compare` fits by default: one form per family, each the member that has
-# won a prior; the rest are a `--forms all` away (README *Which form is the
+# what `compare` fits by default: one form per family (README *Which form is the
 # default*)
 MAIN_FORMS = ("anchored2", "invonly", "saturating", "spline")
 

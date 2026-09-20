@@ -312,9 +312,8 @@ fn curation_shape(
         return Some(rel);
     }
 
-    // 'wordlebot': the mass goes to the words WordleBot considers answerable,
-    // in proportion to its weight, less a hedge spread over everything else.
-    // The hedge stays flat; analysis/curation_shapes.py has why.
+    // 'wordlebot': the mass goes to WordleBot's answerable words in proportion to its
+    // weight, less a flat hedge over everything else (analysis/curation_shapes.py)
     let listed: Vec<f64> = words
         .iter()
         .map(|w| tables.wordlebot.get(*w).copied().unwrap_or(0.0))

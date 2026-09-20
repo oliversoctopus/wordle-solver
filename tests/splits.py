@@ -52,9 +52,8 @@ def split_by_hand(solver, guess, candidates):
     table = solver.data.feedback_table
     pool = (candidates if solver.hard
             else np.arange(table.shape[0], dtype=np.int64))
-    # a word splitting them alike agrees on any few of them, so narrowing on a
-    # handful and then comparing those in full names the same set, without ever
-    # building a copy of the table to do it
+    # a word splitting them alike agrees on any few, so narrow on a handful and
+    # compare those in full, without a copy of the table
     head = candidates[:8]
     near = pool[(table[pool[:, None], head] == table[guess, head]).all(1)]
     return {int(word) for word in near
@@ -123,9 +122,8 @@ def main():
         for answer in answers:
             for candidates, guesses_left in positions(solver, answer):
                 check_position(solver, candidates, guesses_left)
-                # two turns left is a closed form of its own, scoring every
-                # guess rather than the distinct splits, and a real game only
-                # reaches it with a handful of candidates left; ask it here too
+                # two turns left is a closed form scoring every guess, and a real game reaches it
+                # with a handful of candidates; ask it here too
                 if len(candidates) >= 3 and guesses_left != 2:
                     check_position(solver, candidates, 2)
 

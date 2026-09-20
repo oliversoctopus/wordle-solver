@@ -27,10 +27,8 @@ from wordle_data import N_PATTERNS, WIN_PATTERN, load_data
 # opening at the high one
 SIZES = (3, 6, 12, 25, 60, 130, 400, 1200, 2315)
 
-# guesses whose accumulators are held at once.  The answer-major kernels' one
-# tuning knob, and it pulls both ways: a block of G reads G contiguous bytes per
-# candidate, so below 64 it leaves part of a cache line unused, while the
-# accumulator it must keep live is G x 243 x 8 bytes per quantity accumulated.
+# guesses whose accumulators are held at once, the answer-major kernels' one knob:
+# G contiguous bytes per candidate against G x 243 x 8 bytes of accumulator
 BLOCKS = (4, 8, 16, 32, 64)
 
 # the fused kernel's accumulator does not grow with the block, so it can take
@@ -183,17 +181,13 @@ def eg_fused(tt, candidates, weights, wlw, params, codes, knots, base,
              pool, block, rescan_max, threads):
     """Answer-major with the transpose fused in, which is the strongest form.
 
-    The two kernels above each give something up: answer-major reads
-    contiguously but holds G guesses' accumulators, the shipped one holds a
-    single small accumulator but reads scattered.  Neither trade is forced.  Read
-    the G x m tile for a block of guesses out of the answer-major table --
-    contiguous, G bytes per candidate -- transposing it into an L1-sized buffer
-    on the way in.  Each guess's feedback vector is then a contiguous row of that
-    tile, so the reduce is the shipped one, over a single 243-bucket accumulator
-    reused across the whole block.
-
-    What it pays instead is writing and re-reading the tile, G*m bytes, which is
-    free while that stays in L1 and is why it turns over near 2,000 candidates.
+    Answer-major reads contiguously but holds G guesses' accumulators; the
+    shipped kernel holds one small accumulator but reads scattered.  This reads
+    the G x m tile for a block of guesses out of the answer-major table,
+    transposing it into an L1-sized buffer on the way in, so each guess's
+    feedback vector is a contiguous row and the reduce is the shipped one over
+    a single 243-bucket accumulator.  It pays by writing and re-reading the
+    tile, G*m bytes, free while that stays in L1.
     """
     n_out = pool.shape[0]
     m = candidates.shape[0]
@@ -505,9 +499,8 @@ def project(calls, sizes, ratios, games):
     print(f"\n  {'every call':>11} {len(calls):>7} {times.sum() * 1e3:>15.0f}ms "
           f"{other.sum() * 1e3:>15.0f}ms")
 
-    # the opening is one call per process, not per game -- the memo answers it
-    # thereafter -- so how much it weighs here is a fact about the length of the
-    # run and not about the layouts, and it is quoted apart
+    # the opening is one call per process, answered by the memo thereafter, so its
+    # weight is a fact about the run's length; quoted apart
     opening = counts >= 10000
     print(f"  {'less opening':>11} {int((~opening).sum()):>7} "
           f"{times[~opening].sum() * 1e3:>15.0f}ms "

@@ -1,14 +1,11 @@
 """The voice and comment rules in CLAUDE.md, checked rather than remembered.
 
 Scans every document, comment and docstring for the phrases CLAUDE.md *Voice*
-bans, for headers and comment blocks over their line limits, for measurements
-and dates in source comments, and for CLAUDE.md's size.  A file listed in
-``voice_pending.txt`` is still to be cleaned: it reports a count, and fails
-only once it is clean and should come off the list.
+bans, for headers, docstrings and comment blocks over their line limits, for
+measurements and dates in source comments, and for CLAUDE.md's size.
 
     python tests/voice.py                    the repo
     python tests/voice.py PATH...            these files or directories
-    python tests/voice.py --write-pending    list every failing file as pending
 """
 
 import argparse
@@ -21,15 +18,16 @@ import tokenize
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-PENDING_PATH = os.path.join(HERE, "voice_pending.txt")
 
 SKIP_DIRS = {".venv", ".git", "node_modules", "target", "site", "__pycache__",
              "data", "estimator_cache", "results"}
-SKIP_FILES = {"tests/voice.py", "tests/voice_pending.txt"}
-EXTENSIONS = {".md", ".py", ".rs", ".js", ".sh"}
+SKIP_FILES = {"tests/voice.py"}
+EXTENSIONS = {".md", ".py", ".rs", ".js", ".sh", ".toml"}
+NAMES = {".gitignore", ".gitattributes"}    # commented like a shell script
 
 HEADER_LINES = 10      # a file header says what the module is
-BLOCK_LINES = 4        # a run of plain comment lines in the body
+DOC_LINES = 10         # a docstring or doc comment says what the item does
+BLOCK_LINES = 2        # a comment is one or two lines
 CLAUDE_WORDS = 1500    # CLAUDE.md is a rule list
 
 # (pattern, rule name); applied to prose and to comments alike
@@ -56,6 +54,9 @@ DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
 
 # text that is quoting a phrase rather than using it
 QUOTED = re.compile(r'"[^"\n]*"|`[^`\n]*`')
+
+# a section banner, not a comment
+BANNER = re.compile(r"^\s*-{4,}")
 
 
 class Hit:
@@ -91,9 +92,15 @@ def block_hits(comment_lines, header_end):
             run += 1
             continue
         if run > BLOCK_LINES:
-            hits.append(Hit(start, f"comment block of {run} lines", ""))
+            hits.append(Hit(start, f"comment block of {run} lines, limit {BLOCK_LINES}", ""))
         run, start = (1, number) if number is not None else (0, 0)
     return hits
+
+
+def doc_hit(start, length):
+    if length > DOC_LINES:
+        return [Hit(start, f"doc comment of {length} lines, limit {DOC_LINES}", "")]
+    return []
 
 
 # ------------------------------------------------------------------ readers
@@ -133,7 +140,7 @@ def scan_python(text):
     for token in tokens:
         if token.type == tokenize.COMMENT:
             prose.append((token.start[0], token.string))
-            if token.line.strip().startswith("#"):
+            if token.line.strip().startswith("#") and not BANNER.match(token.string[1:]):
                 comment_lines.add(token.start[0])
     tree = ast.parse(text)
     header_end = 0
@@ -145,11 +152,13 @@ def scan_python(text):
             continue
         first = node.body[0]
         start = first.lineno
+        length = doc.count("\n") + 1
         if node is tree:
             header_end = first.end_lineno
-            length = doc.count("\n") + 1
             if length > HEADER_LINES:
                 hits.append(Hit(start, f"header of {length} lines, limit {HEADER_LINES}", ""))
+        else:
+            hits += doc_hit(start, length)
         for k, line in enumerate(doc.split("\n")):
             prose.append((start + k, line))
     hits += voice_hits(prose, source=True)
@@ -178,20 +187,31 @@ def scan_slashed(text, header_marker, doc_marker=None):
             header_end += 1
 
     in_block = in_doc = False
+    block_start = doc_run = 0
     for number, line in enumerate(lines, start=1):
         stripped = line.strip()
         if in_block or stripped.startswith("/*"):
             prose.append((number, stripped.strip("/* ")))
             if not in_block:
                 in_doc = stripped.startswith("/**")   # documents an item
-            if number > header_end and not in_doc:
+                block_start = number
+            if number > header_end and not in_doc and not BANNER.match(stripped.strip("/* ")):
                 comment_lines.add(number)
             in_block = "*/" not in stripped
+            if not in_block and in_doc and block_start > header_end:
+                hits += doc_hit(block_start, number - block_start + 1)
             continue
+        is_doc = bool(doc_marker) and stripped.startswith(doc_marker)
+        if is_doc:
+            doc_run += 1
+        else:
+            if doc_run:
+                hits += doc_hit(number - doc_run, doc_run)
+            doc_run = 0
         if stripped.startswith("//"):
             prose.append((number, stripped.lstrip("/")))
-            if number > header_end and not (doc_marker and
-                                            stripped.startswith(doc_marker)):
+            if number > header_end and not is_doc and \
+                    not BANNER.match(stripped.lstrip("/")):
                 comment_lines.add(number)   # /// documents an item, as a docstring does
             continue
         found = TRAILING.search(line)
@@ -216,7 +236,7 @@ def scan_shell(text):
             if in_header:
                 header_end = number
                 header_lines += 1
-            else:
+            elif not BANNER.match(stripped.lstrip("#")):
                 comment_lines.add(number)
             continue
         in_header = False
@@ -248,7 +268,7 @@ def files_under(root):
     for path, dirs, names in os.walk(root):
         dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
         for name in sorted(names):
-            if os.path.splitext(name)[1] in EXTENSIONS:
+            if os.path.splitext(name)[1] in EXTENSIONS or name in NAMES:
                 yield os.path.join(path, name)
 
 
@@ -256,70 +276,31 @@ def relative(path):
     return os.path.relpath(path, ROOT).replace(os.sep, "/")
 
 
-def load_pending():
-    if not os.path.exists(PENDING_PATH):
-        return set()
-    with open(PENDING_PATH, "r", encoding="utf-8") as handle:
-        return {line.strip() for line in handle if line.strip()
-                and not line.startswith("#")}
-
-
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("paths", nargs="*", help="default: the repo")
-    parser.add_argument("--write-pending", action="store_true",
-                        help="rewrite voice_pending.txt from what fails")
-    parser.add_argument("--verbose", action="store_true",
-                        help="print the hits in pending files too")
     args = parser.parse_args()
 
-    if args.paths:
-        paths = []
-        for given in args.paths:
-            paths += list(files_under(given)) if os.path.isdir(given) else [given]
-        pending = set()
-    else:
-        paths = list(files_under(ROOT))
-        pending = load_pending()
+    paths = []
+    for given in args.paths or [ROOT]:
+        paths += list(files_under(given)) if os.path.isdir(given) else [given]
 
-    failed, dirty, total = [], [], 0
+    failed, total = [], 0
     for path in paths:
         name = relative(path)
         if name in SKIP_FILES:
             continue
         hits = scan(path, name)
         total += len(hits)
-        if not hits:
-            if name in pending:
-                failed.append(name)
-                print(f"{name}: clean; remove it from voice_pending.txt")
-            continue
-        dirty.append(name)
-        if name in pending:
-            print(f"{name}: pending, {len(hits)} hits")
-            if not args.verbose:
-                continue
-        else:
+        if hits:
             failed.append(name)
         for hit in hits:
             where = f"{name}:{hit.line}"
             print(f"  {where:40s} {hit.rule}" + (f"   {hit.text}" if hit.text else ""))
 
-    if args.write_pending:
-        with open(PENDING_PATH, "w", encoding="utf-8", newline="") as handle:
-            handle.write("# files the voice check has not yet been applied to;"
-                         " tests/voice.py fails once one is clean\n")
-            handle.write("\n".join(sorted(dirty)) + "\n")
-        print(f"wrote {len(dirty)} pending files")
-        return 0
-
-    print(f"{total} hits in {len(dirty)} files; {len(pending)} pending")
-    if failed:
-        print(f"failed: {len(failed)} files")
-        return 1
-    print("every file outside the pending list is clean")
-    return 0
+    print(f"{total} hits in {len(failed)} files")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

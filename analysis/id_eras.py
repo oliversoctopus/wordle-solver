@@ -85,6 +85,26 @@ back = [curated[p - 1] for p in gone if curated[p - 1] in played]
 print(f"  {len(gone) - len(back)} of them were never played at all; "
       f"{len(back)} came back elsewhere in the numbering: "
       + ", ".join(back))
+first_id = {}
+for row in sol:
+    first_id.setdefault(row["solution"], row["id"])
+requeued = sorted(w for w in back if first_id[w] > last_id)
+forward = sorted(w for w in back if first_id[w] <= last_id)
+common.record("curated", len(curated))
+common.record("last_curated_id", last_id)
+common.record("back_lo", last_id + 1)
+purge = [p for p in gone if curated[p - 1] not in forward]
+common.record("skipped", len(gone))
+common.record("purge", len(purge))
+common.record("skip_first", min(purge))
+common.record("skip_last", max(purge))
+common.record("dropped", len(gone) - len(back))
+common.record("requeued", " and ".join(f"`{w}`" for w in requeued))
+common.record("forward", " and ".join(f"`{w}`" for w in forward))
+common.record("forward_positions", " and ".join(str(play_pos[w]) for w in forward))
+common.record("block_lo", BLOCK_LO)
+common.record("block_hi", BLOCK_HI)
+common.record("era2_lo", ERA2_LO)
 
 # ------------------------------------------------------- the off-list block
 print()
@@ -176,6 +196,8 @@ print(f"    {'':22s} {'era-1':>7s} {'era-2':>7s}")
 for kind in ("repeat", "curated, first use", "off-list"):
     print(f"    {kind:22s} {table.get((kind, 'era-1'), 0):7d} "
           f"{table.get((kind, 'era-2'), 0):7d}")
+common.record("era1_first_uses", table.get(("curated, first use", "era-1"), 0))
+common.record("era2_first_uses", table.get(("curated, first use", "era-2"), 0))
 
 # a repeat has no era-1 slot left to use; the rest of era 2 had one and did not
 taken = {row["id"] for row in sol}

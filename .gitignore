@@ -5,13 +5,10 @@ __pycache__/
 # what cargo produces; every artifact is rebuilt from core/ and native/
 target/
 
-# 167 MB, and feedback_table.py rebuilds it from the two word lists.  The rest
-# of data/derived/ is a few hundred KB of index maps and is kept: they are what
-# make the table readable, and they cost nothing to store.
+# feedback_table.py rebuilds it from the two word lists; the index maps beside it
+# are kept
 data/derived/feedback_table.npy
 
-# What build_site.sh assembles.  deploy.sh rebuilds it and uploads it straight
-# from there, so none of it belongs in the history.  site/.vercel/ is this
-# machine's link to the Vercel project and is not built at all, which is why
-# build_site.sh carries it across a rebuild.
+# what build_site.sh assembles; deploy.sh uploads it from there.  site/.vercel/ is
+# this machine's link to the Vercel project, carried across a rebuild
 site/

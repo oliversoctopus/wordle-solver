@@ -59,17 +59,11 @@ pub fn every_answer<S: Source>(solver: &mut Solver<S>, max_guesses: usize) -> Ve
 
 /// The same sweep, played a few games at a time.
 ///
-/// The games are independent and a memo holds pure functions of a position, so
-/// which thread plays which answer changes nothing about the answer: this
-/// returns the same lengths as `every_answer`, in the same order.
-///
-/// The kernels already spread each scan across every core, and what this adds
-/// is somewhere for a core to go while one game is between scans -- recursing
-/// through the endgame, filtering a candidate set, walking the memo. Two or
-/// three games in flight covers that; more does not, and measurably so. At one
-/// chunk per core the sweep runs half as fast again as it does serially,
-/// because sixteen games at sixteen different depths of the table share none of
-/// their cache and each starts from a memo the others cannot help.
+/// The games are independent and a memo holds pure functions of a position,
+/// so this returns the same lengths as `every_answer`, in the same order.
+/// The kernels already spread each scan across every core; this gives a core
+/// somewhere to go while one game is between scans. Two or three games in
+/// flight covers that; README *Keeping the port in step* has the measurement.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn every_answer_across_cores<'a, S, F>(n: usize, max_guesses: usize, solver: F) -> Vec<f64>
 where

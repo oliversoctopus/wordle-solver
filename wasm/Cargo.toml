@@ -3,10 +3,8 @@ name = "wordle_wasm"
 version = "0.1.0"
 edition = "2021"
 
-# A cdylib is what the browser can instantiate. No wasm-bindgen: the whole
-# interface is one JSON string in and one out, which is a single marshalling
-# pattern rather than a surface worth generating glue for, and this keeps the
-# Rust tree free of dependencies on the target that has to stay small.
+# a cdylib is what the browser instantiates.  No wasm-bindgen: the interface is
+# one JSON string in and one out, and the tree stays dependency-free
 [lib]
 crate-type = ["cdylib"]
 

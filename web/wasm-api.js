@@ -38,19 +38,16 @@ const wasmApi = (() => {
     });
   }
 
-  // Dealing an answer needs a random draw, and the module has no entropy
-  // source of its own.  So the randomness comes from here, while the draw
-  // itself stays in Rust, where the prior weights are.
+  // dealing an answer needs a random draw and the module has no entropy source, so
+  // the randomness comes from here and the draw stays in Rust with the weights
   function seeded(path, body) {
     if (path !== "/api/game/new" && path !== "/api/draw") return body;
     const parsed = body ? JSON.parse(body) : {};
     return JSON.stringify({ ...parsed, seed: Math.random() });
   }
 
-  // Whether a reply is a refusal, which has to reach the page as a status:
-  // `app.js` throws on a reply that is not ok and renders a board on one that
-  // is, so an error arriving as 200 would be applied as a board.  Which of
-  // 400, 404 and 503 it would have been is not reconstructed.
+  // whether a reply is a refusal, which reaches the page as a status: `app.js`
+  // throws on a reply that is not ok and renders a board on one that is
   function refused(text) {
     try {
       return JSON.parse(text).error !== undefined;

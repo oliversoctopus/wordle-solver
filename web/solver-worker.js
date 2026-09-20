@@ -28,9 +28,8 @@ const DATA_FILES = {
 function writeString(text) {
   const bytes = encoder.encode(text);
   const ptr = wasm.alloc(bytes.length);
-  // alloc hands back 0 for an empty string and for a failure alike, so the
-  // length is what tells them apart; writing at 0 would land on the module's
-  // own memory rather than raise anything.
+  // alloc hands back 0 for an empty string and for a failure alike, so the length
+  // tells them apart; writing at 0 would land on the module's own memory
   if (!ptr && bytes.length) throw new Error("the solver is out of memory");
   new Uint8Array(wasm.memory.buffer, ptr, bytes.length).set(bytes);
   return { ptr, len: bytes.length };
@@ -52,9 +51,8 @@ function call(path, bodyText) {
   return reply;
 }
 
-// How long the solve took.  The module has no clock, so it leaves the field at
-// zero and this fills it in.  Timing it here rather than on the page's side
-// keeps the figure the solve alone, with the two postMessage hops left out.
+// how long the solve took; the module has no clock, so it leaves the field at
+// zero and this fills it in, with the two postMessage hops left out
 function timed(reply, started) {
   if (!reply.includes('"elapsed_ms":0')) return reply;
   return reply.replace('"elapsed_ms":0',
@@ -72,9 +70,8 @@ function serve(request) {
   postMessage({ kind: "reply", id: request.id, text });
 }
 
-// Streaming compilation refuses a module the host did not label
-// application/wasm, so a host that mislabels it compiles from the bytes
-// instead.  The clone is what leaves those bytes still readable afterwards.
+// streaming compilation refuses a module the host did not label application/wasm;
+// a host that mislabels it compiles from the bytes, which the clone keeps readable
 async function instantiate() {
   const response = await fetch("wordle.wasm");
   if (!response.ok) {

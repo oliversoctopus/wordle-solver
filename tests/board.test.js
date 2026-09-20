@@ -157,8 +157,7 @@ context.renderTechnical = () => {};
 const probe = context.probe;
 
 /* The fake server answers immediately, so a request settles through a chain of
-   microtasks and never needs the clock.  Draining them is what makes tens of
-   thousands of edits take seconds rather than minutes. */
+   microtasks; draining them is how a request is awaited. */
 async function flush() {
   for (let i = 0; i < 64; i++) await Promise.resolve();
 }
@@ -294,10 +293,8 @@ function rng(seed) {
 
 const LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
-/* What a person can do, not what a keyboard can send: clearing a row by hand
-   takes six particular presses, which uniform noise never produces.  Each
-   intention is spent one keystroke at a time so the properties are judged in
-   between. */
+/* What a person can do, not what a keyboard can send: each intention is spent one
+   keystroke at a time so the properties are judged in between. */
 const MOVES = [
   ["a letter", 4, (r) => [["type", LETTERS[Math.floor(r() * 26)]]]],
   ["a word", 6, (r) => word(r).map((letter) => ["type", letter])],

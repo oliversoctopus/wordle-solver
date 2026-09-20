@@ -87,9 +87,8 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
         let slug = config.slug();
         let (active, active_params) = load_fit(root, &slug)?;
 
-        // Every fit the page's *Shape of f* menu can name, not just the active
-        // one: choosing a form there is choosing a different f, and expected
-        // mode ranks by f.
+        // every fit the *Shape of f* menu can name, not just the active one: expected
+        // mode ranks by f
         let mut archive: Vec<(Form, Vec<f64>)> = Vec::new();
         for form in forms() {
             match load_form_fit(root, &slug, form.name) {
@@ -121,9 +120,8 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
 
         let weights = build_weights(&data, &config, &tables)?;
         for hard in [false, true] {
-            // Expected mode consults f, so each form is its own ranking.
-            // Entropy never does, so one ranking stands for all of them and
-            // gets written out under every name the menu can send.
+            // expected mode consults f, so each form is its own ranking; entropy never does,
+            // so one ranking is written under every name the menu can send
             for (form, params) in &archive {
                 let mut solver = Solver::new(
                     &table,

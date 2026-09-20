@@ -19,9 +19,7 @@ from wordle_data import CURATED_PATH, DATA_DIR, IND2WORD_PATH, write_json
 
 ANSWER_LIKE_PATH = os.path.join(DATA_DIR, "answer_like.json")
 
-# the "is this actually a name" lift: a word as common abroad as at home is a
-# name, not an English word.  Ten languages, not twenty -- adding more drags
-# the lift toward zero for international words like `laser`.
+# the name lift: a word as common abroad as at home is a name, not an English word
 FOREIGN_LANGUAGES = ("fr", "de", "es", "it", "pl", "tr", "nl", "sv", "pt", "id")
 
 SUFFIXES = ("s", "es", "ed", "er", "y", "ly")

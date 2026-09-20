@@ -177,10 +177,8 @@ if args.all_priors:
          f"on the other {int(rest.sum())}"], regime_rows))
 
 if args.all_priors:
-    # What turning one prior on is worth with the other off, against what it is
-    # worth with the other on.  All four arms played the same answers, so each
-    # is a paired contrast like any other, and the interaction is the same
-    # number read either way round.
+    # what turning one prior on is worth with the other off, against with it on; all
+    # four arms played the same answers, so the interaction reads the same either way
     print()
     for label, (a, b) in CONTRASTS.items():
         contrast = runs[a] - runs[b]
@@ -298,9 +296,8 @@ rec("arm_table", common.md_table(
     ["shapes" if args.shapes else "priors", "repeat", "off-list", "fresh",
      "blended"], arm_table))
 
-# The mixture is itself counted off those same puzzles, and the blend above
-# treats it as exact.  Its error only matters where the arms disagree, so widen
-# each row by the multinomial term and see whether the row moves.
+# the mixture is counted off these same puzzles and the blend treats it as exact;
+# widen each row by the multinomial term and see whether it moves
 n = END - START
 mix_var = [m * (1 - m) / n for m in mix]
 print(f"\n  with the mixture's own error ({n} puzzles: "
