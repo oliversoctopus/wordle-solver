@@ -53,7 +53,7 @@ A reference to a document names its heading, as `README *Results*`, and matches 
 
 ## `doc_numbers.py` — every figure the documents quote is the one its script recorded
 
-At the repository root, since it is also the tool that rewrites the documents. Each script in `analysis/` records its figures to `analysis/results/<script>.json`, and the documents mark each figure with an HTML comment naming the key. Run bare it fails on any figure that differs from its results file. `--write` rewrites them and lists what moved, which is the list of sentences to reread. `--unbound` fails on a figure that carries no marker. It passes the word counts, the pattern count, the shipped defaults it reads out of the modules, section numbers, years and puzzle numbers, and anything in code. The rest is bound, marked `<!--c-->` as a definition or a worked example, or marked `<!--u-->` as a figure measured once with no script here.
+At the repository root, since it is also the tool that rewrites the documents. Each script in `analysis/` records its figures to `analysis/results/<script>.json`, and the documents mark each figure with an HTML comment naming the key. Run with no flags, it fails on any figure that differs from its results file. `--write` rewrites them and lists what moved, which is the list of sentences to reread. `--unbound` fails on a figure that carries no marker. It passes the word counts, the pattern count, the shipped defaults it reads out of the modules, section numbers, years and puzzle numbers, and anything in code. The rest is bound, marked `<!--c-->` as a definition or a worked example, or marked `<!--u-->` as a figure measured once with no script here.
 
 ## `rust_parity.py` — the Rust core agrees with the Python
 
