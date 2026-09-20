@@ -1,6 +1,6 @@
 # The voice
 
-Who is writing the documents, who is reading them, what the writing does at each kind of paragraph, and four pairs that show it. CLAUDE.md *Voice* holds the floor `tests/voice.py` checks. This file says what the writing sounds like once it clears that floor.
+Who is writing the documents, who is reading them, what the writing does at each kind of paragraph, what the check does not catch, and four pairs that show it. CLAUDE.md *Voice* holds the floor `tests/voice.py` checks. This file says what the writing sounds like once it clears that floor.
 
 ## Who is speaking, and to whom
 
@@ -39,6 +39,17 @@ A story is told in order, with the moment of being wrong left in. Hamming storme
 `README.md`, `analysis/README.md`, `tests/README.md` and `ABOUT_SOLVER_EXPLAINED.md` are references. Their reader arrives at one section from a search or a link, wants one thing, and leaves. Everything under *Reporting a result* carries over: the figure once and then what it means, what one would expect and what happened, the candidate causes offered when none was measured, and an example in place of a figure of speech. The whiteboard does not carry over. A reference has no room for the speaker's surprise, so "I" appears only where a choice needs an owner, "we" only where reader and writer are looking at the same table, and a contraction only where the sentence is stiff without one.
 
 Two habits belong to the reference alone. A list is formatted as a list, whether of scripts, rules or fixed points, and a paragraph naming four things in a row is a list that has not been formatted yet. A grid of figures is a table, and a sentence strung with figures is usually a table row that has not been laid out. The procedural sections, on the page, the board and the editor, already read as a calm person pointing at one thing per sentence, and they are left as they are.
+
+## What clears the check and still sounds performed
+
+`tests/voice.py` bans a short list of phrases, and prose that clears it can still read as written for effect. Read each paragraph back for these:
+
+* A short line closing a paragraph, built to be remembered.
+* A word stressed in italics.
+* A dash aside.
+* "X, not Y" where Y was never live.
+* A run of short sentences where one sentence would carry the relation.
+* A sentence that announces the next one.
 
 ## Four pairs
 

@@ -6,11 +6,8 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 ## Never poll background work
 
-* A turn whose message says "waiting" contains zero tool calls. The harness notifies when a background task exits.
-* Before any tool call, ask whether it changes a file or yields something otherwise unavailable. If neither, do not make it.
-* Two consecutive calls returning the same output is the loop signature. Stop and end the turn.
-* Wait by editing, reading unread source or drafting. Ending the turn with nothing pending is correct.
-* An instruction to stop holds for the rest of the session.
+* A turn whose message says "waiting" contains zero tool calls, since the harness notifies when a background task exits. Wait by editing, reading unread source or drafting, and ending the turn with nothing pending is correct.
+* Before any tool call, ask whether it changes a file or yields something otherwise unavailable, and if neither, do not make it. Two consecutive calls returning the same output is the loop signature: stop, and an instruction to stop holds for the rest of the session.
 
 ## Conventions
 
@@ -25,19 +22,9 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 Every sentence in this repo states a fact and stops, and the documents follow `VOICE.md` above that floor. `tests/voice.py` bans the phrases: a trailing justification ("…, which is what lets X"), evaluative filler ("genuinely"), "X rather than Y" where Y was never an option, the "Not X. Y." reversal, and narrated history ("used to", dates of edits).
 
-The check is a floor. Prose that clears it still reads as performed when it has these, so read each paragraph back:
-
-* A short line closing a paragraph.
-* A word stressed in italics.
-* A colon before anything but a list.
-* A dash aside.
-* "X, not Y" where Y was never live.
-* A run of short sentences where one sentence would carry the relation.
-* A sentence that announces the next one.
-
 Write the sentence a careful person would put in an email. A rule is one line. A comment is one or two.
 
-Before finishing, reread the diff against this section and *Conventions*.
+Before finishing, reread the diff against `VOICE.md` and *Conventions*.
 
 ## Running it
 
