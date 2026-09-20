@@ -342,7 +342,8 @@ def build_parser():
     parser.add_argument("--share", action="store_true",
                         help="also print the emoji grid, for pasting elsewhere")
     parser.add_argument("--mask-last", type=int, default=0,
-                        help="ignore the last N entries of solutions.json (default 1)")
+                        help="ignore the last N entries of solutions.json "
+                             "(default %(default)s)")
     return parser
 
 

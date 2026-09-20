@@ -97,10 +97,10 @@ class WordleSolver:
                 self.form = estimator.get_form(form)
                 self.params = estimator.load_form_params(self.config, self.form)
         else:
-            # entropy mode never reads f, and load_cached=False is a deliberate
-            # ask for an unfitted one; expected play raises instead
+            # entropy mode never reads f, and load_cached=False asks for no
+            # fit; expected play raises instead
             self.form = estimator.get_form(form)
-            self.params = estimator.default_params(self.form)
+            self.params = np.zeros(self.form.n_params, dtype=np.float64)
 
         self._codes, self._knots, self._base = self.form.arrays()
         self._memo = Memo(DEFAULT_MEMO_LIMIT)

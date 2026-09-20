@@ -38,16 +38,15 @@ python wordle_solver.py play --no-curation-prior --mode entropy
 | `wording.py` | finds every string the site says, so `editor.py` can rewrite any of it |
 | `editor.py` | the editor itself, previewing the static build it is editing |
 | `unwrap_md.py` | checks that every `.md` is one line per paragraph; `--write` converts |
-| `wordle_solver.ipynb` | the analysis behind the prior probabilities |
 | `data/`, `data/derived/` | the word lists and answer record; everything `feedback_table.py` regenerates |
-| `feedback_table.py` | one-off: builds `feedback_table.npy` from the word lists |
+| `feedback_table.py` | one-off: builds `feedback_table.npy` and the index maps from the word lists |
 | `answer_like.py` | one-off: builds `answer_like.json`, the score behind `--curation-shape frequency` |
 | `solutions.py` | brings `solutions.json` up to date from the NYT, one request per day since the last |
 | `word_lists.py` | one-off: refetches `wordles.json` and `nonwordles.json` upstream |
 | `wordlebot.py` | one-off: rescrapes WordleBot's weights, live and from the 2023 snapshot |
 | `analysis/` | the measurement scripts behind every number in the prior sections below |
 
-`answer_like.py`, `solutions.py`, `word_lists.py` and `wordlebot.py` verify against the file they would write and do nothing unless passed `--write`, since each one rewrites something the solver reads. `feedback_table.py` predates that rule and rebuilds in place as soon as it is run — or imported.
+`answer_like.py`, `feedback_table.py`, `solutions.py`, `word_lists.py` and `wordlebot.py` report how they would change the file they build, and write nothing without `--write`.
 
 ## Results
 

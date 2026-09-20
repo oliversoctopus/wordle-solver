@@ -110,10 +110,6 @@ DEFAULT_FORM = "saturating"
 # default*)
 MAIN_FORMS = ("anchored2", "invonly", "saturating", "spline")
 
-# a rough curve for the modes that never consult f, never played against a real
-# prior: f(2)~1.5, f(100)~2.9, f(1000)~3.5.  A prior with no fit raises instead
-_REFERENCE = (0.188, 0.624)  # slope on x, coefficient on (1 - 1/n), pinned at 1
-
 
 def get_form(form):
     """Accept a Form, a form name, or None (meaning the default)."""
@@ -261,20 +257,6 @@ def fit(n_eff, targets, form, sample_weights=None, n_max=None):
     return params, 0
 
 
-def default_params(form):
-    """Projection of a rough reference curve onto this form's basis.
-
-    Only for the paths that never consult f -- entropy mode, and callers that
-    pass ``load_cached=False``.  Expected-guess play with no fit
-    raises ``NotFitted`` rather than coming here, since this curve is not a
-    measurement of any prior and would not be saved if it were.
-    """
-    form = get_form(form)
-    grid = np.geomspace(1.0, 13000.0, 300)
-    reference = 1.0 + _REFERENCE[0] * np.log2(grid) + _REFERENCE[1] * (1.0 - 1.0 / grid)
-    return _lstsq(design_matrix(grid, form), reference - form.base)
-
-
 # --------------------------------------------------------------------- caching
 
 def cache_path(config):
@@ -299,6 +281,7 @@ def save_params(config, params, form, meta=None, active=True):
         "terms": list(form.term_labels),
         "params": [float(p) for p in params],
         "fitted_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "fitted_by": "python",
     }
     if meta:
         payload.update(meta)

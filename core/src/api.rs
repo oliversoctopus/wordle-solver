@@ -104,6 +104,22 @@ struct Settings {
     top: usize,
 }
 
+/// The fit the mode plays with.  Entropy never reads `f`, so a prior with no
+/// fit gets zeros there, as `WordleSolver` does.
+fn fit_for_mode(
+    loaded: &state::Loaded,
+    settings: &Settings,
+) -> Result<(crate::estimator::Form, Vec<f64>), String> {
+    match loaded.fit_for(&settings.config, settings.form.as_deref()) {
+        Err(_) if settings.mode == Mode::Entropy => {
+            let form = crate::estimator::get_form(crate::estimator::DEFAULT_FORM).unwrap();
+            let params = vec![0.0; form.codes.len()];
+            Ok((form, params))
+        }
+        outcome => outcome,
+    }
+}
+
 fn flag(body: &Value, key: &str, fallback: bool) -> bool {
     match body.get(key) {
         Some(Value::Bool(value)) => *value,
@@ -335,19 +351,7 @@ fn build_state(
         None => rows,
     };
     let weights = loaded.weights_for(&settings.config)?;
-    let form_name = settings.form.as_deref();
-    let (form, params) = match settings.mode {
-        Mode::Expected => loaded.fit_for(&settings.config, form_name)?,
-        // entropy never consults f, so an unfitted prior is fine here
-        Mode::Entropy => loaded
-            .fit_for(&settings.config, form_name)
-            .unwrap_or_else(|_| {
-                (
-                    crate::estimator::get_form("loglinear").unwrap(),
-                    vec![0.0, 1.0],
-                )
-            }),
-    };
+    let (form, params) = fit_for_mode(loaded, settings)?;
 
     let solver_form = form.clone();
     let solver_params = params.clone();
@@ -845,15 +849,7 @@ fn game_hint(body: &Value) -> Result<String, String> {
     // game was dealt, so changing one rethinks the advice for the position you
     // are in instead of dealing a new answer
     let weights = loaded.weights_for(&settings.config)?;
-    let (form, params) = loaded
-        .fit_for(&settings.config, settings.form.as_deref())
-        .or_else(|error| match settings.mode {
-            Mode::Expected => Err(error),
-            Mode::Entropy => Ok((
-                crate::estimator::get_form("loglinear").unwrap(),
-                vec![0.0, 1.0],
-            )),
-        })?;
+    let (form, params) = fit_for_mode(loaded, &settings)?;
     let source = loaded.source();
     let mut solver = Solver::new(&source, &weights, params, form, settings.mode)
         .with_hard(settings.hard)

@@ -160,7 +160,7 @@ That is also what lets its arms be compared across *different* priors, which no 
 
 ## The three fits `--shapes` needs
 
-Comparing the sharpened shapes against the uniform ones needs fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`, and a prior with no fit raises rather than playing an invented `f`. All three are in `estimator_cache/`, fitted the way the shipped five were: the forms archived by `wordle_solver.py compare`, ranked by `form_default.py --shapes`, and the winner written as the active fit by `--promote`. They came out <!--s form_default.shape_winners-->`spline`, `saturating`, `anchored2`<!--/s-->.
+Comparing the sharpened shapes against the uniform ones needs fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`, and a prior with no fit raises rather than playing an invented `f`. All three are in `estimator_cache/`, fitted the way the shipped five were: the forms archived by `wordle_solver.py compare`, ranked by `form_default.py --shapes`, and the winner written as the active fit by `--promote`. `rust_train` declines a prior outside `priors.ALL_CONFIGS`, so these three are fitted in Python. They came out <!--s form_default.shape_winners-->`spline`, `saturating`, `anchored2`<!--/s-->.
 
 The three are not part of a routine refit. The shape question is a finding — README *What the two shapes are worth together* — so their fits stay as they are until it is reopened, and then all eight are refitted together against one answer record. Every arm in a `--shapes` table has to carry a fit of the same history, or the table is comparing solvers, not shapes.
 

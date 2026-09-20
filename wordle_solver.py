@@ -254,7 +254,8 @@ def build_parser():
                              "%(default)s); 'frequency' by how answer-like the "
                              "word is, 'wordlebot' by WordleBot's own weights")
     common.add_argument("--mask-last", type=int, default=0,
-                        help="ignore the last N entries of solutions.json (default 1)")
+                        help="ignore the last N entries of solutions.json "
+                             "(default %(default)s)")
     common.add_argument("--no-exact", action="store_true",
                         help="never use the exact endgame search, only the estimator")
     common.add_argument("--exact-max", type=int, default=None,

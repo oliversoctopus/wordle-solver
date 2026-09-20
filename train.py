@@ -219,7 +219,7 @@ def policy_iteration(config, data=None, form=None, n_games=DEFAULT_GAMES,
 
 
 def train_all(configs=None, **kwargs):
-    """Fit and cache one parameter set per prior combination (4 of them).
+    """Fit and cache one parameter set per prior combination in ``ALL_CONFIGS``.
 
     Rollouts use whatever solver options are passed, exact endgame search
     included, so f is fitted to the returns of the policy that will actually

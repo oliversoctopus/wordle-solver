@@ -28,6 +28,9 @@ DEFAULT_MAX_BRANCH = 50
 # the Rust reads the same variable
 DEFAULT_ROOT_BRANCH = int(os.environ.get("WORDLE_ROOT_BRANCH") or 150)
 
+# a backstop; with the branch cap on, real positions use a handful
+DEFAULT_MAX_NODES = 2000
+
 # two guesses that split the candidates identically score identically, so the
 # feedback-vector comparison is gated at equality
 SPLIT_TIE_TOL = 0.0
@@ -49,9 +52,6 @@ class ExactEndgame:
     ``hard`` narrows every node's choice to the candidates themselves, which is
     the exact search's half of the solver's hard mode.
     """
-
-    # backstop only; with the branch cap on, real positions use a handful
-    DEFAULT_MAX_NODES = 2000
 
     def __init__(self, feedback_table, weights, loss_penalty=1.0,
                  max_nodes=DEFAULT_MAX_NODES, memo_limit=500_000,
