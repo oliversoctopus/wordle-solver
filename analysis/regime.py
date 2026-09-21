@@ -41,7 +41,7 @@ def row(lo, hi, label):
     nonrep = [j for j in range(lo, hi) if not is_repeat[j]]
     off = sum(off_list[j] for j in nonrep)
     print(f"  {label:38s} {n:8d} {100*rep/n:8.2f}% {100*off/len(nonrep):19.2f}%")
-    return n, 100 * rep / n, 100 * off / len(nonrep)
+    return n, 100 * rep / n, 100 * off / len(nonrep), off, len(nonrep)
 
 
 start = common.regime_start(sol)
@@ -58,12 +58,18 @@ for key, (lo, hi, label, shown) in {
         "recent": (N - RECENT_PUZZLES, N, f"last {RECENT_PUZZLES}",
                    f"**last {RECENT_PUZZLES}**"),
         "last50": (N - 50, N, "last 50", "last 50"),
+        "last25": (N - 25, N, "last 25", "last 25"),
         "all": (0, N, "all time", "all time")}.items():
-    n, rep, off = row(lo, hi, label)
+    n, rep, off, events, nonrep = row(lo, hi, label)
     rates[key] = (rep, off)
     common.record(f"{key}.puzzles", n)
     common.record(f"{key}.repeat", rep)
     common.record(f"{key}.offlist", off)
+    # the binomial error on the off-list rate, in points
+    common.record(f"{key}.offlist_events", events)
+    common.record(f"{key}.nonrepeats", nonrep)
+    common.record(f"{key}.offlist_se",
+                  100 * np.sqrt(off / 100 * (1 - off / 100) / nonrep))
     bold = key == "recent"
     cells = [f"{n:,}", f"{rep:.2f}%" if key == "early" else f"{rep:.1f}%",
              f"{off:.2f}%" if key == "early" else f"{off:.1f}%"]
