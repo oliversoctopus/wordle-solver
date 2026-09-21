@@ -82,6 +82,8 @@ def report_accuracy(title, arms, weights, tag=None):
         common.record(f"{tag}.table", common.md_table(
             ["valuation", "true value", "bias", "mean abs error", "RMSE"], table))
         common.record(f"{tag}.ratio", base / look)
+        common.record(f"{tag}.base_rmse", base)
+        common.record(f"{tag}.look_rmse", look)
 
 
 COLUMNS = {}     # decisions per prior, gathered for one table across them

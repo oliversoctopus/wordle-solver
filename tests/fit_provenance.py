@@ -2,9 +2,10 @@
 
 The estimator cache is keyed on the `PriorConfig` alone, so `solutions.py
 --write` leaves every fit describing a shorter record.  This compares each
-cache's `fitted_at` stamp with the newest answer the solver uses.  A
-repeat-off prior is exempt, since `priors.build_weights` reads the record only
-under `config.repeat`.  Refit what it names with
+cache's `fitted_at` stamp, or its `ranked_at` stamp where `form_default.py
+--promote` kept it as the best on a longer record, with the newest answer the
+solver uses.  A repeat-off prior is exempt, since `priors.build_weights` reads
+the record only under `config.repeat`.  Refit what it names with
 `python wordle_solver.py train --this-config-only`.
 """
 
@@ -72,7 +73,8 @@ def main():
 
         with open(path, encoding="utf-8") as fh:
             fit = json.load(fh)
-        fitted = date_of(fit["fitted_at"])
+        fitted = max(date_of(fit["fitted_at"]),
+                     date_of(fit.get("ranked_at", fit["fitted_at"])))
         if not depends_on_answer_record(config):
             report(True, f"{label} does not read the answer record",
                    f"{config.slug}: fitted {fitted} in the '{fit['form']}' form; "

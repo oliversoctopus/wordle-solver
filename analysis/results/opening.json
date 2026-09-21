@@ -1,31 +1,31 @@
 {
     "runs": {
         "opening.py": {
-            "at": "2026-09-18 02:37",
-            "solutions": 1917,
-            "through": "2026-09-17",
+            "at": "2026-09-21 02:56",
+            "solutions": 1919,
+            "through": "2026-09-19",
             "fits": {
                 "repeat0_curation0": "invonly 2026-09-18 01:52:07",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
                 "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
-                "repeat1_curation1": "spline 2026-09-18 02:03:42",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
+                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
+                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
             }
         }
     },
     "values": {
         "beating": 0,
         "best": "salet",
-        "measured": "2026-09-18",
+        "measured": "2026-09-21",
         "openings": 200,
         "pick": "salet",
         "regret": 0.0,
-        "rho": 0.6787564689117228,
-        "rho_top12": 0.44755244755244755,
-        "rho_top25": 0.43076923076923074,
-        "table": "| ranks by `f` | mean true value | worst | best in band |\n| --- | --- | --- | --- |\n| 1–10 | 3.0897 | 3.1057 | **salet 3.0641** |\n| 11–25 | 3.1059 | 3.1317 | slate 3.0916 |\n| 26–50 | 3.1197 | 3.1365 | carle 3.1037 |\n| 51–100 | 3.1239 | 3.1530 | trine 3.0923 |\n| 101–200 | 3.1354 | 3.1689 | sient 3.1093 |"
+        "rho": 0.650569264231606,
+        "rho_top12": 0.18881118881118883,
+        "rho_top25": 0.5053846153846154,
+        "table": "| ranks by `f` | mean true value | worst | best in band |\n| --- | --- | --- | --- |\n| 1–10 | 3.2153 | 3.2441 | **salet 3.1847** |\n| 11–25 | 3.2288 | 3.2534 | parse 3.2096 |\n| 26–50 | 3.2375 | 3.2672 | tales 3.2193 |\n| 51–100 | 3.2415 | 3.2778 | trine 3.2158 |\n| 101–200 | 3.2529 | 3.2901 | stile 3.2305 |"
     }
 }

@@ -167,12 +167,17 @@ def unbound(name, exempt):
     """Prints the figures in document ``name`` with no marker; returns how many."""
     with open(os.path.join(HERE, name), "r", encoding="utf-8") as file:
         lines = file.read().split("\n")
-    count, fenced = 0, False
+    count, fenced, bound_table = 0, False, False
     for number, line in enumerate(lines, start=1):
         if line.startswith("```"):
             fenced = not fenced
             continue
-        if fenced or line.startswith(("|", "#", "$$")):
+        if line.startswith("<!--table "):
+            bound_table = True
+        if line.startswith("<!--/table-->"):
+            bound_table = False
+        # a row of a bound table is rewritten whole; any other row is prose
+        if fenced or line.startswith(("#", "$$")) or (bound_table and line.startswith("|")):
             continue
         clean = re.sub(r"`[^`]*`", "", line)
         clean = S_RE.sub("", clean)

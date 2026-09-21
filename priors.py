@@ -27,7 +27,10 @@ WORDLEBOT_SNAPSHOT_PATH = os.path.join(
     DATA_DIR, f"wordlebot_weights_{WORDLEBOT_SNAPSHOT_DATE}.json")
 
 DEFAULT_REPEAT_PROB = 0.10
-DEFAULT_NONCURATED_PROB = 0.10
+DEFAULT_NONCURATED_PROB = 0.30
+# the window the off-list default is set on; README *The regime the defaults
+# describe*
+RECENT_PUZZLES = 100
 
 REPEAT_SHAPES = ("uniform", "binned")
 CURATION_SHAPES = ("uniform", "frequency", "wordlebot")
@@ -285,6 +288,7 @@ def regime_stats(data):
     The regime starts at the first repeat in the record: nothing repeated
     before it, and nothing was off-list before it either.  Off-list is
     conditional on not being a repeat, the same order the model draws in.
+    ``recent`` is the same pair over the last ``RECENT_PUZZLES``.
     """
     words = data.past_solutions
     curated = set(data.curated_list)
@@ -296,7 +300,7 @@ def regime_stats(data):
     start = next((i for i, r in enumerate(repeats) if r), 0)
 
     def rates(lo):
-        window = range(lo, len(words))
+        window = range(max(lo, 0), len(words))
         fresh = [i for i in window if not repeats[i]]
         return {
             "repeat": sum(repeats[i] for i in window) / max(1, len(window)),
@@ -308,6 +312,8 @@ def regime_stats(data):
         "start_puzzle": data.puzzle_numbers[start] if data.puzzle_numbers else 1,
         "puzzles": len(words) - start,
         "regime": rates(start),
+        "recent": rates(len(words) - RECENT_PUZZLES),
+        "recent_puzzles": min(RECENT_PUZZLES, len(words)),
         "all_time": rates(0),
         "words": data.n_words,
         "curated": len(curated),

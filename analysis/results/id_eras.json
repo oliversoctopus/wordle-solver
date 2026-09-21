@@ -1,18 +1,18 @@
 {
     "runs": {
         "id_eras.py": {
-            "at": "2026-09-20 13:14",
-            "solutions": 1917,
-            "through": "2026-09-17",
+            "at": "2026-09-21 00:58",
+            "solutions": 1919,
+            "through": "2026-09-19",
             "fits": {
                 "repeat0_curation0": "invonly 2026-09-18 01:52:07",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
                 "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
-                "repeat1_curation1": "spline 2026-09-18 02:03:42",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
+                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
+                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
             }
         }
     },
@@ -22,14 +22,14 @@
         "block_lo": 2310,
         "curated": 2309,
         "dropped": 18,
-        "era1_first_uses": 172,
+        "era1_first_uses": 173,
         "era2_first_uses": 5,
         "era2_lo": 2398,
         "exact_positions": 284,
         "forward": "`gecko` and `shine`",
         "forward_positions": "2266 and 2265",
         "last_curated_id": 2287,
-        "measured": "2026-09-20",
+        "measured": "2026-09-21",
         "purge": 20,
         "requeued": "`hasty` and `unlit`",
         "run1.gap": "2319 and 2320",

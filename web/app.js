@@ -1142,9 +1142,12 @@ function curationFact(prior) {
             has <b>left</b> — all of it, when that prior is off. ${note}</p>
           <p>So it is a conditional probability — off-list <em>given not a
             repeat</em> — and has to be measured with that denominator. On that
-            basis off-list answers run at ${RATE(m.regime.noncurated)} over the
-            ${COUNT(m.puzzles)} puzzles since Wordle #${m.start_puzzle}, against
-            ${RATE(m.all_time.noncurated)} across the whole record.</p>`,
+            basis off-list answers run at ${RATE(m.all_time.noncurated)} across
+            the whole record, ${RATE(m.regime.noncurated)} over the
+            ${COUNT(m.puzzles)} puzzles since Wordle #${m.start_puzzle}, and
+            ${RATE(m.recent.noncurated)} over the last
+            ${COUNT(m.recent_puzzles)}. The ${PERCENT(prior.noncurated_prob)}
+            is set on that last window.</p>`,
   };
 }
 

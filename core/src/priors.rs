@@ -16,7 +16,10 @@ use crate::data::{load_table, parse_table, WordleData};
 use crate::sum::pairwise;
 
 pub const DEFAULT_REPEAT_PROB: f64 = 0.10;
-pub const DEFAULT_NONCURATED_PROB: f64 = 0.10;
+pub const DEFAULT_NONCURATED_PROB: f64 = 0.30;
+/// The window the off-list default is set on; README *The regime the
+/// defaults describe*.
+pub const RECENT_PUZZLES: usize = 100;
 
 /// 'binned': a Laplace-smoothed histogram of repeats over the source index,
 /// meaning where in the original answer order the reused word came from.
@@ -136,6 +139,9 @@ pub struct Regime {
     pub puzzles: usize,
     pub regime_repeat: f64,
     pub regime_noncurated: f64,
+    pub recent_repeat: f64,
+    pub recent_noncurated: f64,
+    pub recent_puzzles: usize,
     pub all_time_repeat: f64,
     pub all_time_noncurated: f64,
     pub words: usize,
@@ -145,7 +151,8 @@ pub struct Regime {
 
 /// The regime starts at the first repeat in the record: nothing repeated before
 /// it, and nothing was off-list before it either. Off-list is conditional on
-/// not being a repeat, the same order the model draws in.
+/// not being a repeat, the same order the model draws in. `recent` is the same
+/// pair over the last `RECENT_PUZZLES`.
 pub fn regime_stats(data: &WordleData) -> Regime {
     let words = &data.past_solutions;
     let curated: std::collections::HashSet<&str> =
@@ -173,12 +180,17 @@ pub fn regime_stats(data: &WordleData) -> Regime {
     };
 
     let (regime_repeat, regime_noncurated) = rates(start);
+    let recent_puzzles = RECENT_PUZZLES.min(words.len());
+    let (recent_repeat, recent_noncurated) = rates(words.len() - recent_puzzles);
     let (all_time_repeat, all_time_noncurated) = rates(0);
     Regime {
         start_puzzle: data.puzzle_numbers.get(start).copied().unwrap_or(1),
         puzzles: words.len() - start,
         regime_repeat,
         regime_noncurated,
+        recent_repeat,
+        recent_noncurated,
+        recent_puzzles,
         all_time_repeat,
         all_time_noncurated,
         words: data.n_words(),

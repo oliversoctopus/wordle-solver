@@ -45,7 +45,7 @@ python tests/anchors.py --full --seed 7 --rounds 200
 
 ## `fit_provenance.py` — the cached f is a fit of the answer record we have
 
-The estimator cache is keyed on the `PriorConfig` alone, so `solutions.py --write` leaves every fit describing a shorter record. This compares each cache's `fitted_at` stamp with the date of the newest answer the solver uses, and names the configuration to refit. The repeat-off priors are exempt, since `priors.build_weights` reads the record only under `PriorConfig.repeat`.
+The estimator cache is keyed on the `PriorConfig` alone, so `solutions.py --write` leaves every fit describing a shorter record. This compares each cache's `fitted_at` stamp, or its `ranked_at` stamp where `form_default.py --promote` kept it as the best fit on a longer record, with the date of the newest answer the solver uses, and names the configuration to refit. The repeat-off priors are exempt, since `priors.build_weights` reads the record only under `PriorConfig.repeat`.
 
 ## `doc_refs.py` — every pointer into the documents and the code resolves
 

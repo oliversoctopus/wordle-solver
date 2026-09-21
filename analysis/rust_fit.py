@@ -103,6 +103,9 @@ common.record("mean_delta", float(deltas.mean()))
 if spread:
     common.record("seed_spread_max", max(spread.values()))
     common.record("seed_spread_min", min(spread.values()))
+    common.record("seed_spread_widest", max(spread, key=spread.get))
+    for slug, value in spread.items():
+        common.record(f"seed_spread.{slug}", value)
     common.record("seeds", len(args.seeds))
 print("  a difference with no sign is a different valid fit; one that is worse "
       "on most of the pairs would be a defect, and is what this looks for")

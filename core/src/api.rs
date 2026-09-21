@@ -591,11 +591,19 @@ fn describe_prior(out: &mut String, loaded: &state::Loaded, config: &PriorConfig
             .int("words", stats.words as i64)
             .int("curated", stats.curated as i64)
             .int("used", stats.used as i64)
+            .int("recent_puzzles", stats.recent_puzzles as i64)
             .raw("regime", |out| {
                 let mut rates = Object::new(out);
                 rates
                     .num("repeat", stats.regime_repeat)
                     .num("noncurated", stats.regime_noncurated);
+                rates.end();
+            })
+            .raw("recent", |out| {
+                let mut rates = Object::new(out);
+                rates
+                    .num("repeat", stats.recent_repeat)
+                    .num("noncurated", stats.recent_noncurated);
                 rates.end();
             })
             .raw("all_time", |out| {

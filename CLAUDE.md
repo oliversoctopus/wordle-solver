@@ -58,6 +58,7 @@ python editor.py                  rewrite what the site says, on :8001/editor
 * Reduce a float vector through `sum::pairwise` wherever the Python spells `.sum()`. `kernels.rs` and `api::find` accumulate left to right to match their bucket totals. A numpy `@` cannot be matched; those fields are compared on a tolerance.
 * Break a tie by word index over a key rounded to `BRANCH_TIE_TOL`. A cap or a top-k never stands on last bits.
 * No fast math anywhere. `rustc` exposes none; do not add a crate that does.
+* `core/src/priors.rs` carries the prior defaults, and `rust_train` names a prior by its slug alone, so a changed default is fitted against the compiled value. Run `./build.sh` before any fit. `tests/rust_parity.py` catches the two disagreeing.
 
 ## Where the data comes from
 
@@ -85,7 +86,7 @@ A script calls `common.record(key, value)` at the print site; the figure lands i
 
 The refresh: `solutions.py --write`, refit, rerun the live scripts, `doc_numbers.py --write`, reread what moved. `analysis/README.md` *Rerunning them* says which scripts are live and which are findings.
 
-The refit: `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move; `--repeat-only` skips them. Which form wins a refit is fit noise, not a finding.
+The refit: `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. A change to a prior's probabilities or shapes needs `compare --forms all`. `results_tables.py` replays every archived form, and a fit made under another prior is the mis-paired curve SOLVER_EXPLAINED *The form of `f` has to be refitted per shape* describes. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move; `--repeat-only` skips them. Which form wins a refit is fit noise, not a finding.
 
 A cause needs a measurement. Before writing "because", name two candidate causes and run something that separates them, or label the claim as a guess. Say which kind of claim a sentence is: measured, follows from the code, or guessed.
 

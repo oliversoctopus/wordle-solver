@@ -18,7 +18,8 @@
         0.16410086676197125,
         0.9095394694700143
     ],
-    "fitted_at": "2026-09-17 21:54:33",
+    "fitted_at": "2026-09-20 21:34:34",
+    "fitted_by": "rust",
     "n_games": 2000,
     "seed": 0,
     "iterations": 5,
@@ -29,17 +30,16 @@
     "mean_guesses_last_eval": 4.079,
     "fit_rmse": 0.6601855427613534,
     "holdout": {
-        "games": 2000,
-        "mean_guesses_solved": 4.023023023023023,
-        "mean_guesses_penalized": 4.026,
-        "solve_rate": 0.999,
+        "games": 200,
+        "mean_guesses_solved": 4.085,
+        "mean_guesses_penalized": 4.085,
+        "solve_rate": 1,
         "distribution": {
-            "2": 11,
-            "3": 451,
-            "4": 1100,
-            "5": 353,
-            "6": 83,
-            "7": 2
+            "2": 1,
+            "3": 37,
+            "4": 115,
+            "5": 38,
+            "6": 9
         }
     },
     "opening_word": "tares",
@@ -54,7 +54,7 @@
                 0.9095394694700143
             ],
             "terms_used": 2,
-            "seconds": 0.8633725
+            "seconds": 1.0712581
         },
         {
             "label": "iter 1",
@@ -68,7 +68,7 @@
                 0.7930927558445489
             ],
             "terms_used": 2,
-            "seconds": 0.9088167
+            "seconds": 0.9476356
         },
         {
             "label": "iter 2",
@@ -82,7 +82,7 @@
                 0.8040954862532913
             ],
             "terms_used": 2,
-            "seconds": 0.8740163
+            "seconds": 0.9874576
         },
         {
             "label": "iter 3",
@@ -96,7 +96,7 @@
                 0.8058456795176576
             ],
             "terms_used": 2,
-            "seconds": 0.8772472
+            "seconds": 0.9921199
         },
         {
             "label": "iter 4",
@@ -110,8 +110,7 @@
                 0.8076661369006637
             ],
             "terms_used": 2,
-            "seconds": 0.8775575
+            "seconds": 0.9711101
         }
-    ],
-    "fitted_by": "rust"
+    ]
 }

@@ -4,7 +4,7 @@
         "repeat": true,
         "curation": true,
         "repeat_prob": 0.1,
-        "noncurated_prob": 0.1,
+        "noncurated_prob": 0.3,
         "repeat_shape": "uniform",
         "curation_shape": "uniform"
     },
@@ -16,128 +16,128 @@
         "x^2"
     ],
     "params": [
-        0.17805750215327476,
-        0.4206185536589622,
+        0.17172130282749468,
+        0.5976225500197134,
         0.0
     ],
-    "fitted_at": "2026-09-17 21:58:05",
+    "fitted_at": "2026-09-21 00:40:42",
+    "fitted_by": "python",
     "n_games": 2000,
     "seed": 0,
     "iterations": 6,
-    "converged": true,
+    "converged": false,
     "terms_used": 2,
-    "entropy_baseline_mean_guesses": 3.742,
-    "best_train_mean_guesses": 3.187,
-    "mean_guesses_last_eval": 3.187,
-    "fit_rmse": 0.6270172321394365,
+    "entropy_baseline_mean_guesses": 3.8335,
+    "best_train_mean_guesses": 3.463,
+    "mean_guesses_last_eval": 3.4635,
+    "fit_rmse": 0.7958864068762334,
     "holdout": {
-        "games": 2000,
-        "mean_guesses_solved": 3.1425,
-        "mean_guesses_penalized": 3.1425,
+        "games": 200,
+        "mean_guesses_solved": 3.43,
+        "mean_guesses_penalized": 3.43,
         "solve_rate": 1.0,
         "distribution": {
-            "2": 274,
-            "3": 1283,
-            "4": 345,
-            "5": 80,
-            "6": 18
+            "2": 17,
+            "3": 106,
+            "4": 53,
+            "5": 22,
+            "6": 2
         }
     },
-    "opening_word": "salet",
-    "opening_expected_guesses": 3.198194868597385,
+    "opening_word": "tares",
+    "opening_expected_guesses": 3.5317834179951326,
     "history": [
         {
             "label": "entropy seed",
-            "mean_guesses": 3.742,
+            "mean_guesses": 3.8335,
             "policy_params": null,
             "fitted_params": [
-                -0.7182715653467927,
-                3.2934284372482043,
-                0.0846801408718171
+                -0.27452987648654475,
+                2.1634568866351276,
+                0.03744620300607303
             ],
             "terms_used": 3,
-            "seconds": 0.7396590000134893
+            "seconds": 0.8091021000291221
         },
         {
             "label": "iter 1",
-            "mean_guesses": 3.275,
+            "mean_guesses": 3.516,
             "policy_params": [
-                -0.7182715653467927,
-                3.2934284372482043,
-                0.0846801408718171
+                -0.27452987648654475,
+                2.1634568866351276,
+                0.03744620300607303
             ],
             "fitted_params": [
-                0.15612601000917367,
-                0.6052182640692608,
+                0.17172130282749468,
+                0.5976225500197134,
                 0.0
             ],
             "terms_used": 2,
-            "seconds": 0.9094271000067238
+            "seconds": 0.9750216000247747
         },
         {
             "label": "iter 2",
-            "mean_guesses": 3.189,
+            "mean_guesses": 3.463,
             "policy_params": [
-                0.15612601000917367,
-                0.6052182640692608,
+                0.17172130282749468,
+                0.5976225500197134,
                 0.0
             ],
             "fitted_params": [
-                0.17685035038162297,
-                0.42739132684293163,
-                0.0
+                0.1462325149291497,
+                0.5962699629258419,
+                0.0033798594045343776
             ],
-            "terms_used": 2,
-            "seconds": 0.8537835000024643
+            "terms_used": 3,
+            "seconds": 0.9417663000058383
         },
         {
             "label": "iter 3",
-            "mean_guesses": 3.1885,
+            "mean_guesses": 3.4645,
             "policy_params": [
-                0.17685035038162297,
-                0.42739132684293163,
-                0.0
+                0.1462325149291497,
+                0.5962699629258419,
+                0.0033798594045343776
             ],
             "fitted_params": [
-                0.17805750215327476,
-                0.4206185536589622,
-                0.0
+                0.13841640477291098,
+                0.6255747507070505,
+                0.0038875023763541845
             ],
-            "terms_used": 2,
-            "seconds": 0.8462407999904826
+            "terms_used": 3,
+            "seconds": 0.9425639000255615
         },
         {
             "label": "iter 4",
-            "mean_guesses": 3.187,
+            "mean_guesses": 3.4655,
             "policy_params": [
-                0.17805750215327476,
-                0.4206185536589622,
-                0.0
+                0.13841640477291098,
+                0.6255747507070505,
+                0.0038875023763541845
             ],
             "fitted_params": [
-                0.1791924804542964,
-                0.4126628705242733,
-                0.0
+                0.13184194100763813,
+                0.6440871720928579,
+                0.004525200189846181
             ],
-            "terms_used": 2,
-            "seconds": 0.846389900019858
+            "terms_used": 3,
+            "seconds": 0.9633860000176355
         },
         {
             "label": "iter 5",
-            "mean_guesses": 3.187,
+            "mean_guesses": 3.4635,
             "policy_params": [
-                0.1791924804542964,
-                0.4126628705242733,
-                0.0
+                0.13184194100763813,
+                0.6440871720928579,
+                0.004525200189846181
             ],
             "fitted_params": [
-                0.1791924804542964,
-                0.41266287052427314,
-                0.0
+                0.13582907537228145,
+                0.6284764791810852,
+                0.004180348713689683
             ],
-            "terms_used": 2,
-            "seconds": 0.8487074000004213
+            "terms_used": 3,
+            "seconds": 0.9459592999774031
         }
-    ],
-    "fitted_by": "python"
+    ]
 }

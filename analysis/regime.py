@@ -13,7 +13,7 @@ import numpy as np
 
 import common
 from priors import (DEFAULT_NONCURATED_PROB, DEFAULT_REPEAT_PROB, PriorConfig,
-                    build_weights)
+                    RECENT_PUZZLES, build_weights)
 from wordle_data import load_data
 
 sol = common.solutions()
@@ -47,11 +47,16 @@ def row(lo, hi, label):
 start = common.regime_start(sol)
 end2025 = sum(1 for r in sol if r["print_date"] < "2026-01-01")
 regime_no = common.puzzle_no(sol[start], start)
+mid = start + (N - start) // 2
 table, rates = [], {}
 for key, (lo, hi, label, shown) in {
         "early": (0, end2025, "2021-2025", "2021\u20132025"),
         "since": (start, N, f"since #{regime_no} ({common.REGIME_DATE})",
-                  f"**since Wordle #{regime_no} ({common.REGIME_DATE})**"),
+                  f"since Wordle #{regime_no} ({common.REGIME_DATE})"),
+        "first_half": (start, mid, "  its first half", "its first half"),
+        "second_half": (mid, N, "  its second half", "its second half"),
+        "recent": (N - RECENT_PUZZLES, N, f"last {RECENT_PUZZLES}",
+                   f"**last {RECENT_PUZZLES}**"),
         "last50": (N - 50, N, "last 50", "last 50"),
         "all": (0, N, "all time", "all time")}.items():
     n, rep, off = row(lo, hi, label)
@@ -59,7 +64,7 @@ for key, (lo, hi, label, shown) in {
     common.record(f"{key}.puzzles", n)
     common.record(f"{key}.repeat", rep)
     common.record(f"{key}.offlist", off)
-    bold = key == "since"
+    bold = key == "recent"
     cells = [f"{n:,}", f"{rep:.2f}%" if key == "early" else f"{rep:.1f}%",
              f"{off:.2f}%" if key == "early" else f"{off:.1f}%"]
     if bold:
@@ -140,12 +145,18 @@ for label, config in [
     implied.append((label, f"{100*w[is_used].sum():.1f}%",
                     f"{100*w[~is_used & ~is_curated].sum()/unused:.1f}%"))
 
-# the observed pair: the regime row of the table above, restated
+# the observed pairs: the regime and recent rows of the table above, restated
 nonrep = [j for j in range(start, N) if not is_repeat[j]]
 obs_off = sum(off_list[j] for j in nonrep) / len(nonrep)
 print(f"\n  {'observed':14s} {100*rep_rate:8.1f}% {100*obs_off:20.1f}%   over the "
       f"regime's {N - start} puzzles")
-implied.append(("*observed*", f"*{100*rep_rate:.1f}%*", f"*{100*obs_off:.1f}%*"))
+implied.append(("*observed, the regime*", f"*{100*rep_rate:.1f}%*",
+                f"*{100*obs_off:.1f}%*"))
+recent_rep, recent_off = rates["recent"]
+print(f"  {'observed':14s} {recent_rep:8.1f}% {recent_off:20.1f}%   over the "
+      f"last {RECENT_PUZZLES}")
+implied.append((f"*observed, the last {RECENT_PUZZLES}*", f"*{recent_rep:.1f}%*",
+                f"*{recent_off:.1f}%*"))
 common.record("implied_table", common.md_table(
     ["prior", "implied repeat rate", "implied off-list rate, given not a repeat"],
     implied))

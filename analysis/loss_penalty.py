@@ -143,6 +143,8 @@ def policies():
     print(f"\n  entropy loses {int(entropy.sum())} words, the default "
           f"{int(default.sum())}, sharing {int((entropy & default).sum())}")
     common.record("policies.default_lost", int(default.sum()))
+    common.record("policies.entropy_lost", int(entropy.sum()))
+    common.record("policies.shared_lost", int((entropy & default).sum()))
     never = np.array([w not in curated for w in data.all_words])
     common.record("policies.default_lost_uncurated", int((default & never).sum()))
 
@@ -467,6 +469,20 @@ def sweep(label, settings, run, baseline_key):
     head = ["`--loss-penalty`", "loss probability", "mean (solved)", "mean (loss = 7)"] \
         if tag == "penalty" else ["`--exact-max`", "loss probability", "mean (loss = 7)"]
     common.record(f"{tag}.table", common.md_table(head, table))
+    if tag == "penalty":
+        # the three-row form SOLVER_EXPLAINED *Why the penalty is 5* carries
+        short = []
+        for setting in (1, 5, 30):
+            if setting not in blended:
+                continue
+            row = blended[setting]
+            cells = (f"{setting:g}", f"{row['loss_prob'] * 100:.4f}%",
+                     f"{row['mean_penalized']:.4f}")
+            if setting == baseline_key:
+                cells = tuple(f"**{c}**" for c in cells)
+            short.append(cells)
+        common.record("penalty.short_table", common.md_table(
+            ["penalty", "loss probability", "mean (loss scored as 7)"], short))
     if have_baseline:
         first = blended[settings[0]]
         last = blended[settings[-1]]

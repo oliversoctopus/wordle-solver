@@ -18,7 +18,8 @@
         1.6121783602132078,
         0.19563317963360025
     ],
-    "fitted_at": "2026-09-17 21:54:57",
+    "fitted_at": "2026-09-21 00:38:28",
+    "fitted_by": "rust",
     "n_games": 2000,
     "seed": 0,
     "iterations": 6,
@@ -29,17 +30,16 @@
     "mean_guesses_last_eval": 4.082,
     "fit_rmse": 0.6568488774178736,
     "holdout": {
-        "games": 2000,
-        "mean_guesses_solved": 4.024024024024024,
-        "mean_guesses_penalized": 4.027,
-        "solve_rate": 0.999,
+        "games": 200,
+        "mean_guesses_solved": 4.07,
+        "mean_guesses_penalized": 4.07,
+        "solve_rate": 1,
         "distribution": {
-            "2": 11,
-            "3": 447,
-            "4": 1099,
-            "5": 365,
-            "6": 76,
-            "7": 2
+            "2": 1,
+            "3": 36,
+            "4": 118,
+            "5": 38,
+            "6": 7
         }
     },
     "opening_word": "tares",
@@ -54,7 +54,7 @@
                 0.19227470570555547
             ],
             "terms_used": 2,
-            "seconds": 0.883499
+            "seconds": 0.8884544
         },
         {
             "label": "iter 1",
@@ -68,7 +68,7 @@
                 0.19563317963360025
             ],
             "terms_used": 2,
-            "seconds": 0.9092834
+            "seconds": 0.9166843
         },
         {
             "label": "iter 2",
@@ -82,7 +82,7 @@
                 0.196827352740151
             ],
             "terms_used": 2,
-            "seconds": 0.9006237
+            "seconds": 0.9356266
         },
         {
             "label": "iter 3",
@@ -96,7 +96,7 @@
                 0.19525342645164517
             ],
             "terms_used": 2,
-            "seconds": 0.876634
+            "seconds": 1.0087347
         },
         {
             "label": "iter 4",
@@ -110,7 +110,7 @@
                 0.19639238136310766
             ],
             "terms_used": 2,
-            "seconds": 0.8882416
+            "seconds": 0.975251
         },
         {
             "label": "iter 5",
@@ -124,8 +124,7 @@
                 0.1952746970074216
             ],
             "terms_used": 2,
-            "seconds": 0.8787187
+            "seconds": 0.9611063
         }
-    ],
-    "fitted_by": "rust"
+    ]
 }

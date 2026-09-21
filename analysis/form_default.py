@@ -61,9 +61,9 @@ for config in common.filter_priors(configs, args):
     for form in forms:
         records[form] = archived(config, form)
     # the fit already in play competes too, so a refit can only ever improve
-    # on it; its row carries the form it was made in
+    # on it, unless it was made under other prior probabilities and cannot play
     current = estimator.load_record(config)
-    if current is not None:
+    if current is not None and current.get("prior") == config.fingerprint():
         records[ACTIVE] = current
     for label, record in records.items():
         if record is None:
@@ -102,6 +102,10 @@ for config in common.filter_priors(configs, args):
               f"{openings[label]:>8s}")
     if args.promote:
         if best == ACTIVE:
+            # the kept fit carries the date it was ranked best on this record
+            record = dict(records[ACTIVE],
+                          ranked_at=time.strftime("%Y-%m-%d %H:%M:%S"))
+            write_json(estimator.cache_path(config), record)
             print(f"\n  kept the active {records[ACTIVE]['form']}; no archive beats it")
         else:
             record = dict(records[best],

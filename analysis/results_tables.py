@@ -103,6 +103,18 @@ if args.part in ("forms", "both"):
     common.record("rmse_line", rmse[others[0]])
     common.record("rmse_lo", min(rmse[f] for f in same))
     common.record("rmse_hi", max(rmse[f] for f in same))
+    # the worst fit of the nine, its play, and the range the rest fit in
+    worst = max(fitted, key=rmse.get)
+    common.record("worst_fit.form", f"`{worst}`")
+    common.record("worst_fit.rmse", rmse[worst])
+    common.record("worst_fit.gap", scored[worst][0] - scored[best][0])
+    common.record("worst_fit.opening", meta[worst][1])
+    rest = [rmse[f] for f in fitted if f != worst]
+    common.record("worst_fit.rest_lo", min(rest))
+    common.record("worst_fit.rest_hi", max(rest))
+    # the forms that open on another word than the best, and how they fit
+    common.record("other_opening.count", len(others))
+    common.record("other_opening.rmse_hi", max(rmse[f] for f in others))
     common.record("invonly_gap", scored["invonly"][0] - scored[best][0])
 
     # the fitted curve SOLVER_EXPLAINED section 6 reads: the spline under the

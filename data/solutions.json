@@ -12910,5 +12910,19 @@
         "print_date": "2026-09-17",
         "days_since_launch": 1916,
         "editor": "Tracy Bennett"
+    },
+    {
+        "id": 2228,
+        "solution": "snowy",
+        "print_date": "2026-09-18",
+        "days_since_launch": 1917,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 5231,
+        "solution": "waken",
+        "print_date": "2026-09-19",
+        "days_since_launch": 1918,
+        "editor": "Tracy Bennett"
     }
 ]

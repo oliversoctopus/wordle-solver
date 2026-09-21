@@ -1,33 +1,33 @@
 {
     "runs": {
         "repeat_shapes.py": {
-            "at": "2026-09-18 00:47",
-            "solutions": 1917,
-            "through": "2026-09-17",
+            "at": "2026-09-21 00:58",
+            "solutions": 1919,
+            "through": "2026-09-19",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
-                "repeat1_curation1": "spline 2026-09-17 22:12:11",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
+                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
+                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
             }
         },
         "repeat_shapes.py --events 18": {
-            "at": "2026-09-18 00:47",
-            "solutions": 1917,
-            "through": "2026-09-17",
+            "at": "2026-09-21 00:58",
+            "solutions": 1919,
+            "through": "2026-09-19",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-17 22:05:12",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-17 22:06:12",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-17 22:08:04",
-                "repeat1_curation1": "spline 2026-09-17 22:12:11",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-17 22:13:35",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-17 22:15:38",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-17 22:09:54",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-17 22:08:58"
+                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
+                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
+                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
+                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
             }
         }
     },
@@ -70,6 +70,7 @@
         "gain_se": 0.20457568381477398,
         "inflation": 29.157697693431107,
         "insample": 1.4585193077963268,
+        "measured": "2026-09-21",
         "sigma": 5.519984729031214,
         "table": "| model | logL over 24 events | vs. uniform |\n| --- | --- | --- |\n| uniform over used (current) | −179.7 | — |\n| binned, width 200, α = 0.5 | **−152.6** | **+27.1** |\n| binned, width 200, α = 1.0 | −155.5 | +24.2 |\n| best of 16 window variants (last K ∈ 3/5/8/all, ±25…±200) | −161.5 | +18.2 |",
         "uniform": -179.7184697885458,

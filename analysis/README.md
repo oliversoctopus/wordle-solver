@@ -14,7 +14,10 @@ python analysis/curation_shapes.py  prequential comparison of curation shapes
 python analysis/fresh_shapes.py     the third group, and why it has no shape
 python analysis/id_eras.py          the NYT's id field: what it indexes and when it changed
 python analysis/hard_mode.py        the cost of the hard-mode restriction
+python analysis/hard_mode.py --all-priors --mode entropy   the same restriction under greedy entropy
 python analysis/hard_mode_rules.py  the value of the NYT's looser rule
+python analysis/hard_mode_rules.py --no-endgame   the same with the endgame search off
+python analysis/hard_mode_rules.py --mode entropy  the same under greedy entropy
 python analysis/lookahead.py        the value of one ply of lookahead
 python analysis/lookahead_accuracy.py   how well the two valuations price a position
 python analysis/lookahead_accuracy.py --decisions   the stake in the choice
@@ -23,6 +26,7 @@ python analysis/exact_decisions.py --who-decides   which valuation takes each tu
 python analysis/opening.py          whether the opening f picks is the best one
 python analysis/turn2_regret.py     the regret left in the second guess, and whether it holds
 python analysis/loss_penalty.py     the penalty and the endgame search's reach
+python analysis/loss_penalty.py --exact-max 24 40 60 80 100   the reach table README quotes
 python analysis/loss_penalty.py --policies    entropy against the estimator
 python analysis/loss_penalty.py --search      the search's contribution, by its reach
 python analysis/loss_penalty.py --cost        the time cost of reaching further
@@ -33,7 +37,7 @@ python analysis/ablations.py        the same questions in wall clock -- needs an
 python analysis/replay.py           the shapes in guesses (slow)
 python analysis/replay.py --shapes       the four shape combinations against uniform shapes
 python analysis/replay.py --all-priors   each prior on real answers
-python analysis/prior_basin.py      how much of the prior's setting reaches the board (slow)
+python analysis/prior_basin.py      how much of the prior's setting reaches the board, and the off-list default (slow)
 python analysis/fresh_arm.py        why the fresh arm and the real fresh answers disagree
 python analysis/refit_lag.py        the cost of a stale answer record
 python analysis/form_default.py     which form to fit by default (slower)
@@ -111,7 +115,7 @@ The native sweep is worth about <!--n timing.sweep.expected.python_over_rust .1f
 | `loss_cost.py` | the continuation figures in SOLVER_EXPLAINED §11 |
 | `branch_cap.py` | the branch-cap table in SOLVER_EXPLAINED §16, the claim in §10(d) that the cap never costs the winner, and the node counts under README *The exact endgame* |
 | `ablations.py` | the ablation table in SOLVER_EXPLAINED §16, and the memo and branch-cap figures beside it; its `--projection` the whole of §17 |
-| `prior_basin.py` | README *The prior sits in a flat basin* |
+| `prior_basin.py` | README *The prior sits in a flat basin*, and the off-list sweep under *The regime the defaults describe* |
 | `fresh_arm.py` | the fresh-arm paragraphs of SOLVER_EXPLAINED §14.1 and README *What the two shapes are worth together* |
 | `refit_lag.py` | README *How fresh the answer record has to be*, and the two paragraphs closing SOLVER_EXPLAINED §14.1 |
 | `replay.py` | the head-to-head paragraph under README *The curation prior's shape*; its `--shapes` the whole of README *What the two shapes are worth together* and the regime replay under *The repeat prior's shape*; its `--all-priors` the whole of *What each prior is worth on real answers* |
@@ -130,8 +134,9 @@ Not all of them after every `solutions.py --write`. The scripts are of two kinds
 A **live** figure describes the shipped solver as it stands and moves with the record or the fit: the regime rates, the shape scores, the prior replays, which form each prior plays, the results tables, hard mode's cost. Its scripts are the routine refresh, about fifteen minutes between them:
 
 * `regime.py`, `repeat_shapes.py`, `drift.py`, `curation_shapes.py`, `id_eras.py`
-* `form_default.py --promote`, `replay.py` in its three modes, `results_tables.py`, `hard_mode.py --all-priors`
+* `form_default.py --promote`, `replay.py` in its three modes, `results_tables.py`, `hard_mode.py --all-priors` and `--mode entropy`, `hard_mode_rules.py` in its three modes
 * `turn2_regret.py`, whose enumerated rows are a finding but whose real-answer rows replay the record
+* `prior_basin.py`, whose recent-window rows follow the record and back the off-list default
 * `site_size.py`, after `./build_site.sh`
 
 A **finding** answered a question once and is a property of the design that a refit re-confirms: lookahead is worth nothing, the branch cap never costs the winner, the fit does not converge to its best round, the native fit is as good, a stale record costs nothing. Those are rerun when the code they measure changes, and each one's results file says when that last was. The table below quotes it.
@@ -140,18 +145,18 @@ Nothing warns about a stale fit either way. The estimator cache is keyed on the 
 
 | finding | last measured |
 | --- | --- |
-| `lookahead.py`, `lookahead_accuracy.py` | <!--s lookahead.measured-->2026-09-18<!--/s--> |
-| `exact_decisions.py`, `opening.py` | <!--s opening.measured-->2026-09-18<!--/s--> |
-| `loss_penalty.py`, `loss_cost.py`, `branch_cap.py` | <!--s loss_penalty.measured-->2026-09-20<!--/s--> |
-| `fit_rounds.py`, `rust_fit.py`, `pattern_offsets.py` | <!--s fit_rounds.measured-->2026-09-18<!--/s--> |
-| `prior_basin.py`, `fresh_arm.py`, `refit_lag.py`, `fresh_shapes.py` | <!--s prior_basin.measured-->2026-09-18<!--/s--> |
+| `lookahead.py`, `lookahead_accuracy.py` | <!--s lookahead.measured-->2026-09-21<!--/s--> |
+| `exact_decisions.py`, `opening.py` | <!--s opening.measured-->2026-09-21<!--/s--> |
+| `loss_penalty.py`, `loss_cost.py`, `branch_cap.py` | <!--s loss_penalty.measured-->2026-09-21<!--/s--> |
+| `fit_rounds.py`, `rust_fit.py`, `pattern_offsets.py` | <!--s fit_rounds.measured-->2026-09-21<!--/s--> |
+| `fresh_arm.py`, `refit_lag.py`, `fresh_shapes.py` | <!--s fresh_arm.measured-->2026-09-21<!--/s--> |
 | `ablations.py`, `table_layout.py`, `fused_gain.py`, `timing.py` | <!--s timing.measured-->2026-09-20<!--/s--> |
 
 **Not every arm moves.** `priors.build_weights` consults the used-word mask only under `PriorConfig.repeat`, so a repeat-off prior is the same distribution after the write as before it, its fit is bit-for-bit the same fit, and every figure weighted by it over every word is the same figure. `priors.depends_on_answer_record` is that rule in one line. `wordle_solver.py train --repeat-only` skips the two of the five fits it exempts, and `--repeat-only` drops the same arms from every script here that sweeps priors, printing which it dropped so a table assembled from two runs says so.
 
 The exemption is about where the weights come from, not what an arm is called. The scripts that replay the real answer record (`replay.py`, `prior_basin.py`, `fresh_arm.py`) score their `none` and `curation only` arms over a log that just got longer, so every arm of theirs moves and they take no such flag. Carrying an old row into a new table holds only while nothing else moved either. A `word_lists.py --write`, a fresh `wordlebot.py` scrape or a change to `noncurated_prob` invalidates a repeat-off row as surely as a new answer would, and nothing records which run a row came from.
 
-`replay.py --dump PATH` writes every arm's per-game guess counts out as JSON, <!--n regime.since.puzzles-->228 regime games plus the three arms' <!--n replay.shapes.arms.repeats-->24, <!--n replay.shapes.arms.offlist-->58 and <!--n replay.shapes.arms.fresh-->177 events, one row per arm. With a dump in hand, a contrast nobody thought to print, such as a pair the tables skip or a subgroup split some other way, becomes arithmetic over that file instead of another replay. None is kept here. A dump is true only of the fit and the answer log it was made against, and nothing would catch a checked-in one drifting out of step with either, while `--all-priors` makes a fresh one in two minutes.
+`replay.py --dump PATH` writes every arm's per-game guess counts out as JSON, <!--n regime.since.puzzles-->230 regime games plus the three arms' <!--n replay.shapes.arms.repeats-->24, <!--n replay.shapes.arms.offlist-->59 and <!--n replay.shapes.arms.fresh-->178 events, one row per arm. With a dump in hand, a contrast nobody thought to print, such as a pair the tables skip or a subgroup split some other way, becomes arithmetic over that file instead of another replay. None is kept here. A dump is true only of the fit and the answer log it was made against, and nothing would catch a checked-in one drifting out of step with either, while `--all-priors` makes a fresh one in two minutes.
 
 **Check the method before believing a changed number.** Several scripts score a frozen prefix of the record, and those figures cannot move whatever the answer log does. If they still come out, a number that moved moved because the data did. They are bound to the results files like everything else, so `doc_numbers.py` fails when they stop coming out. The fixed points:
 
@@ -166,7 +171,7 @@ The exemption is about where the weights come from, not what an arm is called. T
 
 `hard_mode.py`, `loss_penalty.py`, `results_tables.py` and `form_default.py` do not draw answers and report a standard error. The solver is deterministic, so a game's outcome is a pure function of the answer, and playing all 12,947 words once with the prior as weights computes the mean and the loss probability. There is no sampling distribution left to put an interval around, and `common.every_answer` is the one implementation they share.
 
-It matters most where the effect is small. The loss penalty is worth about <!--n loss_penalty.penalty.first_to_default.mean +.4f-->+0.0004 guesses, while a 20,000-game sample carries an error near <!--u-->0.009, twenty times larger, and only pairing made those figures readable. Removing the noise also moved conclusions. <!--u-->Under the flat prior the nine forms of `f` span 0.0013 guesses, where a 3,000-answer holdout showed 0.0110<!--/u-->, and most of that spread was noise.
+It matters most where the effect is small. The loss penalty is worth about <!--n loss_penalty.penalty.first_to_default.mean +.4f-->+0.0005 guesses, while a 20,000-game sample carries an error near <!--u-->0.009, twenty times larger, and only pairing made those figures readable. Removing the noise also moved conclusions. <!--u-->Under the flat prior the nine forms of `f` span 0.0013 guesses, where a 3,000-answer holdout showed 0.0110<!--/u-->, and most of that spread was noise.
 
 Three things change shape in the output. A loss rate becomes the exact prior mass on the words that lose, which is not the fraction of words that lose. "Which games changed" becomes a list of words. A block sd or a holdout seed stops existing, so a ranking is a fact about the prior and cannot move on a rerun, which makes a small gap harder to dismiss.
 
@@ -180,7 +185,7 @@ That also lets its arms be compared across different priors, which no enumerated
 
 ## The three fits `--shapes` needs
 
-Comparing the sharpened shapes against the uniform ones needs fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`, and a prior with no fit raises instead of playing an invented `f`. All three are in `estimator_cache/`, fitted the way the shipped five were: the forms archived by `wordle_solver.py compare`, ranked by `form_default.py --shapes`, and the winner written as the active fit by `--promote`. `rust_train` declines a prior outside `priors.ALL_CONFIGS`, so these three are fitted in Python. They came out <!--s form_default.shape_winners-->`spline`, `saturating`, `anchored2`<!--/s-->.
+Comparing the sharpened shapes against the uniform ones needs fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`, and a prior with no fit raises instead of playing an invented `f`. All three are in `estimator_cache/`, fitted the way the shipped five were: the forms archived by `wordle_solver.py compare`, ranked by `form_default.py --shapes`, and the winner written as the active fit by `--promote`. `rust_train` declines a prior outside `priors.ALL_CONFIGS`, so these three are fitted in Python. They came out <!--s form_default.shape_winners-->`spline`, `cubic`, `cubic`<!--/s-->.
 
 The three are not part of a routine refit. The shape question is a finding (README *What the two shapes are worth together*), so their fits stay as they are until it is reopened, and then all eight are refitted together against one answer record. Every arm in a `--shapes` table has to carry a fit of the same history, or the table is comparing solvers and not shapes.
 
@@ -200,7 +205,8 @@ Smaller figures with the same status:
 
 * the search refit moving the curve by under <!--u-->0.03 guesses at an RMSE of <!--u-->0.63, and the search regret of <!--u-->0.0000 at penalty 1
 * the penalty settings within <!--u-->0.0002 guesses of each other across the price of a loss, and `tatty` carrying <!--u-->75% of its family against a <!--u-->0.4% case
-* the r = <!--u-->0.98 of the four-term answer-likeness model
+* the r = <!--u-->0.98 of the four-term answer-likeness model, and the four feature weights `answer_like.py` fits outside this directory
+* the tenth of a guess by which the census once read kinder to the sharpened repeat shape than the real answers did, under fits since replaced (README *What the two shapes are worth together*, SOLVER_EXPLAINED §14.1)
 * the marginal rate past <!--u-->4,000 games a second, the 20,000-game error near <!--u-->0.009 and the holdout span of <!--u-->0.0110
 * the reach's cost moving from <!--u-->1.20× to 1.49×<!--/u--> with the answer log, and `fused_gain.py`'s <!--u-->1.09× on answers drawn from the prior
 
