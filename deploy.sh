@@ -34,4 +34,7 @@ fi
 
 echo
 echo "uploading site/"
+# one request alone refreshes an expired login; the deploy's concurrent
+# requests race for the single-use refresh token and fail "Not authorized"
+npx --yes "$CLI" whoami >/dev/null
 npx --yes "$CLI" deploy site $TARGET
