@@ -31,6 +31,10 @@ FAST = [
      [sys.executable, os.path.join(HERE, "anchors.py")]),
     ("the voice and comment rules hold",
      [sys.executable, os.path.join(HERE, "voice.py")]),
+    ("the spelling is American",
+     [sys.executable, os.path.join(ROOT, "spelling.py")]),
+    ("the spelling fix touches prose alone",
+     [sys.executable, os.path.join(HERE, "spelling_fix.py")]),
 ]
 
 SLOW = [

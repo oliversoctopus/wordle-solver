@@ -317,7 +317,7 @@ def build_parser():
     comp = sub.add_parser("compare", parents=[common],
                           help="policy iteration once per form of f, then tabulate")
     comp.add_argument("--forms", nargs="+", choices=form_choices + ["all"],
-                      default=list(estimator.MAIN_FORMS),
+                      default=[estimator.DEFAULT_FORM],
                       help="forms to compare (default: %(default)s; 'all' for "
                            "every one)")
     comp.add_argument("--games", type=int, default=training.DEFAULT_GAMES)

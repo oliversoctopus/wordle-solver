@@ -121,7 +121,7 @@ pub fn collect_rollouts<S: Source>(solver: &mut Solver<S>, answers: &[usize]) ->
 /// Chunks are collected in index order and each game's samples are appended
 /// whole, so the fit sees the identical vector in the identical order that one
 /// solver playing them in turn would have produced: this is a speed knob and
-/// never a behaviour one.
+/// never a behavior one.
 ///
 /// Unlike the sweep it is off by default, because training turns the endgame
 /// search off and the search is what leaves a core anywhere to go; README

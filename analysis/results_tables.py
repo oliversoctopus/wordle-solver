@@ -33,6 +33,11 @@ def archived(config, form):
         return json.load(file)
 
 
+def signed(x, places):
+    """A table cell with its sign, and a true minus sign."""
+    return f"{x:+.{places}f}".replace("-", "−")
+
+
 def opening_of(solver):
     guess, _ = solver.best_guess(solver.all_candidates(), MAX_GUESSES)
     return solver.data.all_words[guess]
@@ -135,8 +140,9 @@ if args.part in ("forms", "both"):
             cells = [f"**{c}**" for c in cells]
             terms = [f"{params[0]:.3f}", f"{params[1]:.3f}\u00b7x"]
             slopes, slope = [params[1]], params[1]
+            # a hinge that prints as 0.000 is no bend, so it is left out
             for knot, coef in zip((2, 4, 6, 8), params[2:]):
-                if coef != 0.0:
+                if round(coef, 3) != 0.0:
                     sign = "\u2212" if coef < 0 else "+"
                     terms.append(f"{sign} {abs(coef):.3f}\u00b7(x\u2212{knot})\u208a")
                     slope += coef
@@ -147,7 +153,7 @@ if args.part in ("forms", "both"):
             common.record("spline.slopes", ", ".join(f"{x:.3f}" for x in slopes))
             common.record("spline.final_slope", float(slopes[-1]))
             common.record("spline.last_knot", max(
-                k for k, c in zip((2, 4, 6, 8), params[2:]) if c != 0.0))
+                k for k, c in zip((2, 4, 6, 8), params[2:]) if round(c, 3) != 0.0))
         else:
             common.record("flat_spline.f1000", values[4])
             common.record("flat_spline.f16", values[2])
@@ -209,7 +215,7 @@ if args.part in ("priors", "both"):
         print(f"  {label:14s} {entropy:9.4f} {straight:10.4f} {best:9.4f} "
               f"{entropy - straight:+9.4f} {straight - best:+10.4f}")
         split.append((label, f"{entropy:.4f}", f"{straight:.4f}", f"{best:.4f}",
-                      f"+{entropy - straight:.4f}", f"+{straight - best:.4f}"))
+                      signed(entropy - straight, 4), signed(straight - best, 4)))
         key = label.replace(" ", "_")
         common.record(f"{key}.bonus", entropy - straight)
         common.record(f"{key}.curvature", straight - best)
@@ -229,8 +235,8 @@ if args.part in ("priors", "both"):
         [(label, f"{by_label[label][0]:.2f}") for label in order if label in by_label]))
     common.record("bonus_table", common.md_table(
         ["priors on", "possible-answer bonus", "curvature in `f`"],
-        [bold(label, (f"+{by_label[label][0] - by_label[label][1]:.3f}",
-                      f"+{by_label[label][1] - by_label[label][2]:.3f}"))
+        [bold(label, (signed(by_label[label][0] - by_label[label][1], 3),
+                      signed(by_label[label][1] - by_label[label][2], 3)))
          for label in order if label in by_label]))
     common.record("bonus_ratio", (by_label["both"][0] - by_label["both"][1])
                   / (by_label["none"][0] - by_label["none"][1]))

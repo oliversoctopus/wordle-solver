@@ -15,6 +15,7 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 * **Point at code by name**: `priors.build_weights`, `source::Columns`, never `priors.py:221`. `tests/doc_refs.py` resolves every pointer in the documents and the analysis docstrings.
 * **Line endings are LF everywhere.** Write JSON through `wordle_data.write_json`. Anything else that rewrites a file passes `newline=""` to `open`.
 * **Markdown is one line per paragraph. Python is hard-wrapped at about 80 columns.** `python unwrap_md.py` checks; `--write` converts, in its own commit.
+* **Spelling is American.** `python spelling.py` checks; `--write` fixes.
 * **Every measured number in a document is bound** to a results file. See *Numbers in the documents*.
 * **A rule gets a check.** `tests/voice.py` checks *Voice* and the comment rules above. Propose a check with any new rule.
 
@@ -86,7 +87,7 @@ A script calls `common.record(key, value)` at the print site; the figure lands i
 
 The refresh: `solutions.py --write`, refit, rerun the live scripts, `doc_numbers.py --write`, reread what moved. `analysis/README.md` *Rerunning them* says which scripts are live and which are findings.
 
-The refit: `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. A change to a prior's probabilities or shapes needs `compare --forms all`. `results_tables.py` replays every archived form, and a fit made under another prior is the mis-paired curve SOLVER_EXPLAINED *The form of `f` has to be refitted per shape* describes. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move; `--repeat-only` skips them. Which form wins a refit is fit noise, not a finding.
+The refit: `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. A change to a prior's probabilities or shapes needs `compare --forms all` and `form_default.py --shapes`. `results_tables.py` replays every archived form, and a fit made under another prior is the mis-paired curve SOLVER_EXPLAINED *The form of `f` has to be refitted per shape* describes. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move; `--repeat-only` skips them.
 
 A cause needs a measurement. Before writing "because", name two candidate causes and run something that separates them, or label the claim as a guess. Say which kind of claim a sentence is: measured, follows from the code, or guessed.
 

@@ -204,7 +204,7 @@ def _eg_no_table(letters, candidates, weights, wlw, params, codes, knots,
 
 def timed(fn, repeat=3):
     """Best of `repeat`: the run least interrupted by anything else.  It is a
-    defence against a busy machine and not a cure -- see the module docstring."""
+    defense against a busy machine and not a cure -- see the module docstring."""
     best, out = float("inf"), None
     for _ in range(repeat):
         t0 = time.perf_counter()

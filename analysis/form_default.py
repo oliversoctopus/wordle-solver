@@ -2,14 +2,15 @@
 
 Every archived fit is replayed over every possible answer, weighted by the
 prior it was fitted for.  `--shapes` adds the three priors the shape
-comparison needs; `--promote` writes each prior's winner as its active fit,
-ranking the fit already in play with the archives and keeping it when nothing
-beats it.  Backs README *Which form is the default*.
+comparison needs.  `--promote` ranks only the default form's archive against
+the fit in play, writes the better as the active fit, and records nothing.
+Backs README *Which form is the default*.
 """
 
 import argparse
 import json
 import os
+import sys
 import time
 
 import numpy as np
@@ -33,7 +34,8 @@ common.add_prior_filter(parser)
 parser.add_argument("--shapes", action="store_true",
                     help="rank the three shape-comparison priors as well")
 parser.add_argument("--promote", action="store_true",
-                    help="write each prior's best form as its active fit")
+                    help="write each prior's best default-form fit as its "
+                         "active fit")
 args = parser.parse_args()
 
 
@@ -46,11 +48,10 @@ def archived(config, form):
         return json.load(file)
 
 
-forms = sorted(estimator.FORMS)
+forms = [estimator.DEFAULT_FORM] if args.promote else sorted(estimator.FORMS)
 results = {}
 terms_used = {}      # form -> the term counts its fits kept, across priors
 winners = []         # the best archive per prior, for the record
-main_gap = 0.0       # the most the main set gives up against every form
 
 ACTIVE = "(active)"
 
@@ -60,10 +61,11 @@ for config in common.filter_priors(configs, args):
     runs, openings, records = {}, {}, {}
     for form in forms:
         records[form] = archived(config, form)
-    # the fit already in play competes too, so a refit can only ever improve
-    # on it, unless it was made under other prior probabilities and cannot play
+    # the fit in play competes too, so a refit can only improve on it, unless
+    # it was made under other prior probabilities or in a form not ranked here
     current = estimator.load_record(config)
-    if current is not None and current.get("prior") == config.fingerprint():
+    if (current is not None and current.get("prior") == config.fingerprint()
+            and current.get("form") in forms):
         records[ACTIVE] = current
     for label, record in records.items():
         if record is None:
@@ -73,6 +75,9 @@ for config in common.filter_priors(configs, args):
         runs[label] = common.exact_stats(common.every_answer(solver), solver.weights)
         openings[label] = record.get("opening_word", "?")
 
+    if not runs:
+        raise SystemExit(f"{config.slug}: no {forms[0]} fit to rank; run "
+                         f"`wordle_solver.py compare` for this prior first")
     best = min(runs, key=lambda f: runs[f][0])
     # a tie goes to the fit in play, which an identical archive is a copy of
     if ACTIVE in runs and runs[ACTIVE][0] <= runs[best][0] + 1e-12:
@@ -83,10 +88,6 @@ for config in common.filter_priors(configs, args):
     archives = [f for f in forms if f in runs]
     best_archive = min(archives, key=lambda f: runs[f][0])
     winners.append(best_archive)
-    in_main = [f for f in archives if f in estimator.MAIN_FORMS]
-    if in_main:
-        main_gap = max(main_gap, min(runs[f][0] for f in in_main)
-                       - runs[best_archive][0])
     print(f"  every word as the answer, weighted by this prior; gaps to {best}\n")
     print(f"  {'form':11s} {'mean':>7s} {'solved':>8s} {'gap':>8s} {'opening':>8s}")
     order = sorted(runs, key=lambda f: runs[f][0])
@@ -108,11 +109,13 @@ for config in common.filter_priors(configs, args):
             write_json(estimator.cache_path(config), record)
             print(f"\n  kept the active {records[ACTIVE]['form']}; no archive beats it")
         else:
-            record = dict(records[best],
-                          fitted_at=time.strftime("%Y-%m-%d %H:%M:%S"))
-            path = write_json(estimator.cache_path(config), record)
+            # the archive keeps its own date, so an old one promoted reads as old
+            path = write_json(estimator.cache_path(config), records[best])
             print(f"\n  promoted {best} -> {path}")
     print()
+
+if args.promote:
+    sys.exit(0)
 
 common.header("over every prior")
 print("  gap is to the best form for that prior; a form has to be good under a")
@@ -155,9 +158,7 @@ counts = {f: winners.count(f) for f in dict.fromkeys(winners)}
 common.record("winners", ", ".join(f"`{f}` \u00d7{n}" if n > 1 else f"`{f}`"
                                    for f, n in sorted(counts.items(),
                                                       key=lambda kv: -kv[1])))
-common.record("main_forms", ", ".join(f"`{f}`" for f in estimator.MAIN_FORMS))
-common.record("main_forms_gap", main_gap)
 if args.shapes:
     shape_wins = winners[len(winners) - len(SHAPE_CONFIGS):]
     common.record("shape_winners", ", ".join(f"`{f}`" for f in shape_wins))
-print(f"  winners: {counts}; the main set gives up at most {main_gap:.4f}")
+print(f"  winners: {counts}")

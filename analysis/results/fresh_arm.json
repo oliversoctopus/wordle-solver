@@ -1,34 +1,34 @@
 {
     "runs": {
         "fresh_arm.py": {
-            "at": "2026-09-21 01:27",
-            "solutions": 1919,
-            "through": "2026-09-19",
+            "at": "2026-10-04 15:17",
+            "solutions": 1933,
+            "through": "2026-10-03",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
-                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
-                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
-                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
     "values": {
-        "census": 473,
-        "census_today": "−0.006 ± 0.026",
-        "flat.census": "+0.008 ± 0.007",
-        "flat.gap": -0.03089887640449438,
-        "flat.real": "−0.022 ± 0.018",
-        "measured": "2026-09-21",
-        "own.census": "−0.018 ± 0.012",
-        "own.gap": -0.010112359550561795,
-        "own.real": "−0.028 ± 0.037",
-        "real": 178,
-        "sharp.census": "+0.004 ± 0.012",
-        "sharp.gap": 0.0067415730337078645,
-        "sharp.real": "+0.011 ± 0.035"
+        "census": 465,
+        "census_today": "+0.004 ± 0.009",
+        "flat.census": "−0.001 ± 0.006",
+        "flat.gap": -0.020967741935483872,
+        "flat.real": "−0.022 ± 0.017",
+        "measured": "2026-10-04",
+        "own.census": "+0.001 ± 0.006",
+        "own.gap": -0.016666666666666666,
+        "own.real": "−0.016 ± 0.018",
+        "real": 186,
+        "sharp.census": "−0.004 ± 0.005",
+        "sharp.gap": 0.014516129032258067,
+        "sharp.real": "+0.011 ± 0.019"
     }
 }

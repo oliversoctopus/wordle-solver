@@ -624,7 +624,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self.path.split("?", 1)[0]
-        # read first, whoever ends up wanting it: an unread body desynchronises
+        # read first, whoever ends up wanting it: an unread body desynchronizes
         # the kept-alive connection
         try:
             body = self.read_json()

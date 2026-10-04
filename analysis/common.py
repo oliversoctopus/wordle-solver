@@ -385,7 +385,7 @@ def _write_results():
         "fits": _fits_present(),
     }
     payload["values"].update(_RECORDED)
-    # when the figures were last measured, for the catalogue to quote
+    # when the figures were last measured, for the catalog to quote
     payload["values"]["measured"] = time.strftime("%Y-%m-%d")
     payload["values"] = dict(sorted(payload["values"].items()))
     os.makedirs(RESULTS_DIR, exist_ok=True)

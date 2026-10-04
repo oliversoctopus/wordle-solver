@@ -1,9 +1,9 @@
 {
     "runs": {
         "drift.py": {
-            "at": "2026-09-21 00:58",
-            "solutions": 1919,
-            "through": "2026-09-19",
+            "at": "2026-10-04 12:20",
+            "solutions": 1933,
+            "through": "2026-10-03",
             "fits": {
                 "repeat0_curation0": "invonly 2026-09-18 01:52:07",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
@@ -17,25 +17,25 @@
         }
     },
     "values": {
-        "drift": "−0.06 ± 0.88",
-        "drift_se": 0.878072671076701,
-        "events": 24,
+        "drift": "−0.19 ± 0.81",
+        "drift_se": 0.8075622383633233,
+        "events": 25,
         "first18.drift": "+0.55 ± 1.56",
         "first18.drift_se": 1.5605669129968371,
         "first18.events": 18,
         "first18.p": 0.03755308251044731,
         "first18.rho": 0.4613003095975232,
-        "from_first_300": 22,
+        "from_first_300": 23,
         "in_band": 21,
-        "lag_mean": 4.4010273972602745,
-        "lag_sd": 0.7789289039055988,
-        "latest_two": "`click` and `focus`",
-        "latest_two_sources": "#135 and #268",
-        "measured": "2026-09-21",
-        "median_source": 129.0,
-        "outlier_rate": 8.333333333333334,
+        "lag_mean": 4.429589041095891,
+        "lag_sd": 0.7757860518522983,
+        "latest_two": "`focus` and `forth`",
+        "latest_two_sources": "#268 and #56",
+        "measured": "2026-10-04",
+        "median_source": 123.0,
+        "outlier_rate": 8.0,
         "outliers": "`sandy` (#1227), `smile` (#831)",
-        "p": 0.07591902561881758,
-        "rho": 0.3539130434782608
+        "p": 0.182717235000311,
+        "rho": 0.2676923076923077
     }
 }

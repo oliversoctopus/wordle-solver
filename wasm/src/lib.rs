@@ -3,7 +3,7 @@
 //! The page speaks to the solver over `/api/*` with a JSON body and sends the
 //! whole board every submit, so that boundary is a pure function of (path,
 //! body). This exposes exactly that, and `web/wasm-api.js` routes `fetch`
-//! into it. Memory is marshalled by hand: JS calls `alloc`, writes UTF-8,
+//! into it. Memory is marshaled by hand: JS calls `alloc`, writes UTF-8,
 //! calls `handle`, reads the reply out of linear memory, and calls `dealloc`
 //! on both. That is the one unsafe pattern here, confined to this file.
 

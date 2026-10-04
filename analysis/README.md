@@ -40,7 +40,7 @@ python analysis/replay.py --all-priors   each prior on real answers
 python analysis/prior_basin.py      how much of the prior's setting reaches the board, and the off-list default (slow)
 python analysis/fresh_arm.py        why the fresh arm and the real fresh answers disagree
 python analysis/refit_lag.py        the cost of a stale answer record
-python analysis/form_default.py     which form to fit by default (slower)
+python analysis/form_default.py     which form every prior is fitted in; needs compare --forms all first (slower)
 python analysis/fit_rounds.py       what policy iteration converges to, and the search's cost to it
 python analysis/pattern_offsets.py  the share of f's error due to the pattern behind the bucket
 python analysis/branch_tie.py       the branch cap's tie tolerance, and the band it sits in
@@ -79,7 +79,7 @@ Wall clocks on one machine, with the native sweep where a script can use it. A s
 | `fresh_arm.py` | 2 min | | |
 | `refit_lag.py` | 2 min | | |
 | `results_tables.py` | 2 min | | native sweep |
-| `form_default.py` | 12 min | | native sweep; replays every archived fit |
+| `form_default.py` | 12 min | `--promote` ranks one or two fits per prior | native sweep; replays every archived fit |
 | `fit_rounds.py` | 8 min | | native sweep |
 | `pattern_offsets.py` | seconds | | |
 | `branch_tie.py` | 12 min | | Python only: its arms are orderings only `exact.py` has |
@@ -131,32 +131,33 @@ The native sweep is worth about <!--n timing.sweep.expected.python_over_rust .1f
 
 Not all of them after every `solutions.py --write`. The scripts are of two kinds.
 
-A **live** figure describes the shipped solver as it stands and moves with the record or the fit: the regime rates, the shape scores, the prior replays, which form each prior plays, the results tables, hard mode's cost. Its scripts are the routine refresh, about fifteen minutes between them:
+A **live** figure describes the shipped solver as it stands and moves with the record or the fit: the regime rates, the shape scores, the prior replays, the results tables, hard mode's cost. A refit comes first: `wordle_solver.py compare` per prior, then `form_default.py --promote`, which writes the active fits and records no figure. The live scripts are the routine refresh after it:
 
 * `regime.py`, `repeat_shapes.py`, `drift.py`, `curation_shapes.py`, `id_eras.py`
-* `form_default.py --promote`, `replay.py` in its three modes, `results_tables.py`, `hard_mode.py --all-priors` and `--mode entropy`, `hard_mode_rules.py` in its three modes
+* `replay.py` in its three modes, `results_tables.py`, `hard_mode.py --all-priors` and `--mode entropy`, `hard_mode_rules.py` in its three modes
 * `turn2_regret.py`, whose enumerated rows are a finding but whose real-answer rows replay the record
 * `prior_basin.py`, whose recent-window rows follow the record and back the off-list default
 * `site_size.py`, after `./build_site.sh`
 
-A **finding** answered a question once and is a property of the design that a refit re-confirms: lookahead is worth nothing, the branch cap never costs the winner, the fit does not converge to its best round, the native fit is as good, a stale record costs nothing. Those are rerun when the code they measure changes, and each one's results file says when that last was. The table below quotes it.
+A **finding** answered a question once and is a property of the design that a refit re-confirms: lookahead is worth under a hundredth of a guess, the branch cap never costs the winner, the fit does not converge to its best round, the native fit is as good, a stale record costs nothing. Those are rerun when the code they measure changes, and each one's results file says when that last was. The table below quotes it.
 
 Nothing warns about a stale fit either way. The estimator cache is keyed on the `PriorConfig` alone, so refit before rerunning `replay.py` or it measures an old policy against new answers.
 
 | finding | last measured |
 | --- | --- |
-| `lookahead.py`, `lookahead_accuracy.py` | <!--s lookahead.measured-->2026-09-21<!--/s--> |
-| `exact_decisions.py`, `opening.py` | <!--s opening.measured-->2026-09-21<!--/s--> |
-| `loss_penalty.py`, `loss_cost.py`, `branch_cap.py` | <!--s loss_penalty.measured-->2026-09-21<!--/s--> |
-| `fit_rounds.py`, `rust_fit.py`, `pattern_offsets.py` | <!--s fit_rounds.measured-->2026-09-21<!--/s--> |
-| `fresh_arm.py`, `refit_lag.py`, `fresh_shapes.py` | <!--s fresh_arm.measured-->2026-09-21<!--/s--> |
+| `lookahead.py`, `lookahead_accuracy.py` | <!--s lookahead.measured-->2026-10-04<!--/s--> |
+| `exact_decisions.py`, `opening.py` | <!--s opening.measured-->2026-10-04<!--/s--> |
+| `loss_penalty.py`, `loss_cost.py`, `branch_cap.py` | <!--s loss_penalty.measured-->2026-10-04<!--/s--> |
+| `fit_rounds.py`, `rust_fit.py`, `pattern_offsets.py` | <!--s fit_rounds.measured-->2026-10-04<!--/s--> |
+| `form_default.py --shapes`, after `compare --forms all` | <!--s form_default.measured-->2026-10-04<!--/s--> |
+| `fresh_arm.py`, `refit_lag.py`, `fresh_shapes.py` | <!--s fresh_arm.measured-->2026-10-04<!--/s--> |
 | `ablations.py`, `table_layout.py`, `fused_gain.py`, `timing.py` | <!--s timing.measured-->2026-09-20<!--/s--> |
 
 **Not every arm moves.** `priors.build_weights` consults the used-word mask only under `PriorConfig.repeat`, so a repeat-off prior is the same distribution after the write as before it, its fit is bit-for-bit the same fit, and every figure weighted by it over every word is the same figure. `priors.depends_on_answer_record` is that rule in one line. `wordle_solver.py train --repeat-only` skips the two of the five fits it exempts, and `--repeat-only` drops the same arms from every script here that sweeps priors, printing which it dropped so a table assembled from two runs says so.
 
 The exemption is about where the weights come from, not what an arm is called. The scripts that replay the real answer record (`replay.py`, `prior_basin.py`, `fresh_arm.py`) score their `none` and `curation only` arms over a log that just got longer, so every arm of theirs moves and they take no such flag. Carrying an old row into a new table holds only while nothing else moved either. A `word_lists.py --write`, a fresh `wordlebot.py` scrape or a change to `noncurated_prob` invalidates a repeat-off row as surely as a new answer would, and nothing records which run a row came from.
 
-`replay.py --dump PATH` writes every arm's per-game guess counts out as JSON, <!--n regime.since.puzzles-->230 regime games plus the three arms' <!--n replay.shapes.arms.repeats-->24, <!--n replay.shapes.arms.offlist-->59 and <!--n replay.shapes.arms.fresh-->178 events, one row per arm. With a dump in hand, a contrast nobody thought to print, such as a pair the tables skip or a subgroup split some other way, becomes arithmetic over that file instead of another replay. None is kept here. A dump is true only of the fit and the answer log it was made against, and nothing would catch a checked-in one drifting out of step with either, while `--all-priors` makes a fresh one in two minutes.
+`replay.py --dump PATH` writes every arm's per-game guess counts out as JSON, <!--n regime.since.puzzles-->244 regime games plus the three arms' <!--n replay.shapes.arms.repeats-->25, <!--n replay.shapes.arms.offlist-->64 and <!--n replay.shapes.arms.fresh-->186 events, one row per arm. With a dump in hand, a contrast nobody thought to print, such as a pair the tables skip or a subgroup split some other way, becomes arithmetic over that file instead of another replay. None is kept here. A dump is true only of the fit and the answer log it was made against, and nothing would catch a checked-in one drifting out of step with either, while `--all-priors` makes a fresh one in two minutes.
 
 **Check the method before believing a changed number.** Several scripts score a frozen prefix of the record, and those figures cannot move whatever the answer log does. If they still come out, a number that moved moved because the data did. They are bound to the results files like everything else, so `doc_numbers.py` fails when they stop coming out. The fixed points:
 
@@ -171,7 +172,7 @@ The exemption is about where the weights come from, not what an arm is called. T
 
 `hard_mode.py`, `loss_penalty.py`, `results_tables.py` and `form_default.py` do not draw answers and report a standard error. The solver is deterministic, so a game's outcome is a pure function of the answer, and playing all 12,947 words once with the prior as weights computes the mean and the loss probability. There is no sampling distribution left to put an interval around, and `common.every_answer` is the one implementation they share.
 
-It matters most where the effect is small. The loss penalty is worth about <!--n loss_penalty.penalty.first_to_default.mean +.4f-->+0.0005 guesses, while a 20,000-game sample carries an error near <!--u-->0.009, twenty times larger, and only pairing made those figures readable. Removing the noise also moved conclusions. <!--u-->Under the flat prior the nine forms of `f` span 0.0013 guesses, where a 3,000-answer holdout showed 0.0110<!--/u-->, and most of that spread was noise.
+It matters most where the effect is small. The loss penalty is worth about <!--n loss_penalty.penalty.first_to_default.mean +.4f-->+0.0006 guesses, while a 20,000-game sample carries an error near <!--u-->0.009, more than ten times larger, and only pairing made those figures readable. Removing the noise also moved conclusions. <!--u-->Under the flat prior the nine forms of `f` span 0.0013 guesses, where a 3,000-answer holdout showed 0.0110<!--/u-->, and most of that spread was noise.
 
 Three things change shape in the output. A loss rate becomes the exact prior mass on the words that lose, which is not the fraction of words that lose. "Which games changed" becomes a list of words. A block sd or a holdout seed stops existing, so a ranking is a fact about the prior and cannot move on a rerun, which makes a small gap harder to dismiss.
 
@@ -185,13 +186,13 @@ That also lets its arms be compared across different priors, which no enumerated
 
 ## The three fits `--shapes` needs
 
-Comparing the sharpened shapes against the uniform ones needs fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`, and a prior with no fit raises instead of playing an invented `f`. All three are in `estimator_cache/`, fitted the way the shipped five were: the forms archived by `wordle_solver.py compare`, ranked by `form_default.py --shapes`, and the winner written as the active fit by `--promote`. `rust_train` declines a prior outside `priors.ALL_CONFIGS`, so these three are fitted in Python. They came out <!--s form_default.shape_winners-->`spline`, `cubic`, `cubic`<!--/s-->.
+Comparing the sharpened shapes against the uniform ones needs fits for `repeat1_curation1`, `repeat1_curation1_r-binned` and `repeat1_curation1_c-wordlebot`, and a prior with no fit raises instead of playing an invented `f`. All three are in `estimator_cache/`, fitted the way the shipped five were: a `spline` archived by `wordle_solver.py compare` and written as the active fit by `form_default.py --shapes --promote`. `rust_train` declines a prior outside `priors.ALL_CONFIGS`, so these three are fitted in Python.
 
-The three are not part of a routine refit. The shape question is a finding (README *What the two shapes are worth together*), so their fits stay as they are until it is reopened, and then all eight are refitted together against one answer record. Every arm in a `--shapes` table has to carry a fit of the same history, or the table is comparing solvers and not shapes.
+The three are not part of a routine refit. The shape question is a finding (README *What the two shapes are worth together*), so their fits stay as they are until it is reopened, and then all eight are refitted together against one answer record. Every arm in a `--shapes` table has to carry a fit fitted on, or ranked best on, the same record, or the table is comparing solvers and not shapes.
 
 ## What is not reproduced here
 
-`replay.py`'s arms are comparable to each other, but a run is not comparable to an older run. Its numbers depend on the fitted estimator as much as on the data, and a refit can move a configuration's winning form, so its output cannot be diffed across one. The same holds for `form_default.py`, which scores the fits in `estimator_cache/forms/`, so a refit moves every row.
+`replay.py`'s arms are comparable to each other, but a run is not comparable to an older run. Its numbers depend on the fitted estimator as much as on the data, so its output cannot be diffed across a refit. `form_default.py` scores the fits in `estimator_cache/forms/`. A routine refit replaces only the `spline` archives, so its rows describe fits of different records until `compare --forms all` refits the rest.
 
 `hard_mode.py` is the one that survives a refit. Its two arms play the same `f`, so a refit moves both columns together and mostly cancels in the paired difference. Read the difference across refits, and read the two means only against each other. `lookahead.py` does not get that protection even though it also pairs two arms on one fit. It measures how much room the base policy leaves above itself, so a better-fitted `f` should shrink it. Expect that as a direction and not as a prediction. The effect is a few thousandths of a guess against a standard error of about half that, and the last refit improved every arm's base policy while leaving lookahead worth marginally more.
 

@@ -1,41 +1,41 @@
 {
     "runs": {
         "pattern_offsets.py": {
-            "at": "2026-09-21 02:10",
-            "solutions": 1919,
-            "through": "2026-09-19",
+            "at": "2026-10-04 15:10",
+            "solutions": 1933,
+            "through": "2026-10-03",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
-                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
-                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
-                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
     "values": {
-        "measured": "2026-09-21",
-        "repeat0_curation0.greens1": "+0.07 ± 0.02",
-        "repeat0_curation0.greens2": "+0.14 ± 0.04",
-        "repeat0_curation0.greens3": "+0.16 ± 0.07",
+        "measured": "2026-10-04",
+        "repeat0_curation0.greens1": "+0.10 ± 0.02",
+        "repeat0_curation0.greens2": "+0.21 ± 0.03",
+        "repeat0_curation0.greens3": "+0.34 ± 0.06",
         "repeat0_curation0.greens4": "+0.19 ± 0.11",
         "repeat0_curation1_c-wordlebot.greens1": "+0.08 ± 0.02",
         "repeat0_curation1_c-wordlebot.greens2": "+0.13 ± 0.03",
         "repeat0_curation1_c-wordlebot.greens3": "+0.15 ± 0.05",
         "repeat0_curation1_c-wordlebot.greens4": "+0.11 ± 0.07",
-        "repeat1_curation0_r-binned.greens1": "+0.13 ± 0.02",
-        "repeat1_curation0_r-binned.greens2": "+0.22 ± 0.03",
-        "repeat1_curation0_r-binned.greens3": "+0.46 ± 0.06",
+        "repeat1_curation0_r-binned.greens1": "+0.11 ± 0.02",
+        "repeat1_curation0_r-binned.greens2": "+0.28 ± 0.03",
+        "repeat1_curation0_r-binned.greens3": "+0.40 ± 0.06",
         "repeat1_curation1_r-binned_c-frequency.greens1": "+0.05 ± 0.03",
-        "repeat1_curation1_r-binned_c-frequency.greens2": "+0.10 ± 0.04",
-        "repeat1_curation1_r-binned_c-frequency.greens3": "+0.10 ± 0.06",
-        "repeat1_curation1_r-binned_c-frequency.greens4": "+0.25 ± 0.07",
-        "repeat1_curation1_r-binned_c-wordlebot.greens1": "+0.07 ± 0.02",
-        "repeat1_curation1_r-binned_c-wordlebot.greens2": "+0.09 ± 0.03",
-        "repeat1_curation1_r-binned_c-wordlebot.greens3": "+0.06 ± 0.05",
-        "repeat1_curation1_r-binned_c-wordlebot.greens4": "+0.01 ± 0.06"
+        "repeat1_curation1_r-binned_c-frequency.greens2": "+0.08 ± 0.04",
+        "repeat1_curation1_r-binned_c-frequency.greens3": "+0.05 ± 0.06",
+        "repeat1_curation1_r-binned_c-frequency.greens4": "+0.07 ± 0.07",
+        "repeat1_curation1_r-binned_c-wordlebot.greens1": "+0.04 ± 0.02",
+        "repeat1_curation1_r-binned_c-wordlebot.greens2": "+0.11 ± 0.03",
+        "repeat1_curation1_r-binned_c-wordlebot.greens3": "+0.03 ± 0.04",
+        "repeat1_curation1_r-binned_c-wordlebot.greens4": "+0.06 ± 0.06"
     }
 }

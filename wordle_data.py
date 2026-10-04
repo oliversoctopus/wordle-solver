@@ -21,6 +21,7 @@ IND2WORD_PATH = os.path.join(DERIVED_DIR, "ind2word.json")
 CURATED_PATH = os.path.join(DATA_DIR, "wordles.json")
 NONCURATED_PATH = os.path.join(DATA_DIR, "nonwordles.json")
 SOLUTIONS_PATH = os.path.join(DATA_DIR, "solutions.json")
+BRITISH_SPELLINGS_PATH = os.path.join(DATA_DIR, "british_spellings.json")
 
 MAX_GUESSES = 6
 

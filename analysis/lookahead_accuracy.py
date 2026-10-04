@@ -73,7 +73,7 @@ def report_accuracy(title, arms, weights, tag=None):
                  if label.startswith("min_g") else label)
         cell = f"{rmse:.4f}"
         table.append((shown, f"{common.weighted(truths, weights):.4f}",
-                      f"+{bias:.4f}", f"{mae:.4f}",
+                      f"{bias:+.4f}".replace("-", "−"), f"{mae:.4f}",
                       f"**{cell}**" if label.startswith("one") else cell))
     base, look = rmses["min_g E(g, S)"], rmses["one-ply lookahead"]
     print(f"\n  lookahead is {base / look:.2f}x more accurate by RMSE\n")

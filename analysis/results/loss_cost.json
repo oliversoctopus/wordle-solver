@@ -1,28 +1,28 @@
 {
     "runs": {
         "loss_cost.py": {
-            "at": "2026-09-21 01:43",
-            "solutions": 1919,
-            "through": "2026-09-19",
+            "at": "2026-10-04 15:15",
+            "solutions": 1933,
+            "through": "2026-10-03",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
-                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
-                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
-                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
     "values": {
-        "measured": "2026-09-21",
-        "penalty1.extra": 1.2473533314072505,
-        "penalty1.price": 7.2473533314072505,
+        "measured": "2026-10-04",
+        "penalty1.extra": 1.2127706623497174,
+        "penalty1.price": 7.212770662349717,
         "penalty1.worst": 4,
-        "penalty5.extra": 1.2494464939050076,
-        "penalty5.price": 7.249446493905007,
+        "penalty5.extra": 1.2828155684971814,
+        "penalty5.price": 7.282815568497181,
         "penalty5.worst": 3
     }
 }

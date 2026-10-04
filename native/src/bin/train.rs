@@ -20,7 +20,7 @@ use wordle_core::train::{policy_iteration, Options, Outcome};
 use wordle_core::WordleData;
 
 /// `estimator.DEFAULT_FORM`.
-const DEFAULT_FORM: &str = "saturating";
+const DEFAULT_FORM: &str = "spline";
 const MASK_LAST: usize = 0;
 
 struct Args {

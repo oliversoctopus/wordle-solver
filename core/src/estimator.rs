@@ -137,7 +137,7 @@ impl Form {
 }
 
 /// Fitted when no form is asked for.
-pub const DEFAULT_FORM: &str = "saturating";
+pub const DEFAULT_FORM: &str = "spline";
 
 pub fn get_form(name: &str) -> Option<Form> {
     forms().into_iter().find(|f| f.name == name)

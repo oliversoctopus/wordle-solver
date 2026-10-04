@@ -23,7 +23,7 @@ DOCS = ["README.md", "SOLVER_EXPLAINED.md", "ABOUT_SOLVER_EXPLAINED.md",
         "CLAUDE.md", os.path.join("analysis", "README.md"),
         os.path.join("tests", "README.md")]
 # the modules whose upper-case assignments are the shipped defaults, and the
-# check whose limits the test catalogue quotes
+# check whose limits the test catalog quotes
 CONSTANT_MODULES = ["priors.py", "exact.py", "solver.py", "train.py",
                     "wordle_data.py", os.path.join("tests", "voice.py")]
 

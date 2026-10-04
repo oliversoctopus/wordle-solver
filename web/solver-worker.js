@@ -4,7 +4,7 @@
 // cannot repaint, scroll or accept a keystroke through it.  The work takes
 // as long here, and the page stays responsive through it.
 //
-// Marshalling is by hand because the module has no wasm-bindgen: ask it for a
+// Marshaling is by hand because the module has no wasm-bindgen: ask it for a
 // buffer, write UTF-8 in, call handle, read the reply out, free both.
 
 let wasm = null;

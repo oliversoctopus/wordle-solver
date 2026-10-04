@@ -100,13 +100,8 @@ FORMS = {f.name: f for f in [
           "a + b*(1-1/n)"),
 ]}
 
-# fitted when no form is asked for (analysis/form_default.py; README *Which form is
-# the default*)
-DEFAULT_FORM = "saturating"
-
-# what `compare` fits by default: one form per family (README *Which form is the
-# default*)
-MAIN_FORMS = ("anchored2", "invonly", "saturating", "spline")
+# the form every prior is fitted in (README *Which form is the default*)
+DEFAULT_FORM = "spline"
 
 
 def get_form(form):

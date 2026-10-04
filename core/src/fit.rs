@@ -61,7 +61,7 @@ fn qr_solve(mut a: Vec<Vec<f64>>, mut b: Vec<f64>) -> Vec<f64> {
             continue;
         }
         // reflect onto the axis pointing away from the pivot, which is the
-        // choice that avoids cancelling the leading entry against itself
+        // choice that avoids canceling the leading entry against itself
         let alpha = if a[j][j] > 0.0 { -norm } else { norm };
         let mut v = vec![0.0; m];
         v[j..m].copy_from_slice(&a[j][j..m]);

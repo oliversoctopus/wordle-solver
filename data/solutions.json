@@ -12924,5 +12924,103 @@
         "print_date": "2026-09-19",
         "days_since_launch": 1918,
         "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1453,
+        "solution": "shone",
+        "print_date": "2026-09-20",
+        "days_since_launch": 1919,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 4763,
+        "solution": "pager",
+        "print_date": "2026-09-21",
+        "days_since_launch": 1920,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1527,
+        "solution": "stoke",
+        "print_date": "2026-09-22",
+        "days_since_launch": 1921,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 3166,
+        "solution": "forth",
+        "print_date": "2026-09-23",
+        "days_since_launch": 1922,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 4741,
+        "solution": "messy",
+        "print_date": "2026-09-24",
+        "days_since_launch": 1923,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1028,
+        "solution": "copse",
+        "print_date": "2026-09-25",
+        "days_since_launch": 1924,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1498,
+        "solution": "elegy",
+        "print_date": "2026-09-26",
+        "days_since_launch": 1925,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1848,
+        "solution": "sloop",
+        "print_date": "2026-09-27",
+        "days_since_launch": 1926,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1336,
+        "solution": "trunk",
+        "print_date": "2026-09-28",
+        "days_since_launch": 1927,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 763,
+        "solution": "scuba",
+        "print_date": "2026-09-29",
+        "days_since_launch": 1928,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 829,
+        "solution": "river",
+        "print_date": "2026-09-30",
+        "days_since_launch": 1929,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 4848,
+        "solution": "ritzy",
+        "print_date": "2026-10-01",
+        "days_since_launch": 1930,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 4927,
+        "solution": "usury",
+        "print_date": "2026-10-02",
+        "days_since_launch": 1931,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 4872,
+        "solution": "peeve",
+        "print_date": "2026-10-03",
+        "days_since_launch": 1932,
+        "editor": "Tracy Bennett"
     }
 ]

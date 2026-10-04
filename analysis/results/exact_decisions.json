@@ -1,54 +1,54 @@
 {
     "runs": {
         "exact_decisions.py": {
-            "at": "2026-09-21 01:44",
-            "solutions": 1919,
-            "through": "2026-09-19",
+            "at": "2026-10-04 15:10",
+            "solutions": 1933,
+            "through": "2026-10-03",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
-                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
-                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
-                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         },
         "exact_decisions.py --who-decides": {
-            "at": "2026-09-21 01:44",
-            "solutions": 1919,
-            "through": "2026-09-19",
+            "at": "2026-10-04 15:11",
+            "solutions": 1933,
+            "through": "2026-10-03",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
-                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
-                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
-                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
     "values": {
-        "blended.differ": 35.20388447250149,
+        "blended.differ": 31.853397990706434,
         "blended.positions": 600,
-        "blended.regret": 0.006830610130664115,
-        "blended.rho": 0.7621142372206203,
-        "blended.search_regret": 0.000910161368171304,
-        "blended.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 133 | 34.9% | 0.0000 | all of them |\n| 5–10 | 221 | 35.0% | 0.0052 | 29.9% |\n| 11–60 | 246 | 35.4% | 0.0107 | 8.8% |",
-        "measured": "2026-09-21",
-        "shipped.differ": 10.576923076923077,
+        "blended.regret": 0.004752151441853482,
+        "blended.rho": 0.7995748253848199,
+        "blended.search_regret": 0.0002102797351664793,
+        "blended.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 125 | 34.2% | 0.0000 | all of them |\n| 5–10 | 205 | 30.8% | 0.0018 | 28.7% |\n| 11–60 | 270 | 31.7% | 0.0080 | 7.1% |",
+        "measured": "2026-10-04",
+        "shipped.differ": 5.0228310502283104,
         "shipped.positions": 150,
-        "shipped.regret": 0.0007497663540146179,
-        "shipped.rho": 0.7608391608391608,
-        "shipped.search_regret": 4.270088556250602e-18,
-        "shipped.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 29 | 0.0% | 0.0000 | all of them |\n| 5–10 | 56 | 5.5% | 0.0000 | 2.7% |\n| 11–60 | 65 | 17.8% | 0.0015 | 0.0% |",
-        "who.f_at_four": 67,
+        "shipped.regret": 0.00011653645929903276,
+        "shipped.rho": 0.7988100179881,
+        "shipped.search_regret": 7.080638468081548e-06,
+        "shipped.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 22 | 0.0% | 0.0000 | all of them |\n| 5–10 | 61 | 2.4% | 0.0000 | all of them |\n| 11–60 | 67 | 8.2% | 0.0002 | 0.9% |",
+        "who.f_at_four": 50,
         "who.f_late": 0,
         "who.games": 1600,
-        "who.late": 1194,
-        "who.table": "| turns left | `f` | exact search | closed form | one candidate |\n| --- | --- | --- | --- | --- |\n| 6 | 1,600 | 0 | 0 | 0 |\n| 5 | 1,307 | 283 | 1 | 9 |\n| 4 | 67 | 1,135 | 135 | 192 |\n| 3 | 0 | 311 | 143 | 460 |\n| 2 | 0 | 32 | 32 | 181 |\n| 1 | 0 | 0 | 0 | 35 |"
+        "who.late": 1167,
+        "who.table": "| turns left | `f` | exact search | closed form | one candidate |\n| --- | --- | --- | --- | --- |\n| 6 | 1,600 | 0 | 0 | 0 |\n| 5 | 1,309 | 280 | 2 | 9 |\n| 4 | 50 | 1,159 | 136 | 181 |\n| 3 | 0 | 290 | 144 | 485 |\n| 2 | 0 | 32 | 23 | 160 |\n| 1 | 0 | 1 | 0 | 32 |"
     }
 }

@@ -5,8 +5,8 @@ The estimator cache is keyed on the `PriorConfig` alone, so `solutions.py
 cache's `fitted_at` stamp, or its `ranked_at` stamp where `form_default.py
 --promote` kept it as the best on a longer record, with the newest answer the
 solver uses.  A repeat-off prior is exempt, since `priors.build_weights` reads
-the record only under `config.repeat`.  Refit what it names with
-`python wordle_solver.py train --this-config-only`.
+the record only under `config.repeat`, and every fit must be in
+`estimator.DEFAULT_FORM`.  Refit what it names with `wordle_solver.py train`.
 """
 
 import datetime
@@ -73,6 +73,11 @@ def main():
 
         with open(path, encoding="utf-8") as fh:
             fit = json.load(fh)
+        report(fit["form"] == estimator.DEFAULT_FORM,
+               f"{label} is fitted in the {estimator.DEFAULT_FORM} form",
+               "" if fit["form"] == estimator.DEFAULT_FORM else
+               f"{config.slug} plays '{fit['form']}'; README *Which form is "
+               f"the default*")
         fitted = max(date_of(fit["fitted_at"]),
                      date_of(fit.get("ranked_at", fit["fitted_at"])))
         if not depends_on_answer_record(config):
