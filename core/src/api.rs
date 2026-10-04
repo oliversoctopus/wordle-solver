@@ -1,10 +1,8 @@
 //! The endpoints `web/app.js` already calls, answered here instead of by a
 //! server.
 //!
-//! The shapes are `web.py`'s, field for field, because the page is unchanged:
-//! whatever it read off a JSON body before, it reads off the same body now. An
-//! error comes back as `{"error": "..."}` with the same wording, and the page
-//! shows it to the user.
+//! An error comes back as `{"error": "..."}`, and the page shows it to the
+//! user.
 
 use crate::feedback::{pattern_text, N_PATTERNS, WIN_PATTERN};
 use crate::game::MAX_GUESSES;
@@ -94,7 +92,7 @@ fn status() -> String {
 
 // ------------------------------------------------------------------ settings
 
-/// The switches, parsed the way `web.parse_settings` parses them.
+/// The switches the page sends with every request.
 struct Settings {
     config: PriorConfig,
     mode: Mode,
@@ -127,8 +125,8 @@ fn flag(body: &Value, key: &str, fallback: bool) -> bool {
     }
 }
 
-/// Just the two prior switches, as `web.parse_config` reads them. The shapes
-/// are not on the page, so they stay at their defaults on both sides.
+/// Just the two prior switches. The shapes are not on the page, so they stay
+/// at their defaults.
 fn parse_config(body: &Value) -> PriorConfig {
     PriorConfig {
         repeat: flag(body, "repeat", true),
@@ -206,8 +204,8 @@ fn board(body: &Value, fresh: bool) -> Result<String, String> {
     build_state(loaded, &settings, &rows, answer)
 }
 
-/// The answer the board is being played against, as `web.parse_answer` reads
-/// it: set, it colors every row itself and the page's tiles become a display.
+/// The answer the board is being played against: set, it colors every row
+/// itself and the page's tiles become a display.
 fn parse_answer(body: &Value, loaded: &state::Loaded) -> Result<Option<usize>, String> {
     let word = body
         .get("answer")

@@ -33,18 +33,15 @@ The dependencies live in `.venv`; the system Python has no `numba`. Run `.venv/S
 
 ```
 .venv/Scripts/activate            PowerShell: .venv\Scripts\Activate.ps1
-python web.py                     the page, on http://127.0.0.1:8000
-python wordle_solver.py play      the solver in the terminal; the page's oracle
-python wordle_game.py             a game in the terminal; web.py imports from it
+python wordle_game.py             a game in the terminal
 ./build_site.sh                   the same page as static files, in site/
 ./deploy.sh                       build that, and upload it to Vercel
 python editor.py                  rewrite what the site says, on :8001/editor
 ```
 
-* Startup loads the 167 MB table and compiles the numba kernels. `web.py` warms both in the background; poll `/api/status` until `ready`.
-* `play` stays because `tests/front_ends_agree.py` diffs its parser against `web.py`'s. `web.py` imports `wordle_game.TILE_BLOCK` and `wordle_game.pick_random_answer`.
+* Loading the 167 MB table and compiling the numba kernels takes a while at the start of any Python run.
 * `WORDLE_FUSED=1` is a speed knob and changes no score. `WORDLE_ROOT_BRANCH=50` narrows the ranked node's branch cap and moves the runners-up; WASM has no environment. README *The exact endgame*.
-* The solver sits behind one lock. The kernels use every core.
+* The kernels use every core.
 * Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`, whose message names the `train` command that makes one. Entropy mode needs no fit.
 * **A refit invalidates `site/`.** `build_site` bakes the openings into `site/openings.json`. Rerun `./build_site.sh` after any refit before reading a parity failure as a port bug. It calls bare `python`, so have `.venv` on PATH.
 
@@ -78,7 +75,7 @@ Three views, solve, play and find, over one board and one set of switches. READM
 * Taking a word off submits the shorter board itself. A board reached by removing words is indistinguishable from the same board played straight.
 * One request is in flight at a time; a second is held, never dropped.
 * A pattern crosses the wire as `"NYGNN"` or `[0, 1, 2, 0, 0]`; every reader takes both.
-* The editor scans string literals in `index.html`, `app.js`, `web.py` and `core/src/api.rs`. Every message exists twice, in `web.py` and in the Rust; edit both.
+* The editor scans string literals in `index.html`, `app.js`, `core/src/api.rs` and `core/src/state.rs`.
 * `wording_history.json` records past wording. Never rewrite it.
 
 ## Numbers in the documents
@@ -98,5 +95,5 @@ A cause needs a measurement. Before writing "because", name two candidate causes
 * Nothing asserts a number written by hand. Every check runs over inputs nobody chose, against a property, the answer record, or a second implementation.
 * `tests/anchors.py` is the exception: facts from outside the repository. Pin the fact, never the behavior around it.
 * Page logic follows `tests/board.test.js`: a fake DOM, a fake `fetch`, `web/app.js` unmodified, properties over a random walk of whole intentions.
-* Check server endpoints with `http.client` over one keep-alive connection.
+* Check an endpoint through `wordle_core::api`: `api_probe` from a shell, `tests/site_boot.test.js` in a test.
 * Build a test board with `score_guess(guess, answer)`, never hand-written patterns.

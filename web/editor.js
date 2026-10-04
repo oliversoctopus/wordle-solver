@@ -16,9 +16,8 @@ let armed = false;         // "write into the code" asks once before doing it
 const FILE_NAMES = {
   "web/index.html": "The page",
   "web/app.js": "What it says as you use it",
-  "web.py": "What the server says",
-  "core/src/api.rs": "What the deployed site says",
-  "core/src/state.rs": "What the deployed site says when it cannot start",
+  "core/src/api.rs": "What the solver says",
+  "core/src/state.rs": "What the site says when it cannot start",
 };
 
 // kinds that describe where a string came from rather than how it is shown;
@@ -28,12 +27,8 @@ const PLAIN_KINDS = new Set(["markup", "script", "server", "attribute"]);
 const FILE_BLURBS = {
   "web/index.html": "Headings, labels, buttons and the descriptions under them.",
   "web/app.js": "Recommendations, hints, board messages and the technical panel.",
-  "web.py": "Errors and loading text. These are matched by wording rather than by "
-    + "position, so the same sentence written twice changes in both places.",
-  "core/src/api.rs": "The same errors, said by the copy of the solver that runs in "
-    + "the browser. Most of these are written twice, once here and once in web.py, "
-    + "and rewriting only one of them is what the message parity test catches.",
-  "core/src/state.rs": "Loading and session errors from the same copy.",
+  "core/src/api.rs": "Errors from the solver that runs in the browser.",
+  "core/src/state.rs": "Loading and session errors from the same solver.",
 };
 
 /* ------------------------------------------------------------------- server */
@@ -298,8 +293,8 @@ async function apply() {
     const files = result.written.join(", ") || "nothing";
     say(`Written into ${files}.`,
         `${result.phrases} phrase${result.phrases === 1 ? "" : "s"}; the old and new `
-        + `wording is in wording_history.json. The server's own messages need a `
-        + `restart before they change.`,
+        + `wording is in wording_history.json. The solver's messages change `
+        + `once ./build_site.sh has rebuilt the site.`,
         "saved");
   } catch (err) {
     say("Could not write them in", err.message, "problem");

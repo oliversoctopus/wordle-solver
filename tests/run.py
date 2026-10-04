@@ -21,7 +21,6 @@ FAST = [
      ["node", os.path.join(HERE, "wasm_api.test.js")]),
     ("the static build boots, answers and matches the fits",
      ["node", os.path.join(HERE, "site_boot.test.js")]),
-    ("the two front ends agree", [sys.executable, os.path.join(HERE, "front_ends_agree.py")]),
     ("the fitted f is current", [sys.executable, os.path.join(HERE, "fit_provenance.py")]),
     ("every pointer resolves",
      [sys.executable, os.path.join(HERE, "doc_refs.py")]),
@@ -40,8 +39,6 @@ FAST = [
 ]
 
 SLOW = [
-    ("the two front ends recommend alike",
-     [sys.executable, os.path.join(HERE, "front_ends_agree.py"), "--full"]),
     ("one word per split, and the words it stands for",
      [sys.executable, os.path.join(HERE, "splits.py")]),
     ("the scoring rules are what they claim",

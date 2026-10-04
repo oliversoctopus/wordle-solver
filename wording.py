@@ -2,8 +2,7 @@
 
 The site's own source is read and the user-visible text picked out by how it
 is used: text between tags, ``textContent = ...``, ``say(...)``,
-``SolverError(...)``, ``Err(...)``.  ``web.py`` and the Rust say the same
-messages and both are listed.  An occurrence is keyed by
+``Err(...)``.  An occurrence is keyed by
 ``<file>:<hash of the text>:<n>``, which survives the code around it being
 edited.  A value baked into a string, ``${count}`` or ``{row}``, is part of it:
 an edit may move it but not drop it.
@@ -215,9 +214,9 @@ def _literals(source):
     return out
 
 
-def _blanked_comments(source, style):
+def _blanked_comments(source):
     """The source with comments replaced by spaces, so offsets still line up."""
-    pattern = r"//[^\n]*|/\*(?:.|\n)*?\*/" if style == "js" else r"#[^\n]*"
+    pattern = r"//[^\n]*|/\*(?:.|\n)*?\*/"
     return re.sub(pattern, lambda m: " " * len(m.group(0)), source)
 
 
@@ -259,10 +258,6 @@ def _rs_statement(masked, offset):
     return head[max(head.rfind(";"), starts[-1] if starts else -1) + 1:]
 
 
-def _docstrings(source):
-    return [(m.start(), m.end()) for m in re.finditer(r'"""(?:.|\n)*?"""', source)]
-
-
 # a literal is user-visible if it is being assigned to something that shows it
 _JS_LEAD = re.compile(
     r"(?:textContent|innerHTML|\.title|\.placeholder|\.label)\s*=\s*$"
@@ -276,15 +271,7 @@ _JS_ARM = re.compile(r"[?:]\s*$")
 _JS_TEXTY = re.compile(r"textContent|\.title|say\(|\bnote\b"
                        r"|(?:name|value|units|why|label)\s*:")
 
-_PY_LEAD = re.compile(
-    r"SolverError\(\s*$"
-    r"|self\.progress\s*=\s*$"
-    r"|send_error_json\(\s*$"
-    r"|Game\([^()]*,\s*$"
-)
-
-# the Rust says what the Python server says; every user-visible message there
-# leaves through an Err or a field of the reply, so those mark one
+# every user-visible message in the Rust leaves through an Err or a field of the reply, so those mark one
 _RS_LEAD = re.compile(
     r"Err\(\s*(?:format!\(\s*)?$"
     r"|\.ok_or\(\s*$"
@@ -308,15 +295,6 @@ def _js_context(source, offset):
     for first, second in reversed(names):
         if first or second:
             return (first or second) + "()"
-    return ""
-
-
-def _py_context(source, offset):
-    head = source[:offset]
-    names = re.findall(r"^\s*def\s+(\w+)|^class\s+(\w+)", head, re.M)
-    for first, second in reversed(names):
-        if first or second:
-            return (first + "()") if first else second
     return ""
 
 
@@ -350,19 +328,17 @@ def _rs_tests(source):
     return spans
 
 
-LEADS = {"js": _JS_LEAD, "py": _PY_LEAD, "rs": _RS_LEAD}
+LEADS = {"js": _JS_LEAD, "rs": _RS_LEAD}
 ARMS = {"js": (_JS_ARM, _JS_TEXTY), "rs": (_RS_ARM, _RS_TEXTY)}
 STATEMENTS = {"js": _statement, "rs": _rs_statement}
-CONTEXTS = {"js": _js_context, "py": _py_context, "rs": _rs_context}
+CONTEXTS = {"js": _js_context, "rs": _rs_context}
 
 
 def scan_code(source, name, style):
     lead = LEADS[style]
-    blanked = _blanked_comments(source, style)
-    masked = _blanked_literals(blanked) if style in ("js", "rs") else blanked
-    skip = _docstrings(source) if style == "py" else []
-    if style == "rs":
-        skip = _rs_tests(source)
+    blanked = _blanked_comments(source)
+    masked = _blanked_literals(blanked)
+    skip = _rs_tests(source) if style == "rs" else []
     context = CONTEXTS[style]
     found = []
     for start, end, text, quote in _literals(blanked):
@@ -382,7 +358,7 @@ def scan_code(source, name, style):
                 continue
             if not texty.search(STATEMENTS[style](masked, start)):
                 continue
-        kind = {"js": "script", "py": "server"}.get(style, "server")
+        kind = "script" if style == "js" else "server"
         if style == "js" and re.search(r"\.title\s*=\s*$", before):
             kind = ATTRIBUTE_KINDS["title"]   # also never shown until hovered
         found.append(Occurrence(name, start, end, real, _line_of(source, start),
@@ -395,9 +371,6 @@ def scan_code(source, name, style):
 SOURCES = [
     ("web/index.html", scan_html, None),
     ("web/app.js", scan_code, "js"),
-    ("web.py", scan_code, "py"),
-    # the static build says these instead of web.py's, so both are listed and
-    # both are edited by hand; CLAUDE.md *The web page* has why
     ("core/src/api.rs", scan_code, "rs"),
     ("core/src/state.rs", scan_code, "rs"),
 ]
@@ -508,7 +481,6 @@ class Wording:
         self.path = path
         self.lock = threading.Lock()
         self.overrides = {}
-        self._messages = None
         self.load()
 
     def load(self):
@@ -519,13 +491,11 @@ class Wording:
             saved = {}
         with self.lock:
             self.overrides = {k: v for k, v in saved.items() if isinstance(v, str)}
-            self._messages = None
-
+    
     def _write(self):
         tmp = self.path + ".tmp"
         write_json(tmp, self.overrides, indent=2, sort_keys=True)
         os.replace(tmp, self.path)
-        self._messages = None
 
     # ------------------------------------------------------------------- reads
 
@@ -566,58 +536,6 @@ class Wording:
             seen[digest] = index + 1
             occurrence.id = "%s:%s:%d" % (name, digest, index)
         return rewrite(source, found, overrides, written_style(name))
-
-    def message(self, text):
-        """An override for a string this process is about to send.
-
-        The server's literals were compiled before any edit, so a message is
-        matched on the way out, values and all: a literal like ``Row {row} is
-        empty`` becomes a pattern, and what it captured is put back into the
-        rewritten version.  Matching is by content, so a message written twice
-        in web.py is one thing to edit.  What the *page* says goes through
-        ``served`` instead, per occurrence.
-        """
-        with self.lock:
-            if not self.overrides:
-                return text
-            if self._messages is None:
-                self._messages = self._message_table()
-            plain, patterned = self._messages
-
-        if text in plain:
-            return plain[text]
-        for pattern, names, replacement in patterned:
-            found = pattern.match(text)
-            if not found:
-                continue
-            out = replacement
-            for name, value in zip(names, found.groups()):
-                out = out.replace(name, value, 1)
-            return out
-        return text
-
-    def _message_table(self):
-        """``({exact: text}, [(pattern, slot names, replacement), ...])``."""
-        plain, patterned = {}, []
-        for occurrence in scan_file("web.py", scan_code, "py"):
-            replacement = self.overrides.get(occurrence.id)
-            if replacement is None:
-                continue
-            if not occurrence.slots:
-                plain[occurrence.text] = replacement
-                continue
-            # the literal, with each {value} standing in for anything
-            pattern = "".join(
-                "(.+?)" if part in occurrence.slots else re.escape(part)
-                for part in re.split(r"(\{[^{}]*\})", occurrence.text) if part)
-            try:
-                patterned.append((re.compile("^" + pattern + "$", re.S),
-                                  [p for p in re.split(r"(\{[^{}]*\})", occurrence.text)
-                                   if p in occurrence.slots],
-                                  replacement))
-            except re.error:
-                continue
-        return plain, patterned
 
     # ------------------------------------------------------------------ writes
 

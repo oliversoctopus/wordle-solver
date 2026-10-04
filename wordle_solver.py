@@ -4,7 +4,6 @@
     python wordle_solver.py benchmark  self-play, entropy vs. expected guesses
     python wordle_solver.py compare    policy iteration once per form of f
     python wordle_solver.py info       show the cached fits
-    python wordle_solver.py play       solve a puzzle here; the page's oracle
 
 The prior toggles, --mode and --form go after the subcommand.
 """
@@ -18,9 +17,8 @@ from exact import DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH
 from priors import (ALL_CONFIGS, CURATION_SHAPES, REPEAT_SHAPES, PriorConfig,
                     depends_on_answer_record)
 from solver import (DEFAULT_EXACT_MAX, DEFAULT_LOOKAHEAD_BRANCH,
-                    DEFAULT_LOSS_PENALTY, ENTROPY, EXPECTED, MODES,
-                    WordleSolver, solver_options)
-from wordle_data import MAX_GUESSES, WIN_PATTERN, feedback_to_num, load_data
+                    DEFAULT_LOSS_PENALTY, MODES, WordleSolver, solver_options)
+from wordle_data import load_data
 
 
 def config_from_args(args):
@@ -32,88 +30,6 @@ def config_from_args(args):
         repeat_shape=args.repeat_shape,
         curation_shape=args.curation_shape,
     )
-
-
-def score_label(mode, score):
-    if mode == ENTROPY:
-        return f"{score:.4f} bits of expected information"
-    return f"{score:.4f} expected guesses to finish"
-
-
-def cmd_play(args):
-    data = load_data(mask_last=args.mask_last)
-    config = config_from_args(args)
-    solver = WordleSolver(data=data, config=config, mode=args.mode, form=args.form,
-                          hard=args.hard, **solver_options(args))
-
-    print(f"prior: {config.describe()}")
-    print(f"mode:  {args.mode}" + (", hard" if args.hard else ""))
-    if args.mode == EXPECTED:
-        print(estimator.describe(solver.params, solver.form))
-    print()
-
-    candidates = solver.all_candidates()
-    for turn in range(1, MAX_GUESSES + 1):
-        guesses_left = MAX_GUESSES - turn + 1
-        guess, score = solver.best_guess(candidates, guesses_left)
-        word = data.all_words[guess]
-        print(f"--- guess {turn} --- {len(candidates)} candidate(s) left "
-              f"(effective {solver.effective_size(candidates):.1f})")
-        print(f"recommended: {word}   [{score_label(args.mode, score)}]")
-        if len(candidates) == 1:
-            print("this is the only possible answer.")
-        elif guesses_left == 1:
-            print("last guess: restricted to words that could be the answer "
-                  f"(this one has a {solver.win_probability(candidates, guess) * 100:.1f}% "
-                  "chance).")
-        elif args.top > 1:
-            for alt, alt_score in solver.top_guesses(candidates, k=args.top,
-                                                     guesses_left=guesses_left)[1:]:
-                print(f"    alt: {alt}   [{score_label(args.mode, alt_score)}]")
-
-        played = prompt_word(data, default=word)
-        if played is None:
-            return 1
-        pattern = prompt_feedback()
-        if pattern is None:
-            return 1
-        if pattern == WIN_PATTERN:
-            print(f"\nsolved in {turn} guesses.")
-            return 0
-
-        candidates = solver.filter(played, pattern, candidates)
-        if len(candidates) == 0:
-            print("\nno words match that feedback -- a tile color or the word list is off.")
-            return 1
-
-    print(f"\nout of guesses. remaining candidates: "
-          f"{', '.join(data.all_words[i] for i in candidates[:10])}")
-    return 1
-
-
-def prompt_word(data, default):
-    while True:
-        try:
-            raw = input(f"word you guessed [{default}]: ").strip().lower()
-        except EOFError:
-            return None
-        if not raw:
-            raw = default
-        if raw in data.word2ind:
-            return data.word2ind[raw]
-        print(f"  '{raw}' is not in the word list; try again.")
-
-
-def prompt_feedback():
-    while True:
-        try:
-            raw = input("feedback (G green, Y yellow, N gray), e.g. NYGNN: ").strip()
-        except EOFError:
-            return None
-        try:
-            return feedback_to_num(raw)
-        except ValueError:
-            print("  need exactly 5 characters, each G, Y or N.")
 
 
 def cmd_train(args):
@@ -205,9 +121,6 @@ def cmd_info(args):
     return 0
 
 
-COMMANDS = ("play", "train", "benchmark", "compare", "info")
-
-
 def build_parser():
     # shared by every subcommand, so the toggles go after the command name
     common = argparse.ArgumentParser(add_help=False)
@@ -271,15 +184,6 @@ def build_parser():
 
     form_choices = sorted(estimator.FORMS)
 
-    play = sub.add_parser("play", parents=[common], help="interactive solving")
-    play.add_argument("--mode", choices=MODES, default=EXPECTED)
-    play.add_argument("--form", choices=form_choices, default=None,
-                      help="form of f to use (default: whichever the cache holds)")
-    play.add_argument("--top", type=int, default=1, help="also show N-1 alternatives")
-    play.add_argument("--hard", action="store_true",
-                      help="only guess words that could still be the answer")
-    play.set_defaults(func=cmd_play)
-
     tr = sub.add_parser("train", parents=[common],
                         help="fit and cache the estimator by policy iteration")
     tr.add_argument("--form", choices=form_choices, default=estimator.DEFAULT_FORM)
@@ -337,10 +241,11 @@ def build_parser():
 
 
 def main(argv=None):
-    argv = list(sys.argv[1:] if argv is None else argv)
-    if not any(arg in COMMANDS for arg in argv) and not {"-h", "--help"} & set(argv):
-        argv.insert(0, "play")  # bare invocation, or plain flags, means play
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.command is None:
+        parser.print_help()
+        return 2
     try:
         return args.func(args)
     except estimator.NotFitted as exc:

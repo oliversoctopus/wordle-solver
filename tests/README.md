@@ -15,10 +15,6 @@ Eleven checks over ten files here and one at the root. None asserts a number wri
 node tests/board.test.js [walks] [edits]     default 200 walks of 60
 ```
 
-## `front_ends_agree.py` — the page and the terminal ask the same question
-
-`wordle_solver.py play` builds a `PriorConfig` from flags and `web.py` builds one from a JSON body. Each parser is the other's oracle. The shared flags start in the same place, all four switch combinations name the same prior, and the solver is built with the same options. `--full` also compares the recommendation over several boards, given as an answer and the words played at it, with patterns from `score_guess`.
-
 ## `splits.py` — one word per split, and the words it stands for
 
 The ranking names one word per distinct split of the candidates, and `split_siblings` names the rest. Which words split alike is settled by comparing their table columns with numpy, and what a split is worth by scoring it again or asking `best_guess` for the pick. Every position of a played-out game is checked in both modes. Needs the table, so it runs under `--full`.
@@ -57,7 +53,7 @@ At the repository root, since it is also the tool that rewrites the documents. E
 
 ## `rust_parity.py` — the Rust core agrees with the Python
 
-Each ported piece runs against the Python on the same inputs. The coloring rule is checked against every entry of `feedback_table.npy`. The prior weights are compared per configuration. `f` is checked over a grid for every form on synthetic coefficients, and for each prior's cached fit. The training draw is compared exactly, index by index, and the least-squares solve on a tolerance over three datasets built to reach its awkward paths. One round of policy iteration is then run both ways, and the check stops there, since the two fits differ in their last bits and diverge legitimately afterwards. The kernels run over candidate sets Python builds, straddling the `_RESCAN_MAX` and `MAX_PACKED` thresholds. The split helpers are compared in order. The endgame search is checked over positions played out two plies deep, at every turn count and under three arms, and must return the identical guess, value and ranking. The solver dispatch is checked for which branch answers, across six arms. The endpoints are compared leaf by leaf over seven settings and eight boards, six of them one row behind an opening so the precomputed rankings are exercised. The messages are compared word for word across nine refusals. The letter odds are the one field compared on a tolerance, since `web.py` computes them with a BLAS product. `--every-answer` plays all 12,947 words both ways and diffs the lengths. It skips when nothing is built.
+Each ported piece runs against the Python on the same inputs. The coloring rule is checked against every entry of `feedback_table.npy`. The prior weights are compared per configuration. `f` is checked over a grid for every form on synthetic coefficients, and for each prior's cached fit. The training draw is compared exactly, index by index, and the least-squares solve on a tolerance over three datasets built to reach its awkward paths. One round of policy iteration is then run both ways, and the check stops there, since the two fits differ in their last bits and diverge legitimately afterwards. The kernels run over candidate sets Python builds, straddling the `_RESCAN_MAX` and `MAX_PACKED` thresholds. The split helpers are compared in order. The endgame search is checked over positions played out two plies deep, at every turn count and under three arms, and must return the identical guess, value and ranking. The solver dispatch is checked for which branch answers, across six arms. `--every-answer` plays all 12,947 words both ways and diffs the lengths. It skips when nothing is built.
 
 ## `wasm_api.test.js` — the static build's shim keeps the page's contract
 
