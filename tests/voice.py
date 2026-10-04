@@ -16,6 +16,7 @@ import io
 import os
 import re
 import sys
+import textwrap
 import tokenize
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +29,7 @@ EXTENSIONS = {".md", ".py", ".rs", ".js", ".sh", ".toml"}
 NAMES = {".gitignore", ".gitattributes"}    # commented like a shell script
 
 HEADER_LINES = 10      # a file header says what the module is
-DOC_LINES = 10         # a docstring or doc comment says what the item does
+DOC_LINES = 6          # prose lines in a docstring or doc comment
 BLOCK_LINES = 2        # a comment is one or two lines
 CLAUDE_WORDS = 1500    # CLAUDE.md is a rule list
 
@@ -112,9 +113,15 @@ def block_hits(comment_lines, header_end):
     return hits
 
 
-def doc_hit(start, length):
+def doc_hit(start, lines):
+    """A doc comment with more than DOC_LINES prose lines; blank lines and
+    indented examples do not count."""
+    lines = textwrap.dedent("\n".join(lines)).split("\n")
+    length = sum(1 for line in lines
+                 if line.strip() and not line.startswith(" "))
     if length > DOC_LINES:
-        return [Hit(start, f"doc comment of {length} lines, limit {DOC_LINES}", "")]
+        return [Hit(start, f"doc comment of {length} prose lines, "
+                           f"limit {DOC_LINES}", "")]
     return []
 
 
@@ -206,7 +213,7 @@ def scan_python(text):
             if length > HEADER_LINES:
                 hits.append(Hit(start, f"header of {length} lines, limit {HEADER_LINES}", ""))
         else:
-            hits += doc_hit(start, length)
+            hits += doc_hit(start, ast.get_docstring(node).split("\n"))
         for k, line in enumerate(doc.split("\n")):
             prose.append((start + k, line))
     hits += voice_hits(prose, source=True)
@@ -235,7 +242,8 @@ def scan_slashed(text, header_marker, doc_marker=None):
             header_end += 1
 
     in_block = in_doc = False
-    block_start = doc_run = 0
+    block_start = 0
+    doc_lines, block_lines = [], []
     for number, line in enumerate(lines, start=1):
         stripped = line.strip()
         if in_block or stripped.startswith("/*"):
@@ -243,19 +251,21 @@ def scan_slashed(text, header_marker, doc_marker=None):
             if not in_block:
                 in_doc = stripped.startswith("/**")   # documents an item
                 block_start = number
+                block_lines = []
+            block_lines.append(stripped.strip("/* "))
             if number > header_end and not in_doc and not BANNER.match(stripped.strip("/* ")):
                 comment_lines.add(number)
             in_block = "*/" not in stripped
             if not in_block and in_doc and block_start > header_end:
-                hits += doc_hit(block_start, number - block_start + 1)
+                hits += doc_hit(block_start, block_lines)
             continue
         is_doc = bool(doc_marker) and stripped.startswith(doc_marker)
         if is_doc:
-            doc_run += 1
+            doc_lines.append(stripped[len(doc_marker):].removeprefix(" "))
         else:
-            if doc_run:
-                hits += doc_hit(number - doc_run, doc_run)
-            doc_run = 0
+            if doc_lines:
+                hits += doc_hit(number - len(doc_lines), doc_lines)
+            doc_lines = []
         if stripped.startswith("//"):
             prose.append((number, stripped.lstrip("/")))
             if number > header_end and not is_doc and \

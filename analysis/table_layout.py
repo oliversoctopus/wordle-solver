@@ -40,11 +40,9 @@ FUSED_BLOCKS = (16, 32, 64, 128, 256)
 def ig_answer_major(tt, candidates, weights, pool, block, rescan_max, threads):
     """`kernels.ig_all` written for a table indexed [answer, guess].
 
-    The parallel loop runs over threads rather than over blocks so the buckets
-    can be allocated once for the whole scan: both reduces leave every bucket
-    they touch at zero, so the array comes back clean.  Allocating per block
-    instead costs 243 slots per guess, which is the cost `_RESCAN_MAX` exists to
-    avoid, and it dominates every small scan.
+    The parallel loop runs over threads, and each thread allocates its buckets
+    once for the whole scan; both reduces leave every bucket they touch at
+    zero.
     """
     n_out = pool.shape[0]
     m = candidates.shape[0]
@@ -108,10 +106,8 @@ def eg_answer_major(tt, candidates, weights, wlw, params, codes, knots, base,
                     pool, block, rescan_max, threads):
     """`kernels.expected_guesses_all` for a table indexed [answer, guess].
 
-    The four quantities are packed into one array so that a bucket is 32
-    contiguous bytes rather than four cache lines in four arrays.  That is worth
-    a third at the widest positions here and nothing at all to the shipped
-    kernel, whose accumulator never leaves L1 either way.
+    The four quantities are packed into one array, so a bucket is 32
+    contiguous bytes.
     """
     n_out = pool.shape[0]
     m = candidates.shape[0]
@@ -179,15 +175,12 @@ def eg_answer_major(tt, candidates, weights, wlw, params, codes, knots, base,
 @njit(parallel=True, cache=True)
 def eg_fused(tt, candidates, weights, wlw, params, codes, knots, base,
              pool, block, rescan_max, threads):
-    """Answer-major with the transpose fused in, which is the strongest form.
+    """Answer-major with the transpose fused in.
 
-    Answer-major reads contiguously but holds G guesses' accumulators; the
-    shipped kernel holds one small accumulator but reads scattered.  This reads
-    the G x m tile for a block of guesses out of the answer-major table,
-    transposing it into an L1-sized buffer on the way in, so each guess's
-    feedback vector is a contiguous row and the reduce is the shipped one over
-    a single 243-bucket accumulator.  It pays by writing and re-reading the
-    tile, G*m bytes, free while that stays in L1.
+    For a block of guesses this reads the G x m tile out of the answer-major
+    table and transposes it into an L1-sized buffer, so each guess's feedback
+    vector is a contiguous row and the reduce is the shipped one over a single
+    243-bucket accumulator.
     """
     n_out = pool.shape[0]
     m = candidates.shape[0]
@@ -359,12 +352,8 @@ def sweep(fit, table, transposed, pool, rng, label, mode):
 def profile(fit, data, games, seed):
     """Candidate count and elapsed time of every scoring call in real play.
 
-    Every kernel is compiled before the clock starts.  numba caches to
-    __pycache__ keyed on the source file, so any edit to `kernels.py` throws the
-    cache away and the first call to reach a kernel pays its compile -- which
-    lands as a single several-hundred-millisecond call and swamps the band it
-    falls in.  `two_turn_scores` is the one that hides, being reached only from
-    the endgame search rather than from the sweeps above.
+    Every kernel, `two_turn_scores` included, is compiled before the clock
+    starts.
     """
     warm = np.arange(4, dtype=np.int64)
     weights = fit.weights[warm].copy()
@@ -412,15 +401,10 @@ def profile(fit, data, games, seed):
 
 
 def on_real_sets(fit, table, transposed, harvest, rng):
-    """Both layouts on the candidate sets real play actually produces.
+    """Both layouts on the candidate sets real play produces.
 
-    The sweeps draw candidates at random, which assumes the worst about how they
-    fall across a row.  They do not fall that way: the word list is
-    alphabetical and a surviving set shares letters, so a real set of a given
-    size touches about half the distinct cache lines a random one does, and the
-    shipped layout's penalty is correspondingly smaller than a random sweep
-    makes it look.  This measures the ratio on the real sets instead of assuming
-    the random one carries over.
+    The word list is alphabetical and a surviving set shares letters, so a real
+    set touches fewer distinct cache lines than a random set of the same size.
     """
     common.header(f"the {len(harvest)} candidate sets that play produced")
     print(f"  {'size band':>12} {'sets':>6} {'lines touched':>15} "

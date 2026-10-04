@@ -59,10 +59,8 @@ fn error_json(message: &str) -> String {
 /// What the page polls before assuming the solver is usable, and where it gets
 /// the contents of its dropdowns.
 ///
-/// There is no table to load and no kernel to compile here, so readiness is
-/// only about whether the data files have arrived -- but the rest of the fields
-/// are not optional: the page builds the *Shape of f* menu straight out of
-/// `forms`, and throws if it is missing.
+/// Readiness is whether the data files have arrived. The page builds the
+/// *Shape of f* menu out of `forms`, and throws if it is missing.
 fn status() -> String {
     let ready = state::is_ready();
     let mut names: Vec<&str> = crate::estimator::forms().iter().map(|f| f.name).collect();
@@ -268,9 +266,8 @@ fn parse_pattern(value: Option<&Value>) -> Result<u8, String> {
 
 /// The key `openings.json` is indexed by; `build_site` writes it with this.
 ///
-/// The form is in the key because it changes `f`, and `f` is what expected
-/// mode ranks by. Entropy never consults it, so its ten entries per prior are
-/// one ranking written ten times over.
+/// Entropy never consults the form, so its ten entries per prior are one
+/// ranking written ten times over.
 pub fn settings_key(config: &PriorConfig, mode: Mode, hard: bool, form: &str) -> String {
     format!(
         "{}|{}|{}|{}",
@@ -716,10 +713,8 @@ const TILE_BLOCK: [&str; 3] = ["\u{2B1B}", "\u{1F7E8}", "\u{1F7E9}"];
 /// The one word the page reads back and the one it never gets to see, held
 /// together for as long as the tab is open.
 ///
-/// The Python keeps the answer on the server so that no reply can spoil it.
-/// There is no server here, so that property is gone -- a determined player
-/// can read the answer out of memory. It is still not in any reply until the
-/// game is over, and the page relies on that.
+/// The answer is in no reply until the game is over, and the page relies on
+/// that. It sits in the tab's memory, where a determined player can read it.
 fn game_new(body: &Value) -> Result<String, String> {
     let loaded = state::loaded().ok_or("The word lists have not loaded yet")?;
     let config = parse_config(body);
@@ -1058,14 +1053,9 @@ const MAX_LISTED_MATCHES: usize = 120;
 
 /// Which words could have produced this pattern against this answer.
 ///
-/// Backwards from the rest of the page: the answer is known and the guess is
-/// what is being looked for. The Python reads one column of the feedback
-/// table; here the column is scored, which is 12,947 comparisons and cheap.
-///
-/// Each match is then measured three ways, none of which depend on the pattern
-/// having been seen -- `left` is how many words would still be possible after
-/// it, `bits` is what the guess reveals on average over every answer, and
-/// `weight` is the prior's own chance that the guess is itself the answer.
+/// Each match is measured three ways: `left` is how many words would still be
+/// possible after it, `bits` is what the guess reveals on average over every
+/// answer, and `weight` is the prior's chance that the guess is the answer.
 fn find(body: &Value) -> Result<String, String> {
     let loaded = state::loaded().ok_or("The word lists have not loaded yet")?;
     let config = parse_config(body);

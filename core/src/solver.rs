@@ -28,20 +28,16 @@ pub enum Mode {
 }
 
 
-/// How many positions a browser may keep. The native sweeps keep far more --
-/// `DEFAULT_MEMO_LIMIT` -- but they are not sharing an address space with a
-/// page, and what a limit costs is only ever time. See `memo`.
+/// How many positions a browser may keep. The native sweeps keep
+/// `DEFAULT_MEMO_LIMIT`. See `memo`.
 pub const BROWSER_MEMO_LIMIT: usize = 50_000;
 pub const BROWSER_EXACT_MEMO_LIMIT: usize = 100_000;
 
 /// The positions a solver has already worked out, held apart from the solver.
 ///
 /// A `Solver` borrows its source and its weights, so it cannot outlive the
-/// request that built it. What it caches has no such trouble: a position's
-/// value is a pure function of the position, and stays true afterwards.
-/// Swapping these in and out is what lets the same board arrive twice -- which
-/// is the usual case, the page sending the whole board on every submit -- and
-/// be solved once.
+/// request that built it. A position's value is a pure function of the
+/// position, so these outlive it, and a board sent twice is solved once.
 pub struct Memos {
     best: Memo<(Vec<usize>, usize), (i64, f64)>,
     lookahead: Memo<(Vec<usize>, usize, usize), (i64, f64)>,
@@ -274,9 +270,7 @@ impl<'a, S: Source> Solver<'a, S> {
     /// guesses remaining in expected mode.
     ///
     /// `guesses_left` counts this turn; at 1 the guess must be a possible
-    /// answer. It is part of the memo key rather than reduced to "is this the
-    /// last turn", because the exact search's answer depends on how
-    /// many turns are really left.
+    /// answer. The memo key holds it in full.
     pub fn best_guess(
         &mut self,
         candidates: &[usize],
@@ -421,10 +415,8 @@ impl<'a, S: Source> Solver<'a, S> {
     /// `(guess, value)` from expanding the best `lookahead_branch` guesses and
     /// scoring each by what its buckets are really worth.
     ///
-    /// Only the guess is pruned, never the feedback: dropping a bucket would
-    /// leave the sum something other than an expectation. The cap therefore
-    /// limits the fan-out at this node alone, and every level below pays it
-    /// again.
+    /// Only the guess is pruned, never the feedback. The cap limits the fan-out
+    /// at this node, and every level below pays it again.
     fn lookahead_guess(
         &mut self,
         candidates: &[usize],
@@ -481,11 +473,9 @@ impl<'a, S: Source> Solver<'a, S> {
 
     /// `[(guess, score), ...]` for the k best guesses, best first.
     ///
-    /// One word per distinct split: the rest of a split's words give the same
-    /// feedback against every candidate, so listing them would be listing the
-    /// same guess spelled several ways, and `split_siblings` names them
-    /// instead. Where the position is one the solver settles exactly the scores
-    /// are true values, and the list never mixes those with estimates.
+    /// One word per distinct split; `split_siblings` names the rest. Where the
+    /// solver settles the position exactly the scores are true values, and the
+    /// list never mixes those with estimates.
     pub fn top_guesses(
         &mut self,
         candidates: &[usize],

@@ -115,10 +115,8 @@ impl Loaded {
         Live::new(&self.data.words)
     }
 
-    /// Runs `body` over the game store, which is where play mode's answers
-    /// live. The Python keeps them on the server so the traffic cannot spoil
-    /// them; here there is no server, and the tab holds them for as long as it
-    /// holds the page.
+    /// Runs `body` over the game store, which holds play mode's answers for as
+    /// long as the tab holds the page.
     pub fn with_games<T>(&self, body: impl FnOnce(&mut Games) -> T) -> Result<T, String> {
         let mut games = self.games.lock().map_err(|_| "game lock poisoned")?;
         Ok(body(&mut games))
@@ -148,9 +146,8 @@ pub struct Games {
 /// cap is only there to stop a long sitting from growing without bound.
 const MAX_GAMES: usize = 32;
 
-/// How many settings keep their solved positions. Flipping a switch re-solves
-/// the board under the new setting, and flipping back should not re-solve it
-/// again; holding all 160 combinations would not fit in a tab.
+/// How many settings keep their solved positions, so flipping a switch and
+/// flipping it back re-solves nothing.
 const MAX_MEMO_SETS: usize = 4;
 
 impl Games {

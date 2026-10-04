@@ -35,8 +35,7 @@ TILE_VALS = {"N": 0, "Y": 1, "G": 2}
 def write_json(path, payload, indent=4, sort_keys=False):
     """JSON to disk, LF-terminated whatever the platform.
 
-    ``newline=""`` stops text mode writing CRLF on Windows, where every line
-    of the file would register as changed.
+    ``newline=""`` stops text mode writing CRLF on Windows.
     """
     with open(path, "w", encoding="utf-8", newline="") as file:
         json.dump(payload, file, indent=indent, ensure_ascii=False,
@@ -59,9 +58,8 @@ def feedback_to_num(feedback):
 def score_guess(guess, answer):
     """Feedback for one guess as a base-3 integer, duplicate letters and all.
 
-    This is the rule ``feedback_table.npy`` is built from; it exists separately
-    so that anything only needing a single score (the game, say) does not have
-    to load the table.
+    This is the rule ``feedback_table.npy`` is built from, for callers that
+    need a single score without loading the table.
     """
     result = ["N"] * 5
     remaining = Counter(answer)
@@ -105,8 +103,8 @@ class WordleData:
 
     def letter_presence(self):
         """bool [word, letter] -- does the word contain that letter at all.
-        It is built once and kept, which turns a weighted count over any
-        candidate set into a single matrix product."""
+        Built once and kept; a weighted count over a candidate set is one
+        matrix product with it."""
         if self._letter_presence is None:
             grid = np.frombuffer("".join(self.all_words).encode(), dtype=np.uint8)
             grid = grid.reshape(self.n_words, -1).astype(np.intp) - ord("a")
@@ -131,9 +129,7 @@ def load_data(mask_last=0, use_cache=True, with_feedback_table=True):
     """Load everything.
 
     ``mask_last`` drops the most recent N entries of solutions.json, which
-    winds the used-word prior back to an earlier day.  It defaults to 0:
-    ``solutions.py`` stops the record at yesterday, so every entry is a puzzle
-    already played and there is nothing to hold back.
+    winds the used-word prior back to an earlier day.
 
     ``with_feedback_table=False`` leaves ``feedback_table`` as None, which is
     enough for the word lists and the priors and skips the table read.

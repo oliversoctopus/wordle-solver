@@ -57,12 +57,10 @@ class WordleSolver:
     """Chooses guesses under a given prior, in one of two modes.
 
     ``entropy`` maximizes expected information gain; ``expected`` minimizes
-    E(g, S) = 1 + sum_{r != GGGGG} p_r f(n_r) with the estimator fitted for
-    this prior.  Both hand the guess to the exact search where it is affordable
-    and restrict the last guess to a possible answer.  ``lookahead`` puts a
-    branch-capped expectimax above that, ``hard`` restricts every guess to a
-    possible answer, and ``win_bonus`` pays entropy mode ``a`` bits for a guess
-    that could be the answer.  README *Lookahead*, *Hard mode*, *Results*.
+    E(g, S) = 1 + sum_{r != GGGGG} p_r f(n_r) with this prior's fitted f.  Both
+    use the exact search where affordable and restrict the last guess to a
+    possible answer.  README *Lookahead*, *Hard mode* and *Results* describe
+    ``lookahead``, ``hard`` and ``win_bonus``.
     """
 
     def __init__(self, data=None, config=None, mode=EXPECTED, params=None,
@@ -136,14 +134,8 @@ class WordleSolver:
 
     def reset_memo(self):
         """Drop the cached guesses, for a sweep playing many independent
-        configurations in one process.
-
-        A finished run's positions are dead weight -- two openings partition the
-        list differently, so almost nothing carries over.  They cost memory and
-        not hits: being the least recently used, they are evicted before any live
-        entry is, so this reclaims space rather than restoring a hit rate.  The
-        exact search's memo is left alone: its values depend only on the weights,
-        so they stay valid and stay worth sharing.
+        configurations in one process.  The exact search's memo is kept; its
+        values depend only on the weights.
         """
         self._memo.clear()
         self._lookahead_memo.clear()
@@ -294,11 +286,7 @@ class WordleSolver:
     # ------------------------------------------------------------- lookahead
 
     def _partition(self, guess, candidates):
-        """``[(mass, members), ...]`` over the non-winning feedback buckets.
-
-        One sort rather than a pass per pattern, which matters at the opening
-        where there are ~150 buckets over ~13k candidates.
-        """
+        """``[(mass, members), ...]`` over the non-winning feedback buckets."""
         patterns = self.data.feedback_table[guess, candidates]
         order = np.argsort(patterns, kind="stable")
         sorted_patterns = patterns[order]
@@ -334,10 +322,8 @@ class WordleSolver:
         """``(guess, value)`` from expanding the best ``lookahead_max_branch``
         guesses and scoring each by what its buckets are really worth.
 
-        Only the guess is pruned, never the feedback: dropping a bucket would
-        leave the sum something other than an expectation.  The cap therefore
-        limits the fan-out at this node alone, and every level below pays it
-        again.
+        Only the guess is pruned, never the feedback.  The cap limits the
+        fan-out at this node, and every level below pays it again.
         """
         key = (candidates.tobytes(), turns, depth)
         hit = self._lookahead_memo.get(key)
@@ -381,8 +367,7 @@ class WordleSolver:
 
         Hard mode narrows these the way it narrows the choice itself.  A group
         holds either one possible answer or any number of words that cannot be
-        the answer, since only a candidate comes back all green and only
-        against itself.
+        the answer.
         """
         pool = kernels.same_split(self.data.feedback_table, candidates,
                                   int(guess), pool=self.guess_pool(candidates))
@@ -391,11 +376,9 @@ class WordleSolver:
     def top_guesses(self, candidates, k=5, guesses_left=None):
         """``[(word, score), ...]`` for the k best guesses, best first.
 
-        One word per distinct split: the rest of a split's words give the same
-        feedback against every candidate, so listing them would be listing the
-        same guess spelled several ways, and ``split_siblings`` names them
-        instead.  Where the position is one the solver settles exactly the
-        scores are true values, and the list never mixes those with estimates.
+        One word per distinct split; ``split_siblings`` names the rest.  Where
+        the solver settles the position exactly the scores are true values, and
+        the list never mixes those with estimates.
         """
         if self.solved_exactly(candidates, guesses_left):
             exact_top = self._exact_top(candidates, k, guesses_left)
@@ -474,9 +457,8 @@ class WordleSolver:
         ``(effective_size, candidate_count)`` of the position *before* guess i.
 
         ``deadline`` is the turn on which the game must be won; the guess made
-        then is restricted to possible answers.  Leaving it None (the default,
-        used for training rollouts) plays with no deadline, so the recorded
-        guess counts are unbiased estimates of the value function.
+        then is restricted to possible answers.  None plays with no deadline,
+        as training rollouts do.
         """
         candidates = self.all_candidates()
         guesses = []

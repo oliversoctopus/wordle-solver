@@ -11,7 +11,7 @@ A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` f
 
 ## Conventions
 
-* **Comments are one or two lines** saying what the line does. A file header says what the module is, in a few lines. No measurements, no rationale, no history anywhere in source. A decision that needs defending gets one line naming the README section that defends it.
+* **Comments are one or two lines** saying what the line does. A docstring says what the item does and its contract, in at most six prose lines. A file header says what the module is, in a few lines. No measurements, no rationale, no history anywhere in source. A decision that needs defending gets one line naming the README section that defends it.
 * **Point at code by name**: `priors.build_weights`, `source::Columns`, never `priors.py:221`. `tests/doc_refs.py` resolves every pointer in the documents and the analysis docstrings.
 * **Line endings are LF everywhere.** Write JSON through `wordle_data.write_json`. Anything else that rewrites a file passes `newline=""` to `open`.
 * **Markdown is one line per paragraph. Python is hard-wrapped at about 80 columns.** `python unwrap_md.py` checks; `--write` converts, in its own commit.

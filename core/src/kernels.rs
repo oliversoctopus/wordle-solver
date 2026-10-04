@@ -16,10 +16,8 @@ use crate::source::Source;
 
 /// Maps `f` over `0..n`, across cores natively.
 ///
-/// The split helpers walk every one of the 12,947 guesses, and `kernels.py`
-/// declares all of them `parallel=True`. `work` is the pairs the whole call
-/// touches; below the threshold it runs straight through, because rayon's
-/// adaptive splitting costs more than a handful of byte comparisons is worth.
+/// `work` is the pairs the whole call touches; below `PARALLEL_MIN_WORK` it
+/// runs straight through.
 #[cfg(not(target_arch = "wasm32"))]
 fn map_guesses<T, F>(n: usize, work: usize, f: F) -> Vec<T>
 where
@@ -53,11 +51,6 @@ where
 }
 
 /// Least (guess, candidate) pairs worth splitting across cores.
-///
-/// The kernels are called constantly on small candidate sets -- the exact
-/// search asks for a few hundred representatives against a handful of
-/// candidates, tens of thousands of times over a sweep -- and below this the
-/// coordination costs more than the work it divides.
 #[cfg(not(target_arch = "wasm32"))]
 const PARALLEL_MIN_WORK: usize = 1 << 12;
 
@@ -99,18 +92,10 @@ where
 }
 
 /// Below this many candidates the reduce walks the candidates a second time
-/// rather than sweeping all 243 patterns, taking each bucket the first time it
-/// is reached and zeroing it there. Above it the second walk stops paying for
-/// itself, since it re-reads the table where the sweep only touches
-/// accumulators already in cache.
+/// instead of sweeping all 243 patterns, taking each bucket the first time it
+/// is reached and zeroing it there.
 pub const RESCAN_MAX: usize = 128;
 
-/// Every guess index, built once and lent out thereafter.
-///
-/// `pool = None` means "score every word", which is most calls, and building
-/// 12,947 indices each time is pure waste -- `kernels.py` caches the same array
-/// in `_ALL_ROWS` for the same reason. The length check covers the one case a
-/// single process could hold two word lists; it has never happened here.
 /// The guesses to score: `pool`, or every row of the table.
 fn resolve_pool(pool: Option<&[usize]>, n: usize) -> std::borrow::Cow<'_, [usize]> {
     match pool {
@@ -119,6 +104,8 @@ fn resolve_pool(pool: Option<&[usize]>, n: usize) -> std::borrow::Cow<'_, [usize
     }
 }
 
+/// Every guess index, built once and lent out thereafter, as `kernels.py`
+/// keeps `_ALL_ROWS`. A different `n` gets a fresh vector.
 pub(crate) fn all_rows(n: usize) -> std::borrow::Cow<'static, [usize]> {
     static CACHE: std::sync::OnceLock<Vec<usize>> = std::sync::OnceLock::new();
     let cached = CACHE.get_or_init(|| (0..n).collect());
@@ -448,10 +435,8 @@ fn partition_hash(source: &impl Source, candidates: &[usize]) -> Vec<i64> {
 ///
 /// This is `np.unique(keys, return_index=True, return_inverse=True)`: the
 /// representatives in ascending key order, and for every guess the
-/// representative of its group. The order matters -- it decides which word
-/// stands for a split, and so the order the search tries them in. Both come out
-/// of the one sort rather than a map keyed on the hash, which would have to be
-/// built and then looked up once per guess on every call.
+/// representative of its group. The order decides which word stands for a
+/// split, and so the order the search tries them in.
 fn group_by_key(keys: &[i64]) -> (Vec<usize>, Vec<usize>) {
     let mut order: Vec<usize> = (0..keys.len()).collect();
     order.sort_unstable_by_key(|&i| (keys[i], i));

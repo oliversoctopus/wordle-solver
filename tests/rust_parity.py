@@ -291,12 +291,8 @@ def check_kernels(report):
 def _endgame_sets(data, wanted=24):
     """Real positions small enough for the exact search to take on.
 
-    Played out rather than sliced off the front of the list: what the search
-    meets are sets left by a word, which share letters and split unevenly, and
-    an arbitrary prefix of the alphabet does not behave like one.  One ply
-    usually overshoots -- a played word leaves either a couple of candidates or
-    several hundred -- so this goes two deep and keeps a spread of sizes, which
-    is what reaches both the dedupe's packed path and the hashed one.
+    Played out two plies deep, keeping a spread of sizes, so both the dedupe's
+    packed path and its hashed one are reached.
     """
     from wordle_data import score_guess
 
@@ -326,10 +322,7 @@ def _endgame_sets(data, wanted=24):
 def check_exact(report):
     """The endgame search, against ``exact.ExactEndgame``.
 
-    Both the guess and the value have to match.  A guess of equal value would
-    not do: distinct scores over a whole scan sit far apart, so a drifting
-    branch order shows up as a different word long before it shows up as a
-    different number.
+    Both the guess and the value have to match.
     """
     path = binary("parity_exact")
     if path is None:
@@ -440,10 +433,9 @@ def check_exact(report):
 def check_solver(report):
     """Which branch of the dispatch answers, and what it answers with.
 
-    This covers the dispatch: it has five ways out, a closed form at one or two
-    candidates, the exact search,
-    the heaviest candidate on the last turn, lookahead, and the heuristic
-    scorer -- and the arms below reach each of them.
+    The dispatch has five ways out: a closed form at one or two candidates,
+    the exact search, the heaviest candidate on the last turn, lookahead, and
+    the heuristic scorer.  The arms below reach each of them.
     """
     path = binary("parity_solver")
     if path is None:
@@ -561,11 +553,10 @@ def check_solver(report):
 def check_every_answer(report):
     """The whole sweep: every word played as the answer, both sides.
 
-    This is the acceptance test for the port rather than one more comparison.
-    The solver is deterministic, so playing all 12,947 words once and weighting
-    by the prior *computes* the mean -- there is no sampling error to hide in,
-    and README *Results* is the number to hit.  Compared per answer rather than
-    on the mean, so two games that differ in opposite directions cannot cancel.
+    The acceptance test for the port.  The solver is deterministic, so playing
+    every word once and weighting by the prior computes the mean README
+    *Results* quotes.  Games that differ are reported; the check fails when the
+    weighted mean or loss moves past the documents' precision.
     """
     path = binary("every_answer")
     if path is None:
@@ -677,9 +668,8 @@ def check_rng(report):
 def check_fit(report):
     """The least-squares solve, against ``estimator.fit``.
 
-    Compared on a tolerance rather than exactly, and it is the second place in
-    the port that has to be: LAPACK reduces in an order that is neither written
-    down nor stable across builds, so ``core/src/fit.rs`` solves by its own SVD.
+    Compared on a tolerance: LAPACK's reduction order is not fixed, and
+    ``core/src/fit.rs`` solves by its own SVD.
     """
     path = binary("parity_fit")
     if path is None:
@@ -733,10 +723,8 @@ def check_train(report):
 
     Everything up to and including the first fit: the answers drawn, the games
     played under greedy entropy, the states recorded and the parameters fitted
-    to them.  Past the fit the two walk different paths: the least-squares
-    solves differ in the last bits, and acting greedily on the result turns
-    that into a different tie, rollout and next fit.  Even this round's holdout
-    is played with the fitted parameters, so the comparison stops at the fit.
+    to them.  The two fits differ in their last bits and diverge after that,
+    so the comparison stops at the fit.
     """
     path = binary("train")
     if path is None:
