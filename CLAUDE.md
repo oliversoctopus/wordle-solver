@@ -85,7 +85,7 @@ Three views, solve, play and find, over one board and one set of switches. READM
 
 A script calls `common.record(key, value)` at the print site; the figure lands in `analysis/results/<script>.json`; the document marks the figure with an HTML comment naming the key, as `doc_numbers.py`'s docstring shows. `python doc_numbers.py` checks, `--write` rewrites and lists what moved, `--unbound` fails on an unmarked figure. Never type a measured number into a document.
 
-The refresh: `solutions.py --write`, refit, rerun the live scripts, `doc_numbers.py --write`, reread what moved. `analysis/README.md` *Rerunning them* says which scripts are live and which are findings.
+The refresh: `solutions.py --write`, refit, rerun the live scripts, `doc_numbers.py --write`, reread what moved. `analysis/README.md` *Rerunning them* says which scripts are live and which are findings, and which fixes need no rerun.
 
 The refit: `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. A change to a prior's probabilities or shapes needs `compare --forms all` and `form_default.py --shapes`. `results_tables.py` replays every archived form, and a fit made under another prior is the mis-paired curve SOLVER_EXPLAINED *The form of `f` has to be refitted per shape* describes. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move; `--repeat-only` skips them.
 

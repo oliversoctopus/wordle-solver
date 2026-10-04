@@ -19,6 +19,8 @@ FAST = [
     ("the board's editing rules", ["node", os.path.join(HERE, "board.test.js")]),
     ("the static build's shim keeps the page's contract",
      ["node", os.path.join(HERE, "wasm_api.test.js")]),
+    ("the static build boots, answers and matches the fits",
+     ["node", os.path.join(HERE, "site_boot.test.js")]),
     ("the two front ends agree", [sys.executable, os.path.join(HERE, "front_ends_agree.py")]),
     ("the fitted f is current", [sys.executable, os.path.join(HERE, "fit_provenance.py")]),
     ("every pointer resolves",

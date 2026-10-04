@@ -32,7 +32,7 @@ The speaker says which part matters and which is a detail, so the reader knows w
 
 ## Telling what went wrong
 
-A story is told in order, with the moment of being wrong left in. Hamming stormed into Bode's office, got his answer, and slunk out. The `fastmath` bug, the `sqrt` trap and the superadditivity error are stories of that kind, and each has such a moment. What stays banned is the document talking about its own edits. The first is the project's history. The second is the file's.
+A story is told in order, with the moment of being wrong left in. Hamming stormed into Bode's office, got his answer, and slunk out. The `fastmath` bug, the mis-paired `anchored2` and the superadditivity error are stories of that kind, and each has such a moment. What stays banned is the document talking about its own edits. The first is the project's history. The second is the file's.
 
 ## The documentation files
 
