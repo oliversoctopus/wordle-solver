@@ -22,7 +22,7 @@ DOCS = {"README": "README.md", "SOLVER_EXPLAINED": "SOLVER_EXPLAINED.md"}
 
 # where references are written: the prose documents and every analysis script
 SOURCES = ["README.md", "SOLVER_EXPLAINED.md", "ABOUT_SOLVER_EXPLAINED.md",
-           "CLAUDE.md", os.path.join("analysis", "README.md"),
+           "VOICE.md", "CLAUDE.md", os.path.join("analysis", "README.md"),
            os.path.join("tests", "README.md")]
 
 # where the Python and the Rust a pointer can name are kept

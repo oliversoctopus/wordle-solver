@@ -18,6 +18,15 @@ python wordle_solver.py train --this-config-only --no-repeat-prior --form satura
 python wordle_solver.py benchmark --no-curation-prior --mode entropy
 ```
 
+## Findings
+
+* **The shipped solver averages <!--n results_tables.both.expected .2f-->3.18 guesses and loses <!--n loss_penalty.search.loss_full .3f-->0.033% of games**, opening `<!--s results_tables.both.opening-->salet<!--/s-->`, weighted by its prior ([Results](#results)).
+* **It beats greedy entropy by <!--n results_tables.both.gain .2f-->0.60 guesses, and the priors are why.** With no prior the fitted estimator is worth <!--n results_tables.none.gain .2f-->0.05 ([Results](#results)).
+* **The two priors need each other.** On real answers their interaction is <!--n replay.priors.interaction-->−0.410 ± 0.062 guesses a game, and the repeat prior alone is worth nothing measurable ([What each prior is worth on real answers](#what-each-prior-is-worth-on-real-answers)).
+* **The exact endgame search cuts losses and leaves the mean alone.** It takes the loss rate from <!--n loss_penalty.search.loss_none .3f-->0.078% to <!--n loss_penalty.search.loss_full .3f-->0.033% and moves the mean by about a thousandth ([What it is worth](#what-it-is-worth)).
+* **A better valuation buys almost nothing.** One ply of lookahead is worth <!--n lookahead.delta-->−0.0072 ± 0.0037 guesses for ten times the wall clock, and a perfect second guess <!--n turn2_regret.census .3f-->0.002 ([Lookahead](#lookahead---lookahead-off-by-default), [Perfecting the second guess](#perfecting-the-second-guess)).
+* **On the curated answer list it plays within a hundredth of a guess of the published optimum**, <!--n external_benchmark.fitted.gap .3f-->0.008 above it ([Against the known optimum](#against-the-known-optimum)).
+
 ## Layout
 
 | file | contents |

@@ -2,7 +2,7 @@
 
 A Wordle solver: a scoring engine over the full word list, an estimator `f(n)` fitted by policy iteration, an exact endgame search, two terminal front ends and a web page that does both. README *Layout* lists the files.
 
-`README.md` is the reference: priors, objective, endgame, results. `SOLVER_EXPLAINED.md` is the derivation from scratch; `ABOUT_SOLVER_EXPLAINED.md` says who it is for, how to view it, and holds the *If you edit it* rules to read first. When behavior changes, update whichever document describes it.
+`README.md` is the reference: priors, objective, endgame, results. `SOLVER_EXPLAINED.md` is the derivation from scratch; `ABOUT_SOLVER_EXPLAINED.md` says who it is for and how to view it. `VOICE.md` is the style page, how a sentence sounds and where it goes, and is read before any document edit. When behavior changes, update whichever document describes it.
 
 ## Never poll background work
 
@@ -82,9 +82,9 @@ Three views, solve, play and find, over one board and one set of switches. READM
 
 A script calls `common.record(key, value)` at the print site; the figure lands in `analysis/results/<script>.json`; the document marks the figure with an HTML comment naming the key, as `doc_numbers.py`'s docstring shows. `python doc_numbers.py` checks, `--write` rewrites and lists what moved, `--unbound` fails on an unmarked figure. Never type a measured number into a document.
 
-The refresh is `python refresh.py`: new answers, the refit, every live script, `doc_numbers.py --write` and the quick tests, stopping at the first failure. Launch it detached and reread what moved. `--list` shows the steps, `--from STEP` resumes, and `--repeat-only` skips the priors a record update cannot move. `analysis/README.md` *Rerunning them* says which scripts are findings and which fixes need no rerun.
+The refresh is `python refresh.py`: new answers, the refit, every live script, `doc_numbers.py --write` and the quick tests, stopping at the first failure. Launch it detached and reread what moved. `--list` shows the steps and `--from STEP` resumes. `analysis/README.md` *Rerunning them* says which scripts are findings and which fixes need no rerun.
 
-The refit inside it is `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. A change to a prior's probabilities or shapes needs `compare --forms all` and `form_default.py --shapes`. `results_tables.py` replays every archived form, and a fit made under another prior is the mis-paired curve SOLVER_EXPLAINED *The form of `f` has to be refitted per shape* describes. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move.
+The refit inside it is `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. A change to a prior's probabilities or shapes needs `compare --forms all` and `form_default.py --shapes`. `results_tables.py` replays every archived form, and a fit made under another prior is the mis-paired curve SOLVER_EXPLAINED *The form of `f` has to be refitted per shape* describes. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move; `--repeat-only` skips them.
 
 A cause needs a measurement. Before writing "because", name two candidate causes and run something that separates them, or label the claim as a guess. Say which kind of claim a sentence is: measured, follows from the code, or guessed.
 

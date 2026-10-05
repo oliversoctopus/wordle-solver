@@ -1,6 +1,6 @@
 # The voice
 
-Who is writing the documents, who is reading them, what the writing does at each kind of paragraph, what the check does not catch, and four pairs that show it. CLAUDE.md *Voice* holds the floor `tests/voice.py` checks. This file says what the writing sounds like once it clears that floor.
+Who is writing the documents, who is reading them, what the writing does at each kind of paragraph, what the check does not catch, where a new sentence goes, and four pairs that show it. Read it before editing a document. CLAUDE.md *Voice* holds the floor `tests/voice.py` checks. This file says what the writing sounds like once it clears that floor.
 
 ## Who is speaking, and to whom
 
@@ -12,11 +12,11 @@ The habits below are drawn from four writers doing this well: Norvig's spelling 
 
 ## Reporting a result
 
-The exact figure appears once, in the table or in the sentence that reports it. Every later sentence rounds it and says what it means. Norvig reports 75% on the development set and 68% on the test set, and the next sentence says he met his goals for brevity, development time and speed, and not for accuracy.
+The exact figure appears once, in the table or in the sentence that reports it. Every later sentence rounds it and says what it means. Norvig reports <!--c-->75% on the development set and <!--c-->68% on the test set, and the next sentence says he met his goals for brevity, development time and speed, and not for accuracy.
 
 When a result is surprising, the sentence says what one expected and why. Luu writes that the natural next step is a wider saturating counter, and that it turns out more bits buy little. The reader learns the result and the intuition it corrects in the same breath.
 
-When the cause is not measured, the sentence offers the candidates and stops. Norvig: perhaps the test set was hard, or perhaps the simple model cannot reach 80%. Hamming, mid-story: he cannot prove the cause and effect, because one could equally say the closed door is a symptom.
+When the cause is not measured, the sentence offers the candidates and stops. Norvig: perhaps the test set was hard, or perhaps the simple model cannot reach <!--c-->80%. Hamming, mid-story: he cannot prove the cause and effect, because one could equally say the closed door is a symptom.
 
 Concreteness comes from the example and never from a figure of speech. Norvig's examples are the words `thew`, `the` and `thaw`. This repo's are `salet`, `crane`, the 243 patterns and the eleven turn-two substitutions. A sentence reaching for pays, charges, prices, handicaps or verdicts is a sentence whose example is missing.
 
@@ -38,7 +38,7 @@ A story is told in order, with the moment of being wrong left in. Hamming storme
 
 `README.md`, `analysis/README.md`, `tests/README.md` and `ABOUT_SOLVER_EXPLAINED.md` are references. Their reader arrives at one section from a search or a link, wants one thing, and leaves. Everything under *Reporting a result* carries over: the figure once and then what it means, what one would expect and what happened, the candidate causes offered when none was measured, and an example in place of a figure of speech. The whiteboard does not carry over. A reference has no room for the speaker's surprise, so "I" appears only where a choice needs an owner, "we" only where reader and writer are looking at the same table, and a contraction only where the sentence is stiff without one.
 
-Two habits belong to the reference alone. A list is formatted as a list, whether of scripts, rules or fixed points, and a paragraph naming four things in a row is a list that has not been formatted yet. A grid of figures is a table, and a sentence strung with figures is usually a table row that has not been laid out. The procedural sections, on the page, the board and the editor, already read as a calm person pointing at one thing per sentence, and they are left as they are.
+Two habits belong to the reference alone. A list is formatted as a list, whether of scripts, rules or fixed points, and a paragraph naming four things in a row is a list that has not been formatted yet. The procedural sections, on the page, the board and the editor, already read as a calm person pointing at one thing per sentence, and they are left as they are.
 
 ## What clears the check and still sounds performed
 
@@ -50,6 +50,38 @@ Two habits belong to the reference alone. A list is formatted as a list, whether
 * "X, not Y" where Y was never live.
 * A run of short sentences where one sentence would carry the relation.
 * A sentence that announces the next one.
+
+## Where a sentence goes
+
+`SOLVER_EXPLAINED.md` decays in a specific way. Findings get appended instead of absorbed. A paragraph states a result, a later paragraph opens "under the shipped shapes the same decomposition comes out…", and a third explains which of the two to believe. Each addition is reasonable on its own. The sum is a changelog, and the reader ends up reconstructing the project's history to extract its conclusions.
+
+These rules stop it. The sections above say how a sentence sounds, and these say where it goes. They are written for `SOLVER_EXPLAINED.md` and hold for the references too, except the ones about the derivation's order.
+
+**Say what is true now, in the place it belongs.** When a number moves, edit the sentence that carries it. Do not add a paragraph saying it moved. If two paragraphs disagree, one of them is a patch and should not exist.
+
+**Keep superseded numbers only where the contrast is the lesson.** The possible-answer bonus growing <!--n results_tables.none.bonus +.3f-->+0.051 → <!--n results_tables.both.bonus +.3f-->+0.558 as the prior sharpens is evidence for §15's thesis, so it stays, as a clause inside the current statement. "An earlier version of this table reported <!--c-->−8.08" teaches nothing and goes. The test is whether the old number explains something about the solver or only about the repo.
+
+**A number earns its place by its size, not by being true.** Keep a figure where the argument turns on how large it is, such as the <!--n results_tables.both.bonus .2f-->0.56 the possible-answer bonus is worth against the <!--n results_tables.both.curvature .2f-->0.04 for curvature, or the ±<!--n replay.shapes.repeat_alone.arm.repeat_se .2f-->0.15 that stops the repeat arm settling anything. Where the claim is only directional, the words carry it and the digits are noise. "Worse, and by a lot" beats a log-likelihood the reader has nothing to compare against. A document that cites a figure every other sentence is a results table with connective tissue. When a figure is compressed into words, check the compression. Weights moving sixfold and fourfold are not "an order of magnitude in both directions", and <!--n results_tables.none.bonus .2f-->0.05 against <!--n results_tables.both.bonus .2f-->0.56 is an eleventh, not a twentieth.
+
+**Tabulate wherever the table reads better, which two axes always do and one axis often does.** Four shape combinations against four arms, or nine forms against both fit quality and opening word, is a grid, and writing it out as sentences asks the reader to rebuild the grid in their head. That much is not a judgment call. A single axis is, and the test is the reader, not the axis count. A run of three or four figures is usually better tabulated than strung through consecutive sentences. Prose carrying a list of numbers reads as a citation every other line and buries the argument. The same numbers in a table sit where a reader knows to look for them, and the sentences around it are free to argue. A table of one or two values, or one built for a figure the argument only needed directionally, is furniture, and there the words carry it. The corollary matters as much as the rule. When a table goes, the sentences pointing into it have to go with it. "Read across a row", "the second column" and "the bottom two rows" all survive the deletion and point at nothing.
+
+**Never let the document talk about itself.** No "the claim this section used to make is dead", no "this section has been updated", no dates of revision. Where the project was wrong and the error is instructive, as with §14.2's superadditivity, §7's mis-paired `anchored2` and the `fastmath` bug in §8, tell it as something that happened to the project, in the past tense, as part of the argument. The reader should never be made aware they are reading a file with a git history.
+
+**Nothing is measured before it is built.** The document is a derivation, so a section that scores something belongs after the machinery it scores. That is why the model of the editor is built in §4–§5 and asked what it was worth only in §14, three sections after the solver exists. It is why the caveat about refitting `f` per shape sits inside §7, where `f` is fitted, and not beside the shapes it is about, and why lookahead is explained in §10, next to the expectimax it is a shallower version of, and not in §15 where it is measured. A section that has to open by saying which later section defines its subject is in the wrong place, and moving it is the fix.
+
+**Put a new finding where the argument needs it, not at the end.** Hard mode earns its place in §6 because it is the cleanest test of the entropy identity. It appears again in §10 and §13 only as a consequence, and in §15 as an example of the thesis. It is not a section of its own. Ask what a new result is evidence for, and put it next to the claim it supports. The exceptions are §16 and §17, and what exempts them is that neither introduces a mechanism. §16 collects patterns the reader has already met in place, and §17 does arithmetic over what §16 measured. That is the test, not their position. A closing section may gather, measure or project what came before, and the moment one of them needs a new idea to make its point, the idea belongs upstream and the section keeps only a consequence of it.
+
+**A heading states the finding, not that a finding is coming.** "The result worth framing" announces. "A better map, and next to no better score" tells you, and a reader who never opens the section still leaves with it. The same holds one level down. "Why this isn't just entropy in disguise" is a denial, where "A straight-line `f` is entropy plus a bonus" is the thing proved.
+
+**Say each thing once.** The warning that the §4 table is not comparable between rows belongs at that table and nowhere else. A caveat repeated in three sections is three places to forget to update.
+
+**Every join is bridged, from one side or the other.** Often a section ends by naming the question the next one answers. §0 lists what §1–§3 must supply, §2 ends by saying that "many small ones" has to be made precise, and §12 points at the order §13 puts everything in. Just as often the bridge sits at the far end instead. §4's last subsection opens on what unequal weights break, and §8 on what removing the logarithms exposed, and those sections want no closing sentence above them saying it a second time. What matters is that the seam is carried once, not that every section has a last line pointing forward. A section that could be moved without anyone noticing is not carrying its weight, but a sentence appended to satisfy the rule where the next section already bridges is worse than the join it papers over. Where a section opens cold on its own thesis, as §15 does, nothing reaches back and the bridge has to come from the line above it, which is why §13 ends by naming the two questions §14 and §15 answer.
+
+**Section numbers are load-bearing, which does not make them fixed.** The route map in `ABOUT_SOLVER_EXPLAINED.md` and some eighty-odd cross-references are keyed to them, so renumbering is a whole-repository edit, and that is allowed provided every reference moves with it in the same change. They live in four files: `SOLVER_EXPLAINED.md` itself, `ABOUT_SOLVER_EXPLAINED.md`, this one, and `analysis/README.md`, which pairs each measured claim with the script behind it and so has to say where the claim lives. Nothing else references a section number, and nothing else should. `README.md`, `CLAUDE.md` and the analysis scripts name the section they mean instead, which survives a renumbering untouched. `git grep -n "§[0-9]"` finds every reference. The digit matters, since `§ *Editing the board*` and its kind point at a title and not a number. The job is done when each hit reads correctly, not when the numbers have been shifted. `tests/doc_refs.py` then catches what a careless renumbering left pointing at nothing, in the named references as much as the numbered ones. It cannot catch a reference that lands on a real section which is now the wrong one, so the reading is still the part that matters. Renumber when the argument wants a new section in the middle. Where a subsection at the end of an existing section does the same work, that is the cheaper move.
+
+The same freedom covers the words of a heading. A title that reads badly is not kept because `analysis/` quotes it. Rename it, move the quotes, and let `tests/doc_refs.py` name the ones you missed. For a reordering, cut the file at its headings, reassemble the blocks and then diff the set of paragraphs against the old file. Every paragraph that vanished should be a seam you rewrote. If one is not, you dropped it without noticing.
+
+To check yourself, read the section you edited from its first line, out loud if you can stand it. If you hear the seam where your paragraph joins, the reader will too. After anything larger than a paragraph, read the whole document instead. A cut lands in one place and breaks the sentence that pointed at it somewhere else, and nothing here checks that for you.
 
 ## Four pairs
 
