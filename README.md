@@ -45,6 +45,7 @@ python wordle_solver.py benchmark --no-curation-prior --mode entropy
 | `word_lists.py` | one-off: refetches `wordles.json` and `nonwordles.json` upstream |
 | `wordlebot.py` | one-off: rescrapes WordleBot's weights, live and from the 2023 snapshot |
 | `analysis/` | the measurement scripts behind every number in the prior sections below |
+| `refresh.py` | the routine refresh in one command: new answers, the refit, the live scripts, the documents and the tests |
 
 `answer_like.py`, `feedback_table.py`, `solutions.py`, `word_lists.py` and `wordlebot.py` report how they would change the file they build, and write nothing without `--write`.
 

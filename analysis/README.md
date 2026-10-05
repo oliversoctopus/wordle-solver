@@ -134,13 +134,7 @@ The native sweep is worth about <!--n timing.sweep.expected.python_over_rust .1f
 
 Not all of them after every `solutions.py --write`. The scripts are of two kinds.
 
-A **live** figure describes the shipped solver as it stands and moves with the record or the fit: the regime rates, the shape scores, the prior replays, the results tables, hard mode's cost. A refit comes first: `wordle_solver.py compare` per prior, then `form_default.py --promote`, which writes the active fits and records no figure. The live scripts are the routine refresh after it:
-
-* `regime.py`, `repeat_shapes.py`, `drift.py`, `curation_shapes.py`, `id_eras.py`
-* `replay.py` in its three modes, `results_tables.py`, `hard_mode.py --all-priors` and `--mode entropy`, `hard_mode_rules.py` in its three modes
-* `turn2_regret.py`, whose enumerated rows are a finding but whose real-answer rows replay the record
-* `prior_basin.py`, whose recent-window rows follow the record and back the off-list default
-* `site_size.py`, after `./build_site.sh`
+A **live** figure describes the shipped solver as it stands and moves with the record or the fit: the regime rates, the shape scores, the prior replays, the results tables, hard mode's cost. `python refresh.py` reruns all of them after the refit, and `refresh.LIVE` is the list, with each script's modes. Two of them are live for one part only. `turn2_regret.py`'s enumerated rows are a finding, and its real-answer rows replay the record. `prior_basin.py`'s recent-window rows follow the record and back the off-list default.
 
 A **finding** answered a question once and is a property of the design that a refit re-confirms: lookahead is worth under a hundredth of a guess, the branch cap never costs the winner, the fit does not converge to its best round, the native fit is as good, a stale record costs nothing. Those are rerun when the code they measure changes, and each one's results file says when that last was. The table below quotes it.
 
@@ -155,7 +149,7 @@ Nothing warns about a stale fit either way. The estimator cache is keyed on the 
 | `form_default.py --shapes`, after `compare --forms all` | <!--s form_default.measured-->2026-10-04<!--/s--> |
 | `external_benchmark.py` | <!--s external_benchmark.measured-->2026-10-04<!--/s--> |
 | `fresh_arm.py`, `refit_lag.py`, `fresh_shapes.py` | <!--s fresh_arm.measured-->2026-10-04<!--/s--> |
-| `ablations.py`, `table_layout.py`, `fused_gain.py`, `timing.py` | <!--s timing.measured-->2026-09-20<!--/s--> |
+| `ablations.py`, `table_layout.py`, `fused_gain.py`, `timing.py`, `split_ranking.py` | <!--s timing.measured-->2026-09-20<!--/s--> |
 
 **Not every arm moves.** `priors.build_weights` consults the used-word mask only under `PriorConfig.repeat`, so a repeat-off prior is the same distribution after the write as before it, its fit is bit-for-bit the same fit, and every figure weighted by it over every word is the same figure. `priors.depends_on_answer_record` is that rule in one line. `wordle_solver.py train --repeat-only` skips the two of the five fits it exempts, and `--repeat-only` drops the same arms from every script here that sweeps priors, printing which it dropped so a table assembled from two runs says so.
 
