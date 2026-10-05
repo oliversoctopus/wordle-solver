@@ -14,6 +14,21 @@
                 "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
                 "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
+        },
+        "external_benchmark.py --refit": {
+            "at": "2026-10-04 19:13",
+            "solutions": 1933,
+            "through": "2026-10-03",
+            "fits": {
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
+                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
+            }
         }
     },
     "values": {

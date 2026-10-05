@@ -28,7 +28,8 @@ parser.add_argument("--top", type=int, default=200,
 parser.add_argument("--all-priors", action="store_true",
                     help="all four combinations rather than the shipped one")
 parser.add_argument("--every-word", action="store_true",
-                    help="ignore --top and sweep the whole list; hours, not minutes")
+                    help="ignore --top and sweep the whole list; analysis/"
+                         "README.md has the wall clock")
 common.add_prior_filter(parser)
 args = parser.parse_args()
 

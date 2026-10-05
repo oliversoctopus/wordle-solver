@@ -2,9 +2,9 @@
 
 Scans every document, comment and docstring for the phrases CLAUDE.md *Voice*
 bans, for headers, docstrings and comment blocks over their line limits, for
-measurements and dates in source comments, for CLAUDE.md's size, for the
-density of dashes, "rather than" and short closing sentences in a document,
-and for sentence lengths too uniform to be a person's.
+measurements and dates in source comments and help text, for CLAUDE.md's
+size, for the density of dashes, "rather than" and short closing sentences in
+a document, and for sentence lengths too uniform to be a person's.
 
     python tests/voice.py                    the repo
     python tests/voice.py PATH...            these files or directories
@@ -65,7 +65,7 @@ VOICE = [(re.compile(pattern, re.I), name) for pattern, name in VOICE]
 MEASURE = re.compile(
     r"±|\b\d[\d,]*(?:\.\d+)?\s*(?:ms|secs?|seconds?|minutes?|hours?|MB|KB|GB"
     r"|%|σ|nats|×)(?!\w)|\b\d[\d,]*(?:\.\d+)? s(?!\w)|\b\d+(?:\.\d+)?x(?!\w)"
-    r"|\b\d+\.\d+ guesses\b|\b\d+(?:\.\d+)?e-\d+\b")
+    r"|\b\d+\.\d+ guesses\b|\b\d+(?:\.\d+)?e-\d+\b|\+-\s*\d")
 DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
 
 # text that is quoting a phrase rather than using it
@@ -216,9 +216,31 @@ def scan_python(text):
             hits += doc_hit(start, ast.get_docstring(node).split("\n"))
         for k, line in enumerate(doc.split("\n")):
             prose.append((start + k, line))
+    prose += help_strings(tree)
     hits += voice_hits(prose, source=True)
     hits += block_hits(comment_lines, header_end)
     return hits
+
+
+def help_strings(tree):
+    """The literal text of every ``help=`` and ``description=`` argument,
+    which the comment rules cover as they cover a comment."""
+    out = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        for keyword in node.keywords:
+            if keyword.arg not in ("help", "description"):
+                continue
+            parts = (keyword.value.values
+                     if isinstance(keyword.value, ast.JoinedStr)
+                     else [keyword.value])
+            text = "".join(part.value for part in parts
+                           if isinstance(part, ast.Constant)
+                           and isinstance(part.value, str))
+            if text:
+                out.append((keyword.value.lineno, text.replace("%%", "%")))
+    return out
 
 
 TRAILING = re.compile(r"(?<![:\w])//(?!/)(.*)$")

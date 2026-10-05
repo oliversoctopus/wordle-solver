@@ -99,8 +99,7 @@ def score(fn, events, all_words):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--events", type=int, default=0,
-                        help="score only the first N repeats (18 reproduces the "
-                             "pre-2026-08-10 README)")
+                        help="score only the first N repeats")
     args = parser.parse_args()
 
     words = common.answers()

@@ -67,12 +67,17 @@ fit = None if args.refit or args.slice else common.result(
 if fit is None:
     common.header("fitting f under a uniform prior over the list")
     started = time.perf_counter()
+    # the config is overridden by the answer list, so its own labels stay quiet
     params, meta = train.policy_iteration(
         PriorConfig(), data=data,
         n_games=200 if args.slice else train.DEFAULT_GAMES,
         max_iters=1 if args.slice else train.DEFAULT_MAX_ITERS,
-        solver_options={"answers": answers}, save=False, use_rust=False)
-    print(f"  fitted in {time.perf_counter() - started:.0f}s")
+        solver_options={"answers": answers}, save=False, use_rust=False,
+        verbose=False)
+    print(f"  {meta['iterations']} rounds, converged={meta['converged']}, "
+          f"best training mean {meta['best_train_mean_guesses']:.4f}, "
+          f"opening {meta['opening_word']}, "
+          f"{time.perf_counter() - started:.0f}s")
     fit = [float(p) for p in params]
 note("fit_params", fit)
 

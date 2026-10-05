@@ -155,28 +155,25 @@ def build_parser():
     common.add_argument("--exact-branch", type=int, default=DEFAULT_MAX_BRANCH,
                         help="how many splits the exact search tries per position, "
                              "best first (default %(default)s); 0 tries every one, "
-                             "which is provably optimal but can take tens of seconds "
-                             "on a hard position")
+                             "which is provably optimal and slow on a hard position")
     common.add_argument("--exact-root-branch", type=int, default=DEFAULT_ROOT_BRANCH,
                         help="how many it tries at the position being ranked, which "
                              "wants more than the pick does (default %(default)s)")
     common.add_argument("--lookahead", type=int, default=0,
                         help="plies of branch-capped lookahead above the exact "
-                             "search (default %(default)s, off).  1 measures "
-                             "-0.0034 +- 0.0041 guesses, which is nothing, for "
-                             "~10x the wall clock; 2 is not affordable")
+                             "search (default %(default)s, off); README "
+                             "*Lookahead* has what one ply is worth")
     common.add_argument("--lookahead-branch", type=int,
                         default=DEFAULT_LOOKAHEAD_BRANCH,
                         help="guesses expanded per position when --lookahead is on "
-                             "(default %(default)s; a cap of 25 measured no "
-                             "better).  It is a fan-out at each node, as "
-                             "--exact-branch is, so a second ply multiplies the "
-                             "work by it again")
+                             "(default %(default)s).  It is a fan-out at each "
+                             "node, as --exact-branch is, so a second ply "
+                             "multiplies the work by it again")
     common.add_argument("--loss-penalty", type=float, default=DEFAULT_LOSS_PENALTY,
                         help="cost of running out of turns, on top of the six spent, so "
                              "1.0 scores a lost game as 7 and is risk neutral "
-                             "(default %(default)s); the default removes ~40%% of "
-                             "losses for no measurable change in mean score")
+                             "(default %(default)s); README *Losing less* has "
+                             "what it buys")
 
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
