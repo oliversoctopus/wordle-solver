@@ -41,6 +41,9 @@ def _settings(solver, max_guesses):
     # lookahead has no counterpart on the native side at all
     if solver.lookahead:
         return None
+    # nor does a fixed answer list, which replaces the prior's weights
+    if solver.answers is not None:
+        return None
     # the caps are read from the environment by both, so they already agree
     if solver.exact.max_branch != DEFAULT_MAX_BRANCH:
         return None

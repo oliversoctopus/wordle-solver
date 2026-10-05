@@ -59,8 +59,8 @@ class WordleSolver:
     ``entropy`` maximizes expected information gain; ``expected`` minimizes
     E(g, S) = 1 + sum_{r != GGGGG} p_r f(n_r) with this prior's fitted f.  Both
     use the exact search where affordable and restrict the last guess to a
-    possible answer.  README *Lookahead*, *Hard mode* and *Results* describe
-    ``lookahead``, ``hard`` and ``win_bonus``.
+    possible answer.  ``answers`` swaps the prior for a fixed list weighted
+    uniformly.  README *Lookahead*, *Hard mode* and *Results* describe the rest.
     """
 
     def __init__(self, data=None, config=None, mode=EXPECTED, params=None,
@@ -70,7 +70,8 @@ class WordleSolver:
                  exact_max_branch=DEFAULT_MAX_BRANCH,
                  exact_root_branch=DEFAULT_ROOT_BRANCH, hard=False,
                  lookahead=0, lookahead_max_branch=DEFAULT_LOOKAHEAD_BRANCH,
-                 lookahead_exact_max=None, fused=None, win_bonus=0.0):
+                 lookahead_exact_max=None, fused=None, win_bonus=0.0,
+                 answers=None):
         if mode not in MODES:
             raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
         if win_bonus and mode != ENTROPY:
@@ -80,6 +81,12 @@ class WordleSolver:
         self.config = config if config is not None else PriorConfig()
         self.mode = mode
         self.weights = build_weights(self.data, self.config)
+        # a fixed answer list replaces the prior: uniform on it, zero elsewhere
+        self.answers = None
+        if answers is not None:
+            self.answers = np.unique(np.asarray(answers, dtype=np.int64))
+            self.weights = np.zeros_like(self.weights)
+            self.weights[self.answers] = 1.0 / len(self.answers)
 
         if params is not None:
             self.form = estimator.get_form(form)
@@ -141,6 +148,8 @@ class WordleSolver:
         self._lookahead_memo.clear()
 
     def all_candidates(self):
+        if self.answers is not None:
+            return self.answers.copy()
         return self.data.all_candidates()
 
     def guess_pool(self, candidates):

@@ -47,6 +47,7 @@ python analysis/branch_tie.py       the branch cap's tie tolerance, and the band
 python analysis/rust_fit.py         the native trainer's fit against the Python's
 python analysis/results_tables.py   the two tables in README *Results* (slowest)
 python analysis/head_to_head.py     the shipped solver against the reference, game by game
+python analysis/external_benchmark.py   the solver against the published optimum
 python analysis/head_to_head.py --baseline   against greedy entropy instead
 python analysis/split_ranking.py    how much of a ranking is one guess twice
 python analysis/table_layout.py     both feedback-table layouts, kernel by kernel
@@ -89,6 +90,7 @@ Wall clocks on one machine, with the native sweep where a script can use it. A s
 | `fused_gain.py` | under 1 min | | timing probe; see below |
 | `timing.py` | 2 min | `--train` 5 min more | idle machine only |
 | `site_size.py` | seconds | | reads `site/`; needs `brotli` on the path |
+| `external_benchmark.py` | seconds | `--refit` under 1 min | Python only: the fixed answer list has no native flag |
 
 The native sweep is worth about <!--n timing.sweep.expected.python_over_rust .1f-->1.6× on the scripts that use it. The memos are why any of this finishes. Behind a fixed opening the 12,947 answers reach at most 243 distinct positions, and a run comes mostly out of cache once they fill. `memo.Memo` evicts its least recently used entry instead of refusing new ones, and `WordleSolver.reset_memo` is for a sweep that wants each run independent of the last. A run taking far longer than its row above is one to interrupt and diagnose.
 
@@ -122,6 +124,7 @@ The native sweep is worth about <!--n timing.sweep.expected.python_over_rust .1f
 | `form_default.py` | README *Which form is the default* |
 | `results_tables.py` | both tables in README *Results*, and its `--part priors` the bonus/curvature split in SOLVER_EXPLAINED §6 |
 | `head_to_head.py` | README *Where the estimator's guesses come from* |
+| `external_benchmark.py` | README *Against the known optimum* |
 | `split_ranking.py` | the *Alternatives* card under README *In a browser*, and the runners-up paragraph closing *The exact endgame* |
 | `table_layout.py` | SOLVER_EXPLAINED §8 *Storing the table the other way round*, the per-kernel figures |
 | `fused_gain.py` | the same section's whole-game figures |
@@ -150,6 +153,7 @@ Nothing warns about a stale fit either way. The estimator cache is keyed on the 
 | `loss_penalty.py`, `loss_cost.py`, `branch_cap.py` | <!--s loss_penalty.measured-->2026-10-04<!--/s--> |
 | `fit_rounds.py`, `rust_fit.py`, `pattern_offsets.py` | <!--s fit_rounds.measured-->2026-10-04<!--/s--> |
 | `form_default.py --shapes`, after `compare --forms all` | <!--s form_default.measured-->2026-10-04<!--/s--> |
+| `external_benchmark.py` | <!--s external_benchmark.measured-->2026-10-04<!--/s--> |
 | `fresh_arm.py`, `refit_lag.py`, `fresh_shapes.py` | <!--s fresh_arm.measured-->2026-10-04<!--/s--> |
 | `ablations.py`, `table_layout.py`, `fused_gain.py`, `timing.py` | <!--s timing.measured-->2026-09-20<!--/s--> |
 

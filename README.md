@@ -152,6 +152,23 @@ A gap of four hundredths of a guess sounds like two policies that agree on nearl
 
 Because `f` estimates expected guesses, the policy is risk-neutral away from the endgame, where greedy entropy is implicitly cautious. `--loss-penalty 5` and the exact search together close about two thirds of the gap in loss probability. The estimator still loses <!--n head_to_head.baseline.loss_ratio .0f-->4 times as often as entropy does (see [Losing less](#losing-less)). `--loss-penalty 1` restores risk neutrality and gives that ground back.
 
+## Against the known optimum
+
+Optimal play is known for one setting. With the original <!--n external_benchmark.optimum.answers-->2,315 answers weighted uniformly and <!--n external_benchmark.optimum.allowed-->12,972 allowed guesses, the best possible strategy takes <!--n external_benchmark.optimum.total-->7,920 guesses in all, <!--n external_benchmark.optimum.mean .4f-->3.4212 a game, opens `salet` and never needs more than <!--n external_benchmark.optimum.worst-->5 ([Selby](https://sonorouschocolate.com/notes/index.php/The_best_strategies_for_Wordle)). `analysis/external_benchmark.py` fits `f` in that setting, with the candidates restricted to the answer list and every word allowed as a guess, and plays every answer once:
+
+<!--table external_benchmark.table-->
+| policy | opening | mean | vs. optimum | lost | games in 1 / 2 / 3 / 4 / 5 / 6 |
+| --- | --- | --- | --- | --- | --- |
+| fitted f | `reast` | 3.4296 | +0.0085 | 0 | 0 / 70 / 1237 / 942 / 60 / 0 |
+| fitted f, opening salet | `salet` | 3.4249 | +0.0037 | 0 | 0 / 79 / 1218 / 966 / 44 / 2 |
+| greedy entropy | `soare` | 3.5240 | +0.1029 | 0 | 0 / 31 / 1106 / 1104 / 67 / 1 |
+| IG + 2·p_win | `soare` | 3.4621 | +0.0409 | 0 | 0 / 50 / 1214 / 974 / 70 / 1 |
+<!--/table-->
+
+The fitted policy finishes within a hundredth of a guess of the optimum, and within <!--n external_benchmark.salet.gap .3f-->0.004 behind `salet`. Greedy entropy is a tenth of a guess away. The comparison is close and not exact. This list is the <!--n external_benchmark.answers-->2,309 answers left after the NYT's removals, and the vocabulary has <!--n external_benchmark.allowed-->12,947 words. No optimum has been published for those lists, and six fewer answers could move it either way, so a gap this small says the policy is near optimal and does not say by how much.
+
+Two things the shipped prior hides show up here. The estimator's own opening, `<!--s external_benchmark.fitted.opening-->reast<!--/s-->`, costs <!--n external_benchmark.opening_regret .4f-->0.0048 against `salet` behind the same policy, where under the shipped prior it picks `salet` with no regret ([The opening is not where the estimator is weak](#the-opening-is-not-where-the-estimator-is-weak)). And behind `salet` it needs a sixth guess for <!--n external_benchmark.salet.sixes-->2 answers that optimal play finishes in five.
+
 ## The two priors
 
 The answer is not drawn uniformly, and the two departures from uniform can be switched on and off independently, from the command line and from a checkbox each on the page. **All four combinations ship**, each with its own cached fit and its own opening word. "The default prior" throughout this document means both switches on with the sharpened shapes, which is where the switches start.

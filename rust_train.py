@@ -40,7 +40,7 @@ def _flags(config, form, n_games, seed, max_iters, tol, patience,
     options = dict(solver_options or {})
     if options.get("hard") or options.get("lookahead"):
         return None
-    if options.get("win_bonus"):
+    if options.get("win_bonus") or options.get("answers") is not None:
         return None
     # the caps are read from the environment by both, so they already agree
     from exact import DEFAULT_MAX_BRANCH, DEFAULT_ROOT_BRANCH

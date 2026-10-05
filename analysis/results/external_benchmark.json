@@ -1,0 +1,59 @@
+{
+    "runs": {
+        "external_benchmark.py": {
+            "at": "2026-10-04 18:53",
+            "solutions": 1933,
+            "through": "2026-10-03",
+            "fits": {
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
+                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
+            }
+        }
+    },
+    "values": {
+        "allowed": 12947,
+        "answers": 2309,
+        "entropy.gap": 0.10287007268955062,
+        "entropy.lost": 0,
+        "entropy.mean": 3.524036379385015,
+        "entropy.opening": "soare",
+        "entropy.sixes": 1,
+        "fit_params": [
+            1.3266213796933226,
+            0.260410149922495,
+            -0.05273842151527859,
+            -0.04496231598256414,
+            -0.00344630335403292,
+            0.0
+        ],
+        "fitted.gap": 0.008456906816878718,
+        "fitted.lost": 0,
+        "fitted.mean": 3.4296232135123432,
+        "fitted.opening": "reast",
+        "fitted.sixes": 0,
+        "ig.gap": 0.040938500580412374,
+        "ig.lost": 0,
+        "ig.mean": 3.462104807275877,
+        "ig.opening": "soare",
+        "ig.sixes": 1,
+        "measured": "2026-10-04",
+        "opening_regret": 0.004763967085318566,
+        "optimum.allowed": 12972,
+        "optimum.answers": 2315,
+        "optimum.mean": 3.4211663066954645,
+        "optimum.total": 7920,
+        "optimum.worst": 5,
+        "salet.gap": 0.003692939731560152,
+        "salet.lost": 0,
+        "salet.mean": 3.4248592464270247,
+        "salet.opening": "salet",
+        "salet.sixes": 2,
+        "table": "| policy | opening | mean | vs. optimum | lost | games in 1 / 2 / 3 / 4 / 5 / 6 |\n| --- | --- | --- | --- | --- | --- |\n| fitted f | `reast` | 3.4296 | +0.0085 | 0 | 0 / 70 / 1237 / 942 / 60 / 0 |\n| fitted f, opening salet | `salet` | 3.4249 | +0.0037 | 0 | 0 / 79 / 1218 / 966 / 44 / 2 |\n| greedy entropy | `soare` | 3.5240 | +0.1029 | 0 | 0 / 31 / 1106 / 1104 / 67 / 1 |\n| IG + 2·p_win | `soare` | 3.4621 | +0.0409 | 0 | 0 / 50 / 1214 / 974 / 70 / 1 |"
+    }
+}
