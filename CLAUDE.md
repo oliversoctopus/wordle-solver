@@ -43,7 +43,7 @@ python editor.py                  rewrite what the site says, on :8001/editor
 * `WORDLE_FUSED=1` is a speed knob and changes no score. `WORDLE_ROOT_BRANCH=50` narrows the ranked node's branch cap and moves the runners-up; WASM has no environment. README *The exact endgame*.
 * The kernels use every core.
 * Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`, whose message names the `train` command that makes one. Entropy mode needs no fit.
-* **A refit invalidates `site/`.** `build_site` bakes the openings into `site/openings.json`. Rerun `./build_site.sh` after any refit before reading a parity failure as a port bug. It runs `$PYTHON`, else bare `python`, so set one to `.venv`'s.
+* **A refit invalidates `site/`.** `build_site` bakes the openings into `site/openings.json`. Rerun `./build_site.sh` after any refit before reading a parity failure as a port bug. It runs `$PYTHON`, else bare `python`.
 
 ## The Rust port
 
@@ -84,7 +84,7 @@ A script calls `common.record(key, value)` at the print site; the figure lands i
 
 The refresh is `python refresh.py`: new answers, the refit, every live script, `doc_numbers.py --write` and the quick tests, stopping at the first failure. Launch it detached and reread what moved. `--list` shows the steps and `--from STEP` resumes. `analysis/README.md` *Rerunning them* says which scripts are findings and which fixes need no rerun.
 
-The refit inside it is `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. A change to a prior's probabilities or shapes needs `compare --forms all` and `form_default.py --shapes`. `results_tables.py` replays every archived form, and a fit made under another prior is the mis-paired curve SOLVER_EXPLAINED *The form of `f` has to be refitted per shape* describes. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move; `--repeat-only` skips them.
+The refit inside it is `wordle_solver.py compare` per shipped prior, then `analysis/form_default.py --promote`. The three shape-comparison priors are refitted only with `--shapes`. A change to a prior's probabilities or shapes needs `compare --forms all` and `form_default.py --shapes`. `results_tables.py` replays every archived form, and a fit made under another prior is the mis-paired curve SOLVER_EXPLAINED *The form of `f` has to be refitted per shape* describes. The estimator cache is keyed on the `PriorConfig` alone, so refit before `analysis/replay.py`. `priors.depends_on_answer_record` names the priors a record update cannot move; `refresh.py` skips them; `--no-repeat-only` after anything but new answers.
 
 A cause needs a measurement. Before writing "because", name two candidate causes and run something that separates them, or label the claim as a guess. Say which kind of claim a sentence is: measured, follows from the code, or guessed.
 

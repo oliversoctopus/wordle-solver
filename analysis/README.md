@@ -4,7 +4,7 @@ Every measured number in `README.md` and `SOLVER_EXPLAINED.md` comes from one of
 
 So a figure in a document comes from a results file, or it carries a marker saying why not, and `doc_numbers.py --unbound` fails on one that does neither. `<!--c-->` marks a definition or a worked example. `<!--u-->` marks a figure measured once with no script here, and *What is not reproduced here* lists them.
 
-A script that sweeps every answer hands that sweep to the native binary where `./build.sh` has built one, and `analysis/rust.py` decides. It is worth about <!--n timing.sweep.expected.python_over_rust .1f-->1.8× on a whole script and the lengths are identical, since `tests/rust_parity.py --every-answer` plays all 12,947 both ways and diffs them per answer. `WORDLE_NO_RUST=1` keeps everything in Python, and the two are compared under it. A setting the flags cannot express falls back to Python on its own.
+A script that sweeps every answer hands that sweep to the native binary where `./build.sh` has built one, and `analysis/rust.py` decides. It is worth about <!--n timing.sweep.expected.python_over_rust .1f-->1.5× on a whole script and the lengths are identical, since `tests/rust_parity.py --every-answer` plays all 12,947 both ways and diffs them per answer. `WORDLE_NO_RUST=1` keeps everything in Python, and the two are compared under it. A setting the flags cannot express falls back to Python on its own.
 
 ```
 python analysis/regime.py           the regime table and the pool arithmetic
@@ -88,11 +88,11 @@ Wall clocks on one machine, with the native sweep where a script can use it. A s
 | `split_ranking.py` | seconds | | its second half is a timing probe |
 | `table_layout.py` | 4 min | | timing probe; read the ratios |
 | `fused_gain.py` | under 1 min | | timing probe; see below |
-| `timing.py` | 2 min | `--train` 5 min more | idle machine only |
+| `timing.py` | 2 min | `--train` 10 min more; `--seeds` sets how many whole fits it averages | idle machine only |
 | `site_size.py` | seconds | | reads `site/`; needs `brotli` on the path |
 | `external_benchmark.py` | seconds | `--refit` under 1 min | Python only: the fixed answer list has no native flag |
 
-The native sweep is worth about <!--n timing.sweep.expected.python_over_rust .1f-->1.8× on the scripts that use it. The memos are why any of this finishes. Behind a fixed opening the 12,947 answers reach at most 243 distinct positions, and a run comes mostly out of cache once they fill. `memo.Memo` evicts its least recently used entry instead of refusing new ones, and `WordleSolver.reset_memo` is for a sweep that wants each run independent of the last. A run taking far longer than its row above is one to interrupt and diagnose.
+The native sweep is worth about <!--n timing.sweep.expected.python_over_rust .1f-->1.5× on the scripts that use it. The memos are why any of this finishes. Behind a fixed opening the 12,947 answers reach at most 243 distinct positions, and a run comes mostly out of cache once they fill. `memo.Memo` evicts its least recently used entry instead of refusing new ones, and `WordleSolver.reset_memo` is for a sweep that wants each run independent of the last. A run taking far longer than its row above is one to interrupt and diagnose.
 
 `fused_gain.py` draws its answers uniformly from the whole list, not from the prior. The dispatch speeds up the table read alone, which in expected mode is a small share of a scan carrying the estimator and the endgame search. The gain is <!--n fused_gain.expected.whole .2f-->1.03× on its own population and <!--u-->1.09× on answers drawn from the prior, under either fit, so a figure that looks like it moved has usually changed population instead.
 
@@ -149,9 +149,9 @@ Nothing warns about a stale fit either way. The estimator cache is keyed on the 
 | `form_default.py --shapes`, after `compare --forms all` | <!--s form_default.measured-->2026-10-04<!--/s--> |
 | `external_benchmark.py` | <!--s external_benchmark.measured-->2026-10-04<!--/s--> |
 | `fresh_arm.py`, `refit_lag.py`, `fresh_shapes.py` | <!--s fresh_arm.measured-->2026-10-04<!--/s--> |
-| `ablations.py`, `table_layout.py`, `fused_gain.py`, `timing.py`, `split_ranking.py` | <!--s timing.measured-->2026-10-13<!--/s--> |
+| `ablations.py`, `table_layout.py`, `fused_gain.py`, `timing.py`, `split_ranking.py` | <!--s timing.measured-->2026-10-14<!--/s--> |
 
-**Not every arm moves.** `priors.build_weights` consults the used-word mask only under `PriorConfig.repeat`, so a repeat-off prior is the same distribution after the write as before it, its fit is bit-for-bit the same fit, and every figure weighted by it over every word is the same figure. `priors.depends_on_answer_record` is that rule in one line. `wordle_solver.py train --repeat-only` skips the two of the five fits it exempts, and `--repeat-only` drops the same arms from every script here that sweeps priors, printing which it dropped so a table assembled from two runs says so.
+**Not every arm moves.** `priors.build_weights` consults the used-word mask only under `PriorConfig.repeat`, so a repeat-off prior is the same distribution after the write as before it, its fit is bit-for-bit the same fit, and every figure weighted by it over every word is the same figure. `priors.depends_on_answer_record` is that rule in one line. `wordle_solver.py train --repeat-only` skips the two of the five fits it exempts, and `--repeat-only` drops the same arms from every script here that sweeps priors, printing which it dropped so a table assembled from two runs says so. `refresh.py` passes it by default.
 
 The exemption is about where the weights come from, not what an arm is called. The scripts that replay the real answer record (`replay.py`, `prior_basin.py`, `fresh_arm.py`) score their `none` and `curation only` arms over a log that just got longer, so every arm of theirs moves and they take no such flag. Carrying an old row into a new table holds only while nothing else moved either. A `word_lists.py --write`, a fresh `wordlebot.py` scrape or a change to `noncurated_prob` invalidates a repeat-off row as surely as a new answer would, and nothing records which run a row came from.
 

@@ -873,8 +873,8 @@ Nothing in the right-hand column below was run to completion. Each figure is the
 | what the project does once | shipped | with none of it |
 | --- | --- | --- |
 | choose the opening guess | <!--s ablations.projection.opening.shipped-->34 ms<!--/s--> | <!--s ablations.projection.opening.naive-->7.2 minutes<!--/s--> |
-| play every answer once, all 12,947 games | <!--n timing.sweep.expected.python .1f-->10.9 s | <!--s ablations.projection.sweep.naive-->65 days<!--/s--> |
-| `train` — fit `f` for all five shipped priors | <!--n timing.train.python .1f-->37.6 s | <!--s ablations.projection.train.naive-->374 days<!--/s--> |
+| play every answer once, all 12,947 games | <!--n timing.sweep.expected.python .1f-->9.4 s | <!--s ablations.projection.sweep.naive-->65 days<!--/s--> |
+| `train` — fit `f` for all five shipped priors | <!--n timing.train.python .1f-->36.2 s | <!--s ablations.projection.train.naive-->374 days<!--/s--> |
 
 The count is the same kind of thing in both lower rows because of the memo. Every game in a sweep and every rollout in a fit opens at the same position, the full word list, so the shipped solver scans it once per process and hands the answer to the other 12,946 games. Without the caches, each game pays the seven minutes again. What happens after the opening barely registers. The position left after `salet` holds <!--n ablations.midgame.candidates-->268 candidates, and all the later turns of a game together add a few percent to a cost the first turn has set.
 

@@ -2,8 +2,9 @@
 
 A sweep of every answer in Rust against the Python, what keeping games in
 flight is worth, what the answer-major dispatch is worth over a sweep, and
-what a whole `train` costs each way.  NEEDS AN IDLE MACHINE.  Each Rust sweep
-runs twice and the faster is kept; the Python sweep runs in a fresh process.
+what a whole `train` and one round of it cost each way.  NEEDS AN IDLE
+MACHINE.  Each Rust sweep runs twice and the faster is kept; the Python sweep
+runs in a fresh process.
 `--train` adds the trainer probes, which overwrite the estimator cache and
 restore it.  Backs README *Fitting in Rust* and *Keeping the port in step*.
 """
@@ -29,6 +30,8 @@ parser.add_argument("--train", action="store_true",
                     help="also time the trainer; overwrites and restores the cache")
 parser.add_argument("--reps", type=int, default=2,
                     help="runs per Rust probe, the fastest kept")
+parser.add_argument("--seeds", type=int, default=4,
+                    help="training seeds the whole-`train` probe averages over")
 args = parser.parse_args()
 
 
@@ -123,22 +126,33 @@ if args.train:
     common.record("train.exact60.chunks3", three)
     common.record("train.exact60.gain", one / three)
 
-    common.header("a whole `train`, both ways, best of two")
+    common.header(f"a whole `train`, both ways, over seeds 0-{args.seeds - 1}")
     cache = os.path.join(ROOT, "estimator_cache")
     keep = tempfile.mkdtemp()
     shutil.copytree(cache, os.path.join(keep, "estimator_cache"))
     try:
-        times = {}
-        for label, extra in (("rust", []), ("python", ["--no-rust"])):
-            best = None
-            for _ in range(2):
+        walls = {"rust": [], "python": []}
+        seconds = {"rust": [], "python": []}
+        # each seed runs both ways back to back, so drift lands on both
+        for seed in range(args.seeds):
+            for label, extra in (("rust", []), ("python", ["--no-rust"])):
                 start = time.perf_counter()
-                subprocess.run([PY, os.path.join(ROOT, "wordle_solver.py"), "train"]
-                               + extra, capture_output=True, check=True, cwd=ROOT)
-                elapsed = time.perf_counter() - start
-                best = elapsed if best is None else min(best, elapsed)
-            times[label] = best
-            print(f"  {label:8s} {best:.1f} s")
+                done = subprocess.run(
+                    [PY, os.path.join(ROOT, "wordle_solver.py"), "train",
+                     "--seed", str(seed)] + extra,
+                    capture_output=True, text=True, check=True, cwd=ROOT)
+                walls[label].append(time.perf_counter() - start)
+                # every round's own time, from either trainer's log
+                rounds = [float(m) for m in re.findall(
+                    r"(?:entropy seed|iter \d+):.*?\(([\d.]+)s\)", done.stdout)]
+                seconds[label] += rounds
+                print(f"  seed {seed} {label:8s} {walls[label][-1]:.1f} s, "
+                      f"{len(rounds)} rounds", flush=True)
+        times = {k: sum(v) / len(v) for k, v in walls.items()}
+        per_round = {k: sum(v) / len(v) for k, v in seconds.items()}
+        for label in ("rust", "python"):
+            print(f"  {label:8s} mean {times[label]:.1f} s, "
+                  f"{per_round[label]:.3f} s a round")
     finally:
         shutil.rmtree(cache)
         shutil.copytree(os.path.join(keep, "estimator_cache"), cache)
@@ -147,3 +161,7 @@ if args.train:
     common.record("train.rust", times["rust"])
     common.record("train.python", times["python"])
     common.record("train.gain", times["python"] / times["rust"])
+    common.record("train.seeds", args.seeds)
+    common.record("train.per_round.rust", per_round["rust"])
+    common.record("train.per_round.python", per_round["python"])
+    common.record("train.per_round.gain", per_round["python"] / per_round["rust"])

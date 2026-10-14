@@ -75,8 +75,11 @@ def steps(repeat_only):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repeat-only", action="store_true",
-                        help="skip the priors an answer-record update cannot move")
+    parser.add_argument("--repeat-only", action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help="skip the priors an answer-record update cannot move "
+                             "(default); --no-repeat-only after a word-list, "
+                             "WordleBot or prior-default change")
     parser.add_argument("--list", action="store_true",
                         help="print the steps and run nothing")
     parser.add_argument("--from", dest="start", metavar="STEP",
