@@ -1,13 +1,13 @@
 {
     "runs": {
         "site_size.py": {
-            "at": "2026-10-04 16:54",
-            "solutions": 1933,
-            "through": "2026-10-03",
+            "at": "2026-10-13 23:13",
+            "solutions": 1942,
+            "through": "2026-10-12",
             "fits": {
                 "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
+                "repeat1_curation0_r-binned": "spline 2026-10-13 22:43:09",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
                 "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
                 "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
@@ -17,18 +17,18 @@
         }
     },
     "values": {
-        "data_kb": 778.824,
-        "measured": "2026-10-04",
+        "data_kb": 780.325,
+        "measured": "2026-10-13",
         "openings": 180,
-        "solutions_kb": 302.992,
-        "solutions_wire_kb": 16.242,
-        "total_mb": 1.590098,
+        "solutions_kb": 304.493,
+        "solutions_wire_kb": 16.306,
+        "total_mb": 1.591612,
         "turn2.per_prior": 202.0,
         "turn2.priors": 4,
         "turn2.rankings": 808,
-        "turn2.wire_kb": 29.247,
+        "turn2.wire_kb": 29.053,
         "wasm_kb": 468.43,
-        "wasm_wire_kb": 124.742,
-        "wire_kb": 281.773
+        "wasm_wire_kb": 124.641,
+        "wire_kb": 281.884
     }
 }

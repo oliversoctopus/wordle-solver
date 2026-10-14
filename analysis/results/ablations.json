@@ -1,58 +1,73 @@
 {
     "runs": {
         "ablations.py": {
-            "at": "2026-09-20 13:25",
-            "solutions": 1917,
-            "through": "2026-09-17",
+            "at": "2026-10-13 23:48",
+            "solutions": 1942,
+            "through": "2026-10-12",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
-                "repeat1_curation1": "spline 2026-09-18 02:03:42",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
+                "repeat1_curation0_r-binned": "spline 2026-10-13 22:43:09",
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         },
         "ablations.py --sweep-games 12947 --projection": {
-            "at": "2026-09-18 03:25",
-            "solutions": 1917,
-            "through": "2026-09-17",
+            "at": "2026-10-13 23:40",
+            "solutions": 1942,
+            "through": "2026-10-12",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
-                "repeat0_curation1_c-wordlebot": "invonly 2026-09-18 01:54:17",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
-                "repeat1_curation1": "spline 2026-09-18 02:03:42",
-                "repeat1_curation1_c-wordlebot": "saturating 2026-09-18 02:05:14",
-                "repeat1_curation1_r-binned": "anchored2 2026-09-18 02:07:27",
-                "repeat1_curation1_r-binned_c-frequency": "anchored2 2026-09-18 02:01:13",
-                "repeat1_curation1_r-binned_c-wordlebot": "anchored2 2026-09-18 02:00:10"
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
+                "repeat1_curation0_r-binned": "spline 2026-10-13 22:43:09",
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
+            }
+        },
+        "ablations.py --projection": {
+            "at": "2026-10-13 23:49",
+            "solutions": 1942,
+            "through": "2026-10-12",
+            "fits": {
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
+                "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
+                "repeat1_curation0_r-binned": "spline 2026-10-13 22:43:09",
+                "repeat1_curation1": "spline 2026-09-21 00:22:11",
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
     "values": {
-        "branch_cap": 2.553402899032227,
-        "measured": "2026-09-20",
-        "memo.at12947": 99.83498395495637,
-        "memo.at400": 14.704311297948548,
+        "branch_cap": 2.358893964957655,
+        "measured": "2026-10-13",
+        "memo.at12947": 102.31855917226255,
+        "memo.at400": 12.682133319256327,
         "midgame.candidates": 268,
-        "midgame.python": 3361.81503411773,
-        "midgame.table": 11.477824419470052,
-        "midgame.threads": 7.9289835536181315,
-        "midgame.wlogw": 1.8943972051101512,
-        "opening.python": 12570.372216893586,
-        "opening.table": 47.34519018006099,
-        "opening.threads": 8.589849309316314,
-        "opening.wlogw": 4.899485632810266,
-        "projection.ns_per_pair": 0.19123839853420269,
-        "projection.opening.naive": "6.9 minutes",
-        "projection.opening.shipped": "32 ms",
+        "midgame.python": 3259.9042476089758,
+        "midgame.table": 11.21998301108955,
+        "midgame.threads": 8.44224483430838,
+        "midgame.wlogw": 1.6582751795599828,
+        "opening.python": 12792.491451723898,
+        "opening.table": 44.98444723492975,
+        "opening.threads": 9.454734646505846,
+        "opening.wlogw": 4.587561447785558,
+        "projection.ns_per_pair": 0.20092014007011605,
+        "projection.opening.naive": "7.2 minutes",
+        "projection.opening.shipped": "34 ms",
         "projection.pairs": 167624809,
-        "projection.sweep.naive": "62 days",
-        "projection.train.naive": "355 days",
-        "projection.us_per_pair_python": 2.4731215726260642,
+        "projection.sweep.naive": "65 days",
+        "projection.train.naive": "374 days",
+        "projection.us_per_pair_python": 2.5702691743261274,
         "search_positions": 150,
-        "table": "| taking one idea back out | at the opening | at a mid-game position |\n| --- | --- | --- |\n| `w log w` back inside the inner loop | 4.9× | 1.9× |\n| no table — the coloring rule applied per pair | 47× | 11× |\n| one core instead of 16 | 8.6× | 7.9× |\n| **all three at once, in plain Python** | 12,570× | 3,362× |"
+        "table": "| taking one idea back out | at the opening | at a mid-game position |\n| --- | --- | --- |\n| `w log w` back inside the inner loop | 4.6× | 1.7× |\n| no table — the coloring rule applied per pair | 45× | 11× |\n| one core instead of 16 | 9.5× | 8.4× |\n| **all three at once, in plain Python** | 12,792× | 3,260× |"
     }
 }
