@@ -43,7 +43,7 @@ python editor.py                  rewrite what the site says, on :8001/editor
 * `WORDLE_FUSED=1` is a speed knob and changes no score. `WORDLE_ROOT_BRANCH=50` narrows the ranked node's branch cap and moves the runners-up; WASM has no environment. README *The exact endgame*.
 * The kernels use every core.
 * Expected-guesses play on a prior with no cached fit raises `estimator.NotFitted`, whose message names the `train` command that makes one. Entropy mode needs no fit.
-* **A refit invalidates `site/`.** `build_site` bakes the openings into `site/openings.json`. Rerun `./build_site.sh` after any refit before reading a parity failure as a port bug. It calls bare `python`, so have `.venv` on PATH.
+* **A refit invalidates `site/`.** `build_site` bakes the openings into `site/openings.json`. Rerun `./build_site.sh` after any refit before reading a parity failure as a port bug. It runs `$PYTHON`, else bare `python`, so set one to `.venv`'s.
 
 ## The Rust port
 

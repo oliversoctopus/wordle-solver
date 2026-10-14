@@ -129,7 +129,10 @@ if args.part in ("forms", "both"):
     for label, cfg in (("shipped shapes", PriorConfig()),
                        ("flat shapes", PriorConfig(repeat_shape="uniform",
                                                    curation_shape="uniform"))):
-        record = archived(cfg, "spline")
+        # the fit in play, which promote may have kept over the newer archive
+        record = estimator.load_record(cfg)
+        if record is None or record.get("form") != "spline":
+            record = archived(cfg, "spline")
         if record is None:
             continue
         params = np.array(record["params"])

@@ -44,7 +44,7 @@ cp data/derived/ind2word.json "$OUT/data/derived/"
 
 # the page and app.js go through wording.py, so a rewrite saved in the editor
 # ships; the fetch shim goes in ahead of app.js
-python - "$OUT" <<'PY'
+"${PYTHON:-python}" - "$OUT" <<'PY'
 import io, os, sys
 
 from wording import Wording

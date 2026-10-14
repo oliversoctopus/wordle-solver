@@ -94,9 +94,8 @@ def main():
             print(f"{name:<40} {' '.join(argv[1:])}")
         return 0
 
-    # build_site.sh calls bare python, so the environment's comes first
-    env = dict(os.environ)
-    env["PATH"] = os.path.dirname(sys.executable) + os.pathsep + env["PATH"]
+    # build_site.sh runs $PYTHON, which a shell profile cannot reorder
+    env = dict(os.environ, PYTHON=sys.executable)
     began = time.perf_counter()
     for n, (name, argv) in enumerate(todo, start=1):
         print(f"\n### [{n}/{len(todo)}] {name}", flush=True)
