@@ -76,6 +76,10 @@ python tests/voice.py PATH...          these files or directories
 
 `spelling.py` at the root scans the same documents, comments and docstrings for the words in `data/british_spellings.json`, and `--write` replaces them. The list comes from VarCon, which tags every spelling by region, and holds a word only when no sense of it is preferred in American English, so `gauge`, `buses` and `tonne` stay. A spelling British English treats only as a variant, such as `foetus`, is listed when the American spelling is the more common by `spelling.VARIANT_MARGIN` in `wordfreq`, so `okay`, `advisor` and `afterward` stay. `spelling.KEEP` drops the few that American writing uses as they are, and `spelling.ADD` holds reviewed pairs VarCon lacks or maps to another non-American spelling, such as `annexe`, `faery` and `draught`. The list was checked against a second, independent British-to-American list; every pair there that this one leaves out is an American spelling or a different word. Matching is by whole word in its own case, a word joined to an identifier by `_` never matches, and code spans, fenced code, URLs, HTML comments, string literals and everything under `data/` are skipped.
 
+## `arm_table.py` — a run that drops arms keeps their rows
+
+`--repeat-only` skips the priors that read no answer record, and `common.arm_table` carries their rows over from the table the last run recorded. Every arm table in `analysis/results/` is cut to each proper subset of its rows and merged back against the whole, and the merge has to give back the table it started from, row for row and in order.
+
 ## `spelling_fix.py` — the fix touches prose alone
 
 Two hundred spellings are drawn from the list and each is planted in prose, an identifier, a string literal and a code span, in Markdown, Python, Rust and JS. The fix must give every prose copy the listed spelling in its case, leave the rest, and leave nothing for a second pass. `spelling.fixed` refuses any rewrite that changes more than the words it found.

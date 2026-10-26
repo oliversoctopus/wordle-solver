@@ -65,6 +65,7 @@ def filter_priors(items, args):
             if keep_prior(it[1] if isinstance(it, tuple) else it, args)]
     if not kept:
         raise SystemExit("--repeat-only left nothing to sweep")
+    _DROPPED.extend(it for it in items if it not in kept)
     print(f"--repeat-only: {len(kept)} of {len(items)} arms; the rest do not "
           f"read the answer record, so their last figures still stand\n")
     return kept
@@ -318,6 +319,12 @@ def header(title):
 RESULTS_DIR = os.path.join(HERE, "results")
 _RECORDED = {}
 _FAILED = False
+# the arms `filter_priors` dropped, whose rows an arm table carries over
+_DROPPED = []
+
+
+def _script():
+    return os.path.splitext(os.path.basename(sys.argv[0]))[0]
 
 
 def record(key, value):
@@ -335,6 +342,47 @@ def result(script, key, default=None):
         return default
     with open(path, "r", encoding="utf-8") as file:
         return json.load(file)["values"].get(key, default)
+
+
+def last(key, default=None):
+    """A figure this script recorded on an earlier run."""
+    return result(_script(), key, default)
+
+
+def _row_label(line):
+    """A Markdown row's first cell, with the bold and "(the default)" taken off."""
+    cell = line.strip("|").split("|")[0].strip().replace("**", "")
+    return cell.replace(" (the default)", "")
+
+
+def arm_table(columns, rows, key):
+    """``md_table`` for a table with one row per prior, recorded at ``key``.
+
+    After ``filter_priors`` dropped arms, the rows the last run recorded for
+    labels missing here are carried over, in that run's order.
+    """
+    table = md_table(columns, rows)
+    before = last(key)
+    if not _DROPPED or not before:
+        return table
+    lines, old = table.split("\n"), before.split("\n")
+    head, new = lines[:2], lines[2:]
+    if old[:2] != head:
+        print(f"{key}: the columns changed, so no rows are carried over")
+        return table
+    fresh = {_row_label(line): line for line in new}
+    merged, carried = [], []
+    for line in old[2:]:
+        label = _row_label(line)
+        if label in fresh:
+            merged.append(fresh.pop(label))
+        else:
+            merged.append(line)
+            carried.append(label)
+    merged += fresh.values()
+    if carried:
+        print(f"{key}: carried over from the last run: {', '.join(carried)}")
+    return "\n".join(head + merged)
 
 
 def md_table(columns, rows):
@@ -371,7 +419,7 @@ def _fits_present():
 def _write_results():
     if not _RECORDED or _FAILED:
         return
-    name = os.path.splitext(os.path.basename(sys.argv[0]))[0]
+    name = _script()
     path = os.path.join(RESULTS_DIR, f"{name}.json")
     payload = {"runs": {}, "values": {}}
     if os.path.exists(path):

@@ -28,6 +28,8 @@ FAST = [
      [sys.executable, os.path.join(ROOT, "doc_numbers.py")]),
     ("every figure is bound or marked",
      [sys.executable, os.path.join(ROOT, "doc_numbers.py"), "--unbound"]),
+    ("a run that drops arms keeps their table rows",
+     [sys.executable, os.path.join(HERE, "arm_table.py")]),
     ("the facts the rest is measured against",
      [sys.executable, os.path.join(HERE, "anchors.py")]),
     ("the voice and comment rules hold",

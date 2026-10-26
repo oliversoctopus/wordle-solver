@@ -79,7 +79,10 @@ for config in configs:
     table.append(cells)
 
 if args.all_priors:
-    common.record(TAG + "table", common.md_table(
-        ["priors", "free", "hard", "cost", "solve rate, free \u2192 hard"], table))
-    if "none" in costs and "both" in costs:
-        common.record(TAG + "none_over_both", costs["none"] / costs["both"])
+    common.record(TAG + "table", common.arm_table(
+        ["priors", "free", "hard", "cost", "solve rate, free \u2192 hard"], table,
+        TAG + "table"))
+    # `none` reads no answer record, so a run that dropped it keeps its cost
+    none_cost = costs.get("none", common.last(TAG + "none.cost"))
+    if none_cost is not None and "both" in costs:
+        common.record(TAG + "none_over_both", none_cost / costs["both"])

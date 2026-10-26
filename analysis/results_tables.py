@@ -222,27 +222,32 @@ if args.part in ("priors", "both"):
         key = label.replace(" ", "_")
         common.record(f"{key}.bonus", entropy - straight)
         common.record(f"{key}.curvature", straight - best)
-    common.record("priors_table", common.md_table(
+    common.record("priors_table", common.arm_table(
         ["priors", "form", "opening", "entropy mean", "expected mean",
-         "solve rate"], table))
-    common.record("split_table", common.md_table(
-        ["priors", "entropy", "linear", "best", "bonus", "curvature"], split))
+         "solve rate"], table, "priors_table"))
+    common.record("split_table", common.arm_table(
+        ["priors", "entropy", "linear", "best", "bonus", "curvature"], split,
+        "split_table"))
     # the same rows as SOLVER_EXPLAINED sections 4 and 6 lay them out
     order = ["none", "repeat only", "curation only", "both"]
     by_label = {label: (e, l, b) for label, e, l, b in rows}
     bold = lambda label, cells: (  # noqa: E731
         (f"**{label} (the default)**", *(f"**{c}**" for c in cells))
         if label == "both" else (label, *cells))
-    common.record("entropy_table", common.md_table(
+    common.record("entropy_table", common.arm_table(
         ["priors on", "greedy entropy"],
-        [(label, f"{by_label[label][0]:.2f}") for label in order if label in by_label]))
-    common.record("bonus_table", common.md_table(
+        [(label, f"{by_label[label][0]:.2f}") for label in order if label in by_label],
+        "entropy_table"))
+    common.record("bonus_table", common.arm_table(
         ["priors on", "possible-answer bonus", "curvature in `f`"],
         [bold(label, (signed(by_label[label][0] - by_label[label][1], 3),
                       signed(by_label[label][1] - by_label[label][2], 3)))
-         for label in order if label in by_label]))
-    common.record("bonus_ratio", (by_label["both"][0] - by_label["both"][1])
-                  / (by_label["none"][0] - by_label["none"][1]))
+         for label in order if label in by_label], "bonus_table"))
+    # `none` reads no answer record, so a run that dropped it keeps its bonus
+    none_bonus = (by_label["none"][0] - by_label["none"][1]
+                  if "none" in by_label else common.last("none.bonus"))
+    common.record("bonus_ratio",
+                  (by_label["both"][0] - by_label["both"][1]) / none_bonus)
 
 # what the cached fits converged through: the default prior's rounds, and the
 # round counts across the five priors `train` fits
