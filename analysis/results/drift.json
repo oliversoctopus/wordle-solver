@@ -1,41 +1,41 @@
 {
     "runs": {
         "drift.py": {
-            "at": "2026-10-13 22:44",
-            "solutions": 1942,
-            "through": "2026-10-12",
+            "at": "2026-10-26 16:07",
+            "solutions": 1955,
+            "through": "2026-10-25",
             "fits": {
                 "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "spline 2026-10-13 22:43:09",
+                "repeat1_curation0_r-binned": "spline 2026-10-26 16:06:09",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
                 "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
                 "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-26 16:06:27",
                 "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
     "values": {
-        "drift": "−0.30 ± 0.69",
-        "drift_se": 0.6885814850726872,
-        "events": 27,
+        "drift": "−0.40 ± 0.64",
+        "drift_se": 0.6418167670742052,
+        "events": 28,
         "first18.drift": "+0.55 ± 1.56",
         "first18.drift_se": 1.5605669129968371,
         "first18.events": 18,
         "first18.p": 0.03755308251044731,
         "first18.rho": 0.4613003095975232,
-        "from_first_300": 25,
+        "from_first_300": 26,
         "in_band": 22,
-        "lag_mean": 4.476002029426687,
-        "lag_sd": 0.7658628786704459,
-        "latest_two": "`prove` and `major`",
-        "latest_two_sources": "#164 and #21",
-        "measured": "2026-10-13",
-        "median_source": 123.0,
-        "outlier_rate": 7.407407407407407,
+        "lag_mean": 4.505381604696674,
+        "lag_sd": 0.7674571579549981,
+        "latest_two": "`major` and `stink`",
+        "latest_two_sources": "#21 and #15",
+        "measured": "2026-10-26",
+        "median_source": 119.5,
+        "outlier_rate": 7.142857142857143,
         "outliers": "`sandy` (#1227), `smile` (#831)",
-        "p": 0.35159115114658523,
-        "rho": 0.18315018315018314
+        "p": 0.6478564004889709,
+        "rho": 0.08921729611384782
     }
 }

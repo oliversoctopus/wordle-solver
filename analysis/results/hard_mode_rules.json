@@ -1,62 +1,62 @@
 {
     "runs": {
         "hard_mode_rules.py": {
-            "at": "2026-10-13 22:54",
-            "solutions": 1942,
-            "through": "2026-10-12",
+            "at": "2026-10-26 16:20",
+            "solutions": 1955,
+            "through": "2026-10-25",
             "fits": {
                 "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "spline 2026-10-13 22:43:09",
+                "repeat1_curation0_r-binned": "spline 2026-10-26 16:06:09",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
                 "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
                 "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-26 16:06:27",
                 "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         },
         "hard_mode_rules.py --no-endgame": {
-            "at": "2026-10-13 22:55",
-            "solutions": 1942,
-            "through": "2026-10-12",
+            "at": "2026-10-26 16:21",
+            "solutions": 1955,
+            "through": "2026-10-25",
             "fits": {
                 "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "spline 2026-10-13 22:43:09",
+                "repeat1_curation0_r-binned": "spline 2026-10-26 16:06:09",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
                 "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
                 "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-26 16:06:27",
                 "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         },
         "hard_mode_rules.py --mode entropy": {
-            "at": "2026-10-13 22:55",
-            "solutions": 1942,
-            "through": "2026-10-12",
+            "at": "2026-10-26 16:21",
+            "solutions": 1955,
+            "through": "2026-10-25",
             "fits": {
                 "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "spline 2026-10-13 22:43:09",
+                "repeat1_curation0_r-binned": "spline 2026-10-26 16:06:09",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
                 "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
                 "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-26 16:06:27",
                 "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
     "values": {
-        "entropy.better": 220,
-        "entropy.changed": 875,
-        "entropy.off_pool": 2563,
-        "entropy.worse": 655,
-        "entropy.worth": 0.04722487028452079,
-        "measured": "2026-10-13",
+        "entropy.better": 217,
+        "entropy.changed": 859,
+        "entropy.off_pool": 2524,
+        "entropy.worse": 642,
+        "entropy.worth": 0.04613506559662103,
+        "measured": "2026-10-26",
         "no_endgame.better": 13,
-        "no_endgame.changed": 24,
-        "no_endgame.off_pool": 59,
-        "no_endgame.worse": 11,
+        "no_endgame.changed": 25,
+        "no_endgame.off_pool": 56,
+        "no_endgame.worse": 12,
         "no_endgame.worth": -4.1555509952801145e-06,
         "shipped.better": 0,
         "shipped.changed": 0,

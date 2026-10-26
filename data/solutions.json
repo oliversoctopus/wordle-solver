@@ -13085,5 +13085,96 @@
         "print_date": "2026-10-12",
         "days_since_launch": 1941,
         "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1308,
+        "solution": "wider",
+        "print_date": "2026-10-13",
+        "days_since_launch": 1942,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 2392,
+        "solution": "psych",
+        "print_date": "2026-10-14",
+        "days_since_launch": 1943,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 889,
+        "solution": "dunce",
+        "print_date": "2026-10-15",
+        "days_since_launch": 1944,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1001,
+        "solution": "shady",
+        "print_date": "2026-10-16",
+        "days_since_launch": 1945,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1267,
+        "solution": "gaffe",
+        "print_date": "2026-10-17",
+        "days_since_launch": 1946,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1084,
+        "solution": "adorn",
+        "print_date": "2026-10-18",
+        "days_since_launch": 1947,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 4253,
+        "solution": "stink",
+        "print_date": "2026-10-19",
+        "days_since_launch": 1948,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 549,
+        "solution": "wrest",
+        "print_date": "2026-10-20",
+        "days_since_launch": 1949,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1938,
+        "solution": "penny",
+        "print_date": "2026-10-21",
+        "days_since_launch": 1950,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 662,
+        "solution": "reset",
+        "print_date": "2026-10-22",
+        "days_since_launch": 1951,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 4645,
+        "solution": "trill",
+        "print_date": "2026-10-23",
+        "days_since_launch": 1952,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 5139,
+        "solution": "holey",
+        "print_date": "2026-10-24",
+        "days_since_launch": 1953,
+        "editor": "Tracy Bennett"
+    },
+    {
+        "id": 1773,
+        "solution": "dress",
+        "print_date": "2026-10-25",
+        "days_since_launch": 1954,
+        "editor": "Tracy Bennett"
     }
 ]

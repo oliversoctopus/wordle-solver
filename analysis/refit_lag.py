@@ -47,6 +47,11 @@ def total_variation(a, b):
     return 0.5 * np.abs(np.asarray(a) - np.asarray(b)).sum()
 
 
+def cell(mean, se):
+    """A (mean, se) pair as JSON can hold it, with no NaN."""
+    return [None if np.isnan(v) else float(v) for v in (mean, se)]
+
+
 def guesses(view, answer):
     solver = WordleSolver(data=view, config=SHIPPED)
     out = solver.play(data.word2ind[answer])
@@ -90,8 +95,15 @@ print("\nagainst it, paired on the same answers (negative = the stale one is "
 print(f"  {'lag':>4s} {'mass moved':>11s} {'mean':>8s} {'paired':>19s}"
       f" {'changed':>8s} {'worse':>6s} {'better':>7s}")
 table = []
+# every lag's row as plain lists, for the dev page to chart
+lines = {"lags": LAGS[1:], "mass": [], "all": [], "worse": [], "better": [],
+         "repeats": [], "off-list": [], "other": []}
 for lag in LAGS[1:]:
     mean, se, d = common.paired(runs[lag], base)
+    lines["mass"].append(float(np.mean(shift[lag]) * 100))
+    lines["all"].append(cell(mean, se))
+    lines["worse"].append(int((d > 0).sum()))
+    lines["better"].append(int((d < 0).sum()))
     print(f"  {lag:4d} {np.mean(shift[lag]) * 100:10.2f}%"
           f" {runs[lag].mean():8.4f}"
           f" {mean:+9.4f} +- {se:.4f} {int((d != 0).sum()):8d}"
@@ -107,8 +119,10 @@ for lag in LAGS[1:]:
     common.record(f"lag{lag}.changed", worse + better)
     for name, mask in (("repeats", repeat), ("off-list", offlist),
                        ("other", rest)):
+        lines[name].append(None)
         if mask.any():
             m, s, _ = common.paired(runs[lag][mask], base[mask])
+            lines[name][-1] = cell(m, s)
             print(f"  {'':4s} {'':11s} {'on the':>8s} {int(mask.sum()):3d} "
                   f"{name:9s} {m:+.4f} +- {s:.4f}")
     changed = [words[START + i] for i in range(len(base)) if d[i] != 0]
@@ -117,6 +131,7 @@ for lag in LAGS[1:]:
 common.record("table", common.md_table(
     ["lag", "mass moved", "vs. a record rebuilt daily",
      f"games changed of {END - START}"], table))
+common.record("series.lags", lines)
 common.record("puzzles", END - START)
 common.record("yardstick", float(yard * 100))
 print(f"\n  for scale, the repeat shape flattened moves {yard * 100:.2f}% of "
@@ -125,6 +140,7 @@ print(f"  which `prior_basin.py` prices at "
       f"{common.result('prior_basin', 'repeat_flattened', 'a figure it has not recorded yet')} guesses.")
 
 print("\nrefitting every k days, the lag then uniform over 0..k-1\n")
+cycle = {"every": [], "all": []}
 for k in range(2, max(LAGS[-1], 2) + 1):
     have = [lag for lag in range(k) if lag in runs]
     if len(have) < k:
@@ -133,5 +149,8 @@ for k in range(2, max(LAGS[-1], 2) + 1):
                                 base)
     print(f"  every {k:2d} days   {mean:+.5f} +- {se:.5f}")
     common.record(f"every{k}", common.neg(f"{mean:+.4f} \u00b1 {se:.4f}"))
+    cycle["every"].append(k)
+    cycle["all"].append(cell(mean, se))
+common.record("series.cycle", cycle)
 
 print(f"\n[{time.time() - STARTED:.0f}s]")

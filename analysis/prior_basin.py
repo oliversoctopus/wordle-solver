@@ -125,6 +125,16 @@ def pm(cell):
     return common.neg(f"{cell[0]:+.3f} \u00b1 {cell[1]:.3f}")
 
 
+def series(points, cells):
+    """One sweep's rows as plain lists, for the dev page to chart."""
+    names = ("all", "repeat", "offlist", "fresh")
+    out = {"points": list(points)}
+    for i, name in enumerate(names):
+        out[name] = [[None if np.isnan(v) else float(v) for v in cells[p][i]]
+                     for p in points]
+    return out
+
+
 curation_span = []
 if args.part in ("shapes", "both"):
     # t=0 has to rebuild the uniform shapes exactly, or the knob is not the knob
@@ -138,13 +148,14 @@ if args.part in ("shapes", "both"):
     for slug in FITS:
         params, form = load_fit(slug)
         common.header(f"shapes tempered, f held at {slug} ({form})")
-        runs = {}
+        runs, cells = {}, {}
         for point in grid:
             with tempered(*point):
                 runs[point] = regime(SHIPPED, params, form)
         print(f"{HEAD}\n")
         for point in grid:
             got = row(f"t={point[0]:.2f}/{point[1]:.2f}", runs[point], runs[(1.0, 1.0)])
+            cells[point] = got
             if slug == FITS[0]:
                 if point == (0.0, 1.0):
                     common.record("repeat_flattened", pm(got[0]))
@@ -152,6 +163,11 @@ if args.part in ("shapes", "both"):
                     common.record("curation_flattened", pm(got[0]))
                 if point[0] == 1.0 and 0.0 < point[1] < 1.0:
                     curation_span.append(abs(got[0][0]))
+        if slug == FITS[0]:
+            rep = series(TEMPERS, {t: cells[(t, 1.0)] for t in TEMPERS})
+            cur = series(TEMPERS, {t: cells[(1.0, t)] for t in TEMPERS})
+            common.record("series.tempered.repeat", rep)
+            common.record("series.tempered.curation", cur)
         print()
     common.record("curation_span", max(curation_span))
 
@@ -176,6 +192,9 @@ if args.part in ("groups", "both"):
         for p in LEVELS:
             late[p] = row(f"{key}={p:.2f}", runs[p], runs[base], recent)
         print()
+        common.record(f"series.{key}", {"base": base,
+                                        "regime": series(LEVELS, got),
+                                        "recent": series(LEVELS, late)})
         # the basin: every level whose whole-regime gap is inside FLAT, and
         # the levels beyond it
         flat = [p for p in LEVELS if abs(got[p][0][0]) < FLAT]
