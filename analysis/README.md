@@ -170,14 +170,15 @@ The exemption is about where the weights come from, not what an arm is called. T
 
 ## Charting them
 
-`python editor.py` serves `/dev`, a page that charts the results files and reads them again on every reload. It draws:
+`python editor.py` serves `/dev`, a page that charts the results files, the answer record and the cached fits, and reads them again on every reload. It draws:
 
-* the off-list and repeat rates over a trailing window of `solutions.json`, against the prior's defaults
-* the basin sweeps from `prior_basin.py`
-* the stale-record cost from `refit_lag.py`
+* from `solutions.json`: the off-list and repeat rates over a trailing window against the prior's defaults, each repeat against the puzzle that first used it, and the unused curated words projected at `regime.py`'s rate
+* from `estimator_cache/`: each prior's `f(n)`, and its mean guesses per policy-iteration round
+* the arm contrasts from `replay.py`, the guess distributions from `head_to_head.py`, the penalty and search tables from `loss_penalty.py` and the decision tables from `exact_decisions.py`, each read from its recorded table
+* the basin sweeps from `prior_basin.py` and the stale-record cost from `refit_lag.py`, each read from a series recorded under a `series.` key
 * every table any script records, one script at a time
 
-A chart reads a whole series, recorded under a `series.` key beside the figures the documents quote. A chart whose series is missing names the script to rerun.
+A chart whose table or series is missing names the script to rerun. `/dev` imports `estimator` to evaluate the fits, so it loads numba, which `/editor` does not.
 
 ## Enumerating instead of sampling
 

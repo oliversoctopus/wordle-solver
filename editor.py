@@ -59,10 +59,41 @@ def dev_payload():
         rows.append([n, row["print_date"], word, kind])
         seen.add(word)
     return {"results": results,
-            "record": {"rows": rows, "regime_start": common.regime_start()},
+            "record": {"rows": rows, "regime_start": common.regime_start(),
+                       "curated_total": len(curated)},
+            "fits": dev_fits(priors.ALL_CONFIGS),
             "defaults": {"repeat_prob": priors.DEFAULT_REPEAT_PROB,
                          "noncurated_prob": priors.DEFAULT_NONCURATED_PROB,
                          "recent": priors.RECENT_PUZZLES}}
+
+
+def dev_fits(configs):
+    """Each prior's cached fit: f(n) on a grid of n, and the mean per round."""
+    import numpy as np
+    import estimator
+    from wordle_data import IND2WORD_PATH
+
+    names = {(False, False): "none", (False, True): "curation only",
+             (True, False): "repeat only", (True, True): "both"}
+    with open(IND2WORD_PATH, "r", encoding="utf-8") as file:
+        words = len(json.load(file))
+    # every whole n from 1 to the word list, spaced evenly in log2(n)
+    grid = np.unique(np.round(np.logspace(0, np.log2(words), 160, base=2)))
+    out = []
+    for config in configs:
+        record = estimator.load_record(config)
+        if record is None:
+            continue
+        label = names[(config.repeat, config.curation)]
+        if config.curation and config.curation_shape != "wordlebot":
+            label += f", {config.curation_shape}"
+        f = estimator.f_value(grid, record["params"], record["form"])
+        out.append({"label": label, "slug": config.slug, "form": record["form"],
+                    "fitted_at": record["fitted_at"][:10],
+                    "n": grid.tolist(), "f": f.tolist(),
+                    "rounds": [[h["label"], h["mean_guesses"]]
+                               for h in record["history"]]})
+    return out
 
 
 class Handler(BaseHTTPRequestHandler):
