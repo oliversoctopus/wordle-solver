@@ -44,7 +44,7 @@ python wordle_solver.py benchmark --no-curation-prior --mode entropy
 | `wordle_game.py` | play Wordle yourself in the terminal, against a chosen or a sampled answer |
 | `web/` | the page: solve, play and the word finder, over the WASM solver |
 | `wording.py` | finds every string the site says, so `editor.py` can rewrite any of it |
-| `editor.py` | the editor itself, previewing the static build it is editing |
+| `editor.py` | the editor itself, previewing the static build it is editing, and `/dev`, charts of the analysis results |
 | `unwrap_md.py` | checks that every `.md` is one line per paragraph; `--write` converts |
 | `spelling.py` | checks documents, comments and docstrings for British spellings from `data/british_spellings.json`; `--write` fixes them |
 | `data/`, `data/derived/` | the word lists and answer record; everything `feedback_table.py` regenerates |

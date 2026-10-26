@@ -1,6 +1,6 @@
 """Rewrite what the site says, previewing the site that gets deployed.
 
-    python editor.py                edit, on http://127.0.0.1:8001/editor
+    python editor.py                edit on :8001/editor, charts on :8001/dev
     python editor.py --port 9001    somewhere else
     python editor.py --no-browser   do not open one
 
@@ -10,9 +10,11 @@ and a phrase written into the Rust needs ``./build_site.sh`` to show.
 """
 
 import argparse
+import glob
 import json
 import os
 import posixpath
+import sys
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -32,6 +34,35 @@ TYPES = {".html": "text/html; charset=utf-8",
          ".wasm": "application/wasm"}
 
 WORDING = Wording()
+
+
+def dev_payload():
+    """Every results file, the answer record classed, and the prior defaults.
+
+    Read fresh on each request, so a script that finishes shows on a reload.
+    """
+    sys.path.insert(0, os.path.join(HERE, "analysis"))
+    import common
+    import priors
+
+    results = {}
+    for path in sorted(glob.glob(os.path.join(common.RESULTS_DIR, "*.json"))):
+        with open(path, "r", encoding="utf-8") as file:
+            name = os.path.splitext(os.path.basename(path))[0]
+            results[name] = json.load(file)
+    curated = set(common.load("wordles.json"))
+    seen, rows = set(), []
+    for n, row in enumerate(common.solutions(), start=1):
+        word = row["solution"]
+        kind = ("repeat" if word in seen
+                else "offlist" if word not in curated else "fresh")
+        rows.append([n, row["print_date"], word, kind])
+        seen.add(word)
+    return {"results": results,
+            "record": {"rows": rows, "regime_start": common.regime_start()},
+            "defaults": {"repeat_prob": priors.DEFAULT_REPEAT_PROB,
+                         "noncurated_prob": priors.DEFAULT_NONCURATED_PROB,
+                         "recent": priors.RECENT_PUZZLES}}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -90,8 +121,12 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path == "/editor":
             path = "/editor.html"
+        if path == "/dev":
+            path = "/dev.html"
         if path == "/api/wording":
             return self.send_json(WORDING.manifest())
+        if path == "/api/dev":
+            return self.send_json(dev_payload())
         if path.startswith("/api/"):
             return self.send_json({"error": "Not found"}, status=404)
 

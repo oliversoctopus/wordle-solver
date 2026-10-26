@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solver results</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --s1: #2a78d6;
+    --s2: #eb6834;
+    --s3: #1baf7a;
+    --s4: #eda100;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #f0efec;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --s1: #3987e5;
+      --s2: #d95926;
+      --s3: #199e70;
+      --s4: #c98500;
+    }
+  }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 2px; }
+  .lede, .note { color: var(--ink-2); margin: 0 0 12px; }
+  .note { font-size: 12.5px; }
+  section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px 12px;
+    margin: 18px 0;
+  }
+  .controls { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0; }
+  .seg { display: inline-flex; border: 1px solid var(--axis); border-radius: 7px;
+         overflow: hidden; }
+  .seg button {
+    font: inherit; font-size: 12.5px; padding: 3px 10px; border: 0;
+    background: transparent; color: var(--ink-2); cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--axis); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px;
+            color: var(--ink-2); margin: 4px 0; }
+  .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px;
+              vertical-align: middle; margin-right: 5px; }
+  .legend i.dot { width: 9px; height: 9px; border-radius: 50%; }
+  .legend i.dash { background: none !important; border-top: 2px dashed; height: 0; }
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chart .label { fill: var(--ink-2); }
+  .tip {
+    position: absolute; pointer-events: none; z-index: 2;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 7px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    padding: 6px 9px; font-size: 12px; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .tip b { font-weight: 600; }
+  .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+           margin-right: 5px; }
+  .missing { color: var(--ink-2); font-style: italic; padding: 18px 0; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+  table { border-collapse: collapse; font-size: 12.5px; margin: 8px 0 16px;
+          font-variant-numeric: tabular-nums; display: block; overflow-x: auto; }
+  th, td { padding: 3px 10px; border-bottom: 1px solid var(--grid); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--ink-2); font-weight: 600; }
+  h3 { font-size: 13px; margin: 14px 0 0; color: var(--ink-2); font-weight: 600; }
+  select { font: inherit; font-size: 13px; padding: 2px 6px; color: var(--ink);
+           background: var(--surface); border: 1px solid var(--axis); border-radius: 6px; }
+  code { font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Solver results</h1>
+  <p class="lede" id="lede">Loading…</p>
+
+  <section id="rates">
+    <h2>Answer rates over time</h2>
+    <p class="note">A trailing window over the answer record, ending at each puzzle, with ±1 standard error shaded. The dashed lines are the prior's defaults. The off-list rate counts only answers that are not repeats.</p>
+    <div class="controls" id="rates-controls"></div>
+    <div class="legend" id="rates-legend"></div>
+    <div class="chart" id="rates-chart"></div>
+    <div class="chart" id="rates-strip"></div>
+  </section>
+
+  <section id="basin">
+    <h2>The prior's basin</h2>
+    <p class="note" id="basin-note"></p>
+    <div class="controls" id="basin-controls"></div>
+    <div class="legend" id="basin-legend"></div>
+    <div class="chart" id="basin-chart"></div>
+    <h3>Each shape tempered from flat (0) to what ships (1)</h3>
+    <div class="legend" id="temper-legend"></div>
+    <div class="chart" id="temper-chart"></div>
+  </section>
+
+  <section id="lag">
+    <h2>A stale answer record</h2>
+    <p class="note" id="lag-note"></p>
+    <div class="pair">
+      <div><h3>Guesses against a record rebuilt daily</h3><div class="chart" id="lag-chart"></div></div>
+      <div><h3>Share of the prior's mass moved</h3><div class="chart" id="mass-chart"></div></div>
+    </div>
+    <h3>Refitting every k days</h3>
+    <div class="chart" id="cycle-chart"></div>
+  </section>
+
+  <section id="tables">
+    <h2>Every recorded table</h2>
+    <p class="note">The tables each script records for the documents, as last measured.</p>
+    <div class="controls"><select id="table-script"></select></div>
+    <div id="table-runs" class="note"></div>
+    <div id="table-body"></div>
+  </section>
+</main>
+<script src="dev.js"></script>
+</body>
+</html>

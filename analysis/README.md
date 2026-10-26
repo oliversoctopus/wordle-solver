@@ -168,6 +168,17 @@ The exemption is about where the weights come from, not what an arm is called. T
 
 **An older answer log is reproducible in place.** `load_data(mask_last=n)` drops the most recent n entries of `solutions.json` and rebuilds the priors from what is left, and every front end takes it as `--mask-last`. Wind the log back to the day a figure was recorded, rerun, and whether the data moved or the code did stops being a matter of opinion. The fit does not wind back with it. `estimator.cache_path` is keyed on the `PriorConfig` slug alone, so the current `f` loads against the truncated log without complaint. Refitting is the wrong fix, because `train --mask-last n` writes to that same path and replaces the prior's live fit with one describing a short log, under a filename recording nothing about the difference. Copy `params_<slug>.json` aside first, or take the stale `f` as the known cost of a cheap check and say which you did.
 
+## Charting them
+
+`python editor.py` serves `/dev`, a page that charts the results files and reads them again on every reload. It draws:
+
+* the off-list and repeat rates over a trailing window of `solutions.json`, against the prior's defaults
+* the basin sweeps from `prior_basin.py`
+* the stale-record cost from `refit_lag.py`
+* every table any script records, one script at a time
+
+A chart reads a whole series, recorded under a `series.` key beside the figures the documents quote. A chart whose series is missing names the script to rerun.
+
 ## Enumerating instead of sampling
 
 `hard_mode.py`, `loss_penalty.py`, `results_tables.py` and `form_default.py` do not draw answers and report a standard error. The solver is deterministic, so a game's outcome is a pure function of the answer, and playing all 12,947 words once with the prior as weights computes the mean and the loss probability. There is no sampling distribution left to put an interval around, and `common.every_answer` is the one implementation they share.

@@ -36,7 +36,7 @@ The dependencies live in `.venv`; the system Python has no `numba`. Run `.venv/S
 python wordle_game.py             a game in the terminal
 ./build_site.sh                   the same page as static files, in site/
 ./deploy.sh                       build that, and upload it to Vercel
-python editor.py                  rewrite what the site says, on :8001/editor
+python editor.py                  site text on :8001/editor, charts on /dev
 ```
 
 * Loading the 167 MB table and compiling the numba kernels takes a while at the start of any Python run.
