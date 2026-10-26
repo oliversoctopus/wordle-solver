@@ -20,6 +20,8 @@
     --s3: #1baf7a;
     --s4: #eda100;
     --s5: #e87ba4;
+    --good: #0ca30c;
+    --bad: #d03b3b;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -72,9 +74,10 @@
               vertical-align: middle; margin-right: 5px; }
   .legend i.dot { width: 9px; height: 9px; border-radius: 50%; }
   .legend i.dash { background: none !important; border-top: 2px dashed; height: 0; }
+  .legend i.dotted { border-top-style: dotted; }
   .chart { position: relative; }
   .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
-  .chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chart text { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
   .chart .label { fill: var(--ink-2); }
   .tip {
     position: absolute; pointer-events: none; z-index: 2;
@@ -102,16 +105,22 @@
   .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
             gap: 6px 22px; }
   .panels h3 { margin-top: 8px; }
+  .zoom { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; margin: 4px 0 0; }
+  .toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--axis); }
+  .toc a:hover { color: var(--ink); }
+  section { scroll-margin-top: 12px; }
 </style>
 </head>
 <body>
 <main>
   <h1>Solver results</h1>
   <p class="lede" id="lede">Loading…</p>
+  <nav class="toc" id="toc"></nav>
 
   <section id="rates">
     <h2>Answer rates over time</h2>
-    <p class="note">A trailing window over the answer record, ending at each puzzle, with ±1 standard error shaded. The dashed lines are the prior's defaults. The off-list rate counts only answers that are not repeats.</p>
+    <p class="note">Each point is a share of the last 25, 50 or 100 answers, the window, ending at that puzzle: how many were off the curated list, and how many repeated an earlier answer. The off-list share counts only the answers that were not repeats, because the prior decides in that order, first whether the answer is a repeat and then, if not, whether it is off-list. The shaded band is ±1 standard error, and it is wide because a window holds few such answers. The dashed line is the probability the prior uses now. The dotted line is the edge of the basin <code>analysis/prior_basin.py</code> found: settings from the bottom of its sweep up to that edge all play about as well as the shipped one, and past it the solver starts to need more guesses. The lines start once a full window has been played. The strip below has one mark per answer since the regime began, colored by kind.</p>
     <div class="controls" id="rates-controls"></div>
     <div class="legend" id="rates-legend"></div>
     <div class="chart" id="rates-chart"></div>
@@ -145,6 +154,8 @@
     <p class="note" id="fits-note"></p>
     <div class="legend" id="fits-legend"></div>
     <div class="chart" id="fits-chart"></div>
+    <h3>Each prior's <code>f(n)</code> minus the shipped prior's</h3>
+    <div class="chart" id="fits-diff"></div>
     <h3>Mean guesses per policy-iteration round, against each prior's best round</h3>
     <p class="note" id="rounds-note"></p>
     <div class="chart" id="rounds-chart"></div>
@@ -156,7 +167,8 @@
     <div class="controls" id="h2h-controls"></div>
     <div class="legend" id="h2h-legend"></div>
     <div class="chart" id="h2h-chart"></div>
-    <h3>The shipped solver minus the other, in percentage points</h3>
+    <h3>Games finished within k guesses: the shipped solver minus the other, in percentage points</h3>
+    <div class="legend"><span><i class="dot" style="background:var(--good)"></i>the shipped solver ahead</span><span><i class="dot" style="background:var(--bad)"></i>the shipped solver behind</span></div>
     <div class="chart" id="h2h-diff"></div>
   </section>
 

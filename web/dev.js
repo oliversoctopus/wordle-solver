@@ -97,8 +97,9 @@ function legend(node, items) {
 // layer that snaps to the nearest x.
 function lineChart(node, opts) {
   node.innerHTML = "";
-  const W = opts.width || 900, H = opts.height || 280;
-  const M = { top: 14, right: 18, bottom: 34, left: 58 };
+  // drawn at the container's own width, so the text stays at its set size
+  const W = opts.width || node.clientWidth || 900, H = opts.height || 280;
+  const M = { top: 14, right: opts.right ?? 18, bottom: 34, left: 58 };
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, node);
   const tip = document.createElement("div");
   tip.className = "tip";
@@ -111,24 +112,40 @@ function lineChart(node, opts) {
   for (const ref of opts.refs || []) if (ref.y != null) ys.push(ref.y);
   if (opts.zero) ys.push(0);
   const xMin = opts.xMin ?? Math.min(...xs), xMax = opts.xMax ?? Math.max(...xs);
-  let yMin = Math.min(...ys), yMax = Math.max(...ys);
-  const padY = (yMax - yMin || 1) * 0.08;
-  yMin -= padY;
-  yMax += padY;
-  if (opts.yFloor != null) yMin = Math.max(yMin, opts.yFloor);
+  // `yLog` scales y by its logarithm; `yMin`/`yMax` fix the range, and a
+  // point above `yMax` is drawn at the top edge as a triangle
+  const ty = opts.yLog ? Math.log10 : (v) => v;
+  const fy = opts.yLog ? (v) => 10 ** v : (v) => v;
+  let lo = ty(Math.min(...ys)), hi = ty(Math.max(...ys.filter((v) => opts.yMax == null || v <= opts.yMax)));
+  const padY = (hi - lo || 1) * 0.08;
+  lo -= padY;
+  hi += padY;
+  if (opts.yFloor != null) lo = Math.max(lo, ty(opts.yFloor));
+  if (opts.yMin != null) lo = ty(opts.yMin);
+  if (opts.yMax != null) hi = ty(opts.yMax);
+  const yMin = fy(lo), yMax = fy(hi);
 
   const tx = opts.log ? Math.log10 : (v) => v;
   const X = (v) => M.left + (tx(v) - tx(xMin)) / ((tx(xMax) - tx(xMin)) || 1)
     * (W - M.left - M.right);
-  const Y = (v) => H - M.bottom - (v - yMin) / (yMax - yMin) * (H - M.top - M.bottom);
+  const Y = (v) => H - M.bottom
+    - (ty(Math.min(v, yMax)) - lo) / (hi - lo) * (H - M.top - M.bottom);
 
-  // grid and y ticks
-  const step = niceStep((yMax - yMin) / 5);
-  for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) {
+  // grid and y ticks: decades on a log axis, round steps otherwise
+  const ticks = [];
+  if (opts.yLog) {
+    for (let e = Math.ceil(lo); e <= hi; e++) ticks.push(10 ** e);
+  } else {
+    const step = niceStep((yMax - yMin) / 5);
+    for (let v = Math.ceil(yMin / step) * step; v <= yMax; v += step) {
+      ticks.push(Math.abs(v) < step / 1e6 ? 0 : v);
+    }
+  }
+  for (const v of ticks) {
     el("line", { x1: M.left, x2: W - M.right, y1: Y(v), y2: Y(v),
                  stroke: "var(--grid)", "stroke-width": 1 }, svg);
     el("text", { x: M.left - 8, y: Y(v) + 4, "text-anchor": "end" }, svg)
-      .textContent = opts.yFmt(Math.abs(v) < step / 1e6 ? 0 : v);
+      .textContent = opts.yFmt(v);
   }
   if (opts.zero && yMin < 0 && yMax > 0) {
     el("line", { x1: M.left, x2: W - M.right, y1: Y(0), y2: Y(0),
@@ -155,17 +172,35 @@ function lineChart(node, opts) {
       .textContent = opts.yLabel;
   }
 
-  // reference lines
+  // shaded x ranges, labeled at their top left
+  for (const span of opts.spans || []) {
+    el("rect", { x: X(span.x0), y: M.top, width: X(span.x1) - X(span.x0),
+                 height: H - M.top - M.bottom, fill: "var(--ink)", "fill-opacity": 0.06 }, svg);
+    if (span.label) {
+      el("text", { x: X(span.x0) + 6, y: M.top + 12, class: "label" }, svg).textContent = span.label;
+    }
+  }
+
+  // reference lines: dashed, or dotted with `dotted`
   for (const ref of opts.refs || []) {
     const dash = { stroke: ref.color || "var(--muted)", "stroke-width": 1.5,
-                   "stroke-dasharray": "5 4" };
+                   "stroke-dasharray": ref.dotted ? "2 4" : "5 4" };
     if (ref.y != null) {
       el("line", { x1: M.left, x2: W - M.right, y1: Y(ref.y), y2: Y(ref.y), ...dash }, svg);
+      // labeled at the left end, which `xMin` leaves empty on the rates chart
+      if (ref.label) {
+        el("text", { x: M.left + 6, y: Y(ref.y) - 5, class: "label" }, svg)
+          .textContent = ref.label;
+      }
     } else {
       el("line", { x1: X(ref.x), x2: X(ref.x), y1: M.top, y2: H - M.bottom, ...dash }, svg);
       if (ref.label) {
-        el("text", { x: X(ref.x) + 5, y: M.top + 10, class: "label" }, svg)
-          .textContent = ref.label;
+        // a label near the right edge goes on the line's left
+        const right = X(ref.x) > W * 0.8;
+        // `row` drops a label a line, below a neighbor it would overlap
+        el("text", { x: X(ref.x) + (right ? -5 : 5), y: M.top + 10 + 14 * (ref.row || 0),
+                     class: "label",
+                     "text-anchor": right ? "end" : "start" }, svg).textContent = ref.label;
       }
     }
   }
@@ -177,7 +212,7 @@ function lineChart(node, opts) {
       const upper = pts.map((p) => `${X(p.x)},${Y(p.hi)}`);
       const lower = pts.slice().reverse().map((p) => `${X(p.x)},${Y(p.lo)}`);
       el("polygon", { points: upper.concat(lower).join(" "), fill: s.color,
-                      "fill-opacity": 0.14 }, svg);
+                      "fill-opacity": s.bandOpacity ?? 0.14 }, svg);
     }
     if (s.bars) {
       for (const p of pts) {
@@ -194,13 +229,43 @@ function lineChart(node, opts) {
       el("polyline", { points: pts.map((p) => `${X(p.x)},${Y(p.y)}`).join(" "),
                        fill: "none", stroke: s.color, "stroke-width": 2,
                        "stroke-linejoin": "round",
-                       ...(s.dash ? { "stroke-dasharray": "5 4" } : {}) }, svg);
+                       ...(s.dash ? { "stroke-dasharray": s.dotted ? "2 4" : "5 4" } : {}) },
+         svg);
     }
     if (s.markers) {
       for (const p of pts) {
-        el("circle", { cx: X(p.x), cy: Y(p.y), r: 4, fill: s.color,
-                       stroke: "var(--surface)", "stroke-width": 2 }, svg);
+        if (p.y > yMax) {
+          const x = X(p.x), y = Y(yMax);
+          el("path", { d: `M${x - 5},${y + 4}L${x + 5},${y + 4}L${x},${y - 4}Z`,
+                       fill: s.color }, svg);
+          if (p.clipLabel) {
+            el("text", { x: x + 8, y: y + 4, class: "label" }, svg).textContent = p.clipLabel;
+          }
+          continue;
+        }
+        el("circle", { cx: X(p.x), cy: Y(p.y), r: s.ring?.(p) ? 6 : s.r || 4, fill: s.color,
+                       stroke: s.ring?.(p) ? "var(--ink)" : "var(--surface)",
+                       "stroke-width": 2 }, svg);
+        // `name` says which setting a point is, beside it
+        if (p.name) {
+          el("text", { x: X(p.x) + 9, y: Y(p.y) - 7, class: "label" }, svg).textContent = p.name;
+        }
       }
+    }
+  }
+
+  // a name at the right end of each line, nudged apart where they would touch
+  if (opts.endLabels) {
+    const ends = opts.series.map((s) => {
+      const last = s.points.filter((p) => p.y != null).at(-1);
+      return { s, y: Y(last.y) };
+    }).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) {
+      ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 14);
+    }
+    for (const { s, y } of ends) {
+      el("circle", { cx: W - M.right + 10, cy: y, r: 3.5, fill: s.color }, svg);
+      el("text", { x: W - M.right + 18, y: y + 4, class: "label" }, svg).textContent = s.name;
     }
   }
 
@@ -224,7 +289,7 @@ function lineChart(node, opts) {
     cross.setAttribute("x2", X(best));
     cross.setAttribute("visibility", "visible");
     opts.series.forEach((s, i) => {
-      const p = s.points.find((q) => q.x === best);
+      const p = s.hover === false ? null : s.points.find((q) => q.x === best);
       if (p && p.y != null) {
         dots[i].setAttribute("cx", X(p.x));
         dots[i].setAttribute("cy", Y(p.y));
@@ -281,32 +346,40 @@ function drawRates() {
     offlist.push({ x: n, y: o, lo: o - ose, hi: o + ose });
     meta.set(n, { row: rows[end], reps, offs, r, o, rse, ose });
   }
+  // where each basin ends, from `prior_basin.py`: the rate a default can sit
+  // below before the board notices
+  const basin = values("prior_basin");
+  const edges = { off: basin["noncurated.flat_to"], rep: basin["repeat.flat_to"] };
   legend($("rates-legend"), [
-    { name: "off-list, given not a repeat", color: "var(--s2)" },
-    { name: "repeat", color: "var(--s1)" },
-    { name: `defaults ${offProb} and ${repeatProb}`, color: "var(--muted)", kind: "dash" },
+    { name: "the rate, ±1 standard error shaded", color: "var(--muted)" },
+    { name: "the prior's default", color: "var(--muted)", kind: "dash" },
+    ...(edges.off ? [{ name: "the edge of the basin", color: "var(--muted)",
+                       kind: "dash dotted" }] : []),
   ]);
-  // the x axis spans the whole regime, so the strip below lines up with it
+  // one panel per rate, each with its own default and basin edge; the x axis
+  // spans the whole regime in both, so the strip below lines up with them
   const first = rows[start][0], last = rows[rows.length - 1][0];
-  lineChart($("rates-chart"), {
-    xMin: first, xMax: last,
-    series: [
-      { name: "off-list", color: "var(--s2)", points: offlist, band: true },
-      { name: "repeat", color: "var(--s1)", points: repeat, band: true },
-    ],
-    refs: [{ y: offProb, color: "var(--s2)" }, { y: repeatProb, color: "var(--s1)" }],
-    yFloor: 0,
-    yFmt: (v) => pct(v, 0),
-    xTicks: ticksBetween(first, last, 6),
-    xFmt: (v) => `#${v}`,
-    xLabel: `the puzzle the ${w}-puzzle window ends at`,
+  const node = $("rates-chart");
+  node.className = "";
+  node.innerHTML = '<h3>Off-list, given not a repeat</h3><div class="chart"></div>'
+    + '<h3>Repeat</h3><div class="chart"></div>';
+  const [offNode, repNode] = node.querySelectorAll(".chart");
+  const panel = (target, points, color, prob, edge, tipRowOf) => lineChart(target, {
+    xMin: first, xMax: last, height: 200,
+    series: [{ name: "rate", color, points, band: true }],
+    refs: [{ y: prob, color, label: `default ${prob}` },
+           ...(edge ? [{ y: edge, color, dotted: true, label: `basin edge ${edge}` }] : [])],
+    yFloor: 0, yFmt: (v) => pct(v, 0),
+    xTicks: ticksBetween(first, last, 6), xFmt: (v) => `#${v}`,
     tip: (x) => {
       const m = meta.get(x);
-      return `<div><b>#${m.row[0]}</b> ${m.row[1]}, <b>${m.row[2]}</b></div>`
-        + tipRow("var(--s2)", "off-list", `${pct(m.o)} ± ${pct(m.ose)} (${m.offs} of ${w - m.reps})`)
-        + tipRow("var(--s1)", "repeat", `${pct(m.r)} ± ${pct(m.rse)} (${m.reps} of ${w})`);
+      return `<div><b>#${m.row[0]}</b> ${m.row[1]}, <b>${m.row[2]}</b></div>` + tipRowOf(m);
     },
   });
+  panel(offNode, offlist, "var(--s2)", offProb, edges.off, (m) =>
+    tipRow("var(--s2)", "off-list", `${pct(m.o)} ± ${pct(m.ose)} (${m.offs} of ${w - m.reps})`));
+  panel(repNode, repeat, "var(--s1)", repeatProb, edges.rep, (m) =>
+    tipRow("var(--s1)", "repeat", `${pct(m.r)} ± ${pct(m.rse)} (${m.reps} of ${w})`));
   drawStrip(rows.slice(start));
 }
 
@@ -321,7 +394,7 @@ function ticksBetween(a, b, count) {
 function drawStrip(rows) {
   const node = $("rates-strip");
   node.innerHTML = "";
-  const W = 900, H = 46, left = 58, right = 18;
+  const W = node.clientWidth || 900, H = 46, left = 58, right = 18;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}` }, node);
   const tip = document.createElement("div");
   tip.className = "tip";
@@ -366,7 +439,10 @@ function drawBasin() {
   const v = values("prior_basin");
   $("basin-note").innerHTML = "Extra guesses per game against the shipped setting, "
     + "with <code>f</code> held at the shipped fit, ±1 standard error. "
-    + "Lower is better. " + provenance("prior_basin");
+    + "Lower is better. The shaded range is the basin, the settings "
+    + "<code>prior_basin.py</code> scores within its <code>FLAT</code> bound of the "
+    + "shipped one over the whole regime, and the dotted line is the rate the record "
+    + "shows. " + provenance("prior_basin");
   const controls = $("basin-controls");
   controls.innerHTML = "";
   const redraw = (key, value) => { state[key] = value; drawBasin(); };
@@ -398,9 +474,17 @@ function drawBasin() {
     }));
     legend($("basin-legend"), state.split ? shown : []);
     const name = state.axis === "noncurated" ? "noncurated_prob" : "repeat_prob";
+    // the basin `prior_basin.py` found, and the rate the record shows: the
+    // regime's for repeats, the last 100 puzzles' for off-list
+    const from = v[`${state.axis}.flat_from`], to = v[`${state.axis}.flat_to`];
+    const measured = state.axis === "noncurated"
+      ? [v.recent_noncurated, `last ${DATA.defaults.recent}: ${v.recent_noncurated?.toFixed(3)}`]
+      : [v.regime_repeat, `regime: ${v.regime_repeat?.toFixed(3)}`];
     lineChart($("basin-chart"), {
-      series, log: true, zero: true,
-      refs: [{ x: sweep.base, label: `shipped ${sweep.base}` }],
+      series, log: true, zero: true, height: 300,
+      spans: from != null ? [{ x0: from, x1: to, label: "the basin" }] : [],
+      refs: [{ x: sweep.base, label: `shipped ${sweep.base}` },
+             ...(measured[0] != null ? [{ x: measured[0], dotted: true, label: measured[1], row: 1 }] : [])],
       xTicks: xs, xFmt: (x) => String(x),
       xLabel: `${name}, log scale`,
       yLabel: "guesses vs shipped",
@@ -456,8 +540,8 @@ function drawLag() {
   });
   lineChart($("lag-chart"), {
     series: [{ name: "all", color: "var(--s1)", points, markers: true, bars: true }],
-    zero: true, width: 440, height: 260,
-    xTicks: lags.lags, xFmt: (x) => String(x), xLabel: "days of lag",
+    zero: true, height: 260, log: true,
+    xTicks: lags.lags, xFmt: (x) => String(x), xLabel: "days of lag, log scale",
     yFmt: (y) => signed(y, 2),
     tip: (x) => {
       const i = lags.lags.indexOf(x);
@@ -472,9 +556,9 @@ function drawLag() {
   lineChart($("mass-chart"), {
     series: [{ name: "mass", color: "var(--s3)", markers: true,
                points: lags.lags.map((x, i) => ({ x, y: lags.mass[i] / 100 })) }],
-    yFloor: 0, width: 440, height: 260,
+    yFloor: 0, height: 260, log: true,
     refs: [{ y: v.yardstick / 100, label: "repeat shape flattened" }],
-    xTicks: lags.lags, xFmt: (x) => String(x), xLabel: "days of lag",
+    xTicks: lags.lags, xFmt: (x) => String(x), xLabel: "days of lag, log scale",
     yFmt: (y) => pct(y, 1),
     tip: (x) => `<div><b>${x} day${x > 1 ? "s" : ""}</b></div>`
       + tipRow("var(--s3)", "mass moved", pct(lags.mass[lags.lags.indexOf(x)] / 100, 2))
@@ -509,23 +593,58 @@ function drawRepeats() {
     }
   }
   if (!events.length) return;
-  const lag = events.reduce((sum, e) => sum + e.x - e.y, 0) / events.length;
-  $("repeats-note").textContent = `Each of the ${events.length} repeats, by the `
-    + "puzzle it fell on and the puzzle that first used the word. A fixed replay "
-    + "lag puts the points on a diagonal, and the dashed one is the mean lag of "
-    + `${(lag / 365).toFixed(2)} years. A source window that stays put puts `
-    + "them in a level band.";
+  // the two stories as lines through the mean point: a fixed window keeps the
+  // source level (slope 0), a fixed replay lag moves it one for one (slope 1)
+  const mx = events.reduce((s, e) => s + e.x, 0) / events.length;
+  const my = events.reduce((s, e) => s + e.y, 0) / events.length;
+  const x0 = events[0].x, x1 = events[events.length - 1].x;
+  const line = (slope) => [x0, mx, x1].map((x) => ({ x, y: my + slope * (x - mx) }));
+  // `drift.py`'s least-squares slope over the same events, which also passes
+  // through the mean point, drawn with its standard error as a fan
+  const fit = parsePm(values("drift").drift || "");
+  // a few far-off sources would squash the band the points sit in, so the
+  // axis stops at half again the 90th percentile and they sit on its edge
+  const sources = events.map((e) => e.y).sort((a, b) => a - b);
+  const cap = Math.ceil(1.5 * sources[Math.floor(0.9 * (sources.length - 1))] / 50) * 50;
+  for (const e of events) e.clipLabel = `#${e.y}`;
+  const clipped = events.filter((e) => e.y > cap).length;
+  $("repeats-note").innerHTML = `Each dot is one of the ${events.length} repeats: `
+    + "across, the puzzle it fell on; up, the puzzle that first used the word. Two "
+    + "stories would explain where the editor takes repeats from. If she recycles "
+    + "words a fixed time after they were first used, the source moves forward one "
+    + "puzzle for every puzzle that passes, and the dots climb along the steep line "
+    + "(slope 1). If she draws from a fixed early block of the archive, the source "
+    + "stays put however late the repeat falls, and the dots lie along the flat line "
+    + "(slope 0). Both lines go through the dots' average. The shaded fan is the trend "
+    + "the dots actually show, the least-squares slope from <code>analysis/drift.py</code>"
+    + (fit ? `, ${signed(fit[0], 2)} ± ${fit[1].toFixed(2)} source puzzles per puzzle,` : "")
+    + " with ±1 standard error; the closer it lies to one line, the more the dots favor "
+    + "that story."
+    + (clipped ? ` The ${clipped} repeats that came from later than #${cap} sit on the `
+      + "top edge as triangles, labeled with where they came from; the fit includes them."
+      : "");
   legend($("repeats-legend"), [
     { name: "a repeat", color: "var(--s1)", kind: "dot" },
-    { name: "the mean replay lag", color: "var(--muted)", kind: "dash" },
+    ...(fit ? [{ name: "the trend the dots show, ±1 standard error", color: "var(--ink)" }] : []),
+    { name: "a fixed window (slope 0)", color: "var(--s3)", kind: "dash" },
+    { name: "a fixed replay lag (slope 1)", color: "var(--s2)", kind: "dash" },
   ]);
-  const x0 = events[0].x, x1 = events[events.length - 1].x;
+  const guides = [
+    { name: "fixed window", color: "var(--s3)", dash: true, hover: false, points: line(0) },
+    { name: "replay lag", color: "var(--s2)", dash: true, hover: false, points: line(1) },
+  ];
+  if (fit) {
+    guides.push({ name: "trend", color: "var(--ink)", band: true, bandOpacity: 0.08, hover: false,
+                  points: line(fit[0]).map((p) => {
+                    const a = my + (fit[0] - fit[1]) * (p.x - mx);
+                    const b = my + (fit[0] + fit[1]) * (p.x - mx);
+                    return { ...p, lo: Math.min(a, b), hi: Math.max(a, b) };
+                  }) });
+  }
   lineChart($("repeats-chart"), {
-    series: [
-      { name: "lag", color: "var(--muted)", dash: true, hover: false,
-        points: [{ x: x0, y: x0 - lag }, { x: x1, y: x1 - lag }] },
-      { name: "repeat", color: "var(--s1)", line: false, markers: true, points: events },
-    ],
+    series: [...guides,
+             { name: "repeat", color: "var(--s1)", line: false, markers: true, points: events }],
+    yMin: 0, yMax: cap, height: 300,
     xTicks: ticksBetween(x0, x1, 6), xFmt: (v) => `#${v}`,
     xLabel: "the puzzle it fell on", yLabel: "first used at",
     yFmt: (v) => `#${Math.round(v)}`,
@@ -569,7 +688,8 @@ function drawPool() {
   ]);
   lineChart($("pool-chart"), {
     series, yFloor: 0, height: 240,
-    refs: [{ x: rows[start][0], label: "regime begins" }],
+    refs: [{ x: rows[start][0], label: "regime begins" },
+           ...(rate ? [{ x: series[1].points[1].x, label: `runs out ${ends.slice(0, 7)}` }] : [])],
     xTicks: ticksBetween(1, series[series.length - 1].points.at(-1).x, 6),
     xFmt: (v) => `#${Math.round(v)}`, xLabel: "puzzle",
     yFmt: (v) => Math.round(v).toLocaleString(),
@@ -583,11 +703,30 @@ function drawPool() {
 
 // ------------------------------------------------------------- replay arms
 
-// each table, and the baseline `replay.py` pairs its rows against (its BASE)
+// each table, the baseline `replay.py` pairs its rows against (its BASE), and
+// what its rows change
 const ARM_TABLES = [
-  ["priors.arm_table", "the four priors", "both priors on"],
-  ["shapes.arm_table", "the four shapes", "uniform shapes"],
-  ["arm_table", "the curation shape", "the shipped wordlebot shape"],
+  ["priors.arm_table", "the four priors", "the shipped prior, both priors on",
+   "Each row turns one or both priors off and keeps everything else. <b>none</b> has "
+   + "neither, so every word in the list is equally likely; <b>curation only</b> turns "
+   + "the repeat prior off; <b>repeat only</b> turns the curation prior off. A dot right "
+   + "of zero means the solver needs more guesses without that prior, so how far right "
+   + "it sits is what the missing prior is worth on that kind of answer. The repeat "
+   + "prior sets the share of probability that already-used words get, so it acts "
+   + "mostly on repeats; the curation prior splits the rest between the curated list "
+   + "and every other word, so it acts on off-list and fresh answers."],
+  ["shapes.arm_table", "the four shapes", "both shapes flat",
+   "Every row has both priors on. What changes is each prior's shape: how it spreads "
+   + "its share of probability over its own words, either flat (every word equal) or "
+   + "sharpened (some words weighted more). The repeat shape is <code>binned</code>, "
+   + "weighting used words by where in the old answer order repeats have come from; "
+   + "the curation shapes are <code>wordlebot</code>, WordleBot's weights, and "
+   + "<code>frequency</code>, word frequency. A dot left of zero means the sharpened "
+   + "shape saves guesses against leaving it flat. The last row is the shipped pair."],
+  ["arm_table", "the curation shape", "the shipped wordlebot shape",
+   "The one row swaps the curation prior's shape from WordleBot's weights, which ship, "
+   + "to word frequency, and keeps everything else shipped. A dot right of zero means "
+   + "word frequency needs more guesses than the shipped shape on that kind of answer."],
 ];
 const ARM_COLORS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
 
@@ -613,23 +752,39 @@ function drawReplay() {
   if (!tables.some(([key]) => key === state.replay)) state.replay = tables[0][0];
   segmented(controls, tables.map(([key, name]) => [key, name]), state.replay,
             (key) => { state.replay = key; drawReplay(); });
-  const [key, , base] = tables.find(([k]) => k === state.replay);
-  $("replay-note").innerHTML = `Guesses per game against ${base}, on the same real `
-    + "answers, ±1 standard error. Negative means the row needs fewer guesses. "
-    + "Blended weights the three kinds of answer at the regime's mixture. "
+  const [key, , base, rowsMean] = tables.find(([k]) => k === state.replay);
+  // the arm sizes and the mixture are recorded under the table's own prefix
+  const prefix = key.slice(0, key.length - "arm_table".length);
+  const count = (name) => v[`${prefix}arms.${name}`];
+  $("replay-note").innerHTML = "This replays real answers. Each one is played twice "
+    + "with the answer record as it stood the day before, once under a row's setting "
+    + `and once under the baseline, ${base}, and each dot is the average difference `
+    + "in guesses per game, with ±1 standard error. The answers come in three kinds, "
+    + "because a prior can help on one kind and cost on another: "
+    + (count("repeats") != null
+      ? `the ${count("repeats")} repeats, the ${count("offlist")} answers ever taken `
+        + `from off the curated list, and the ${count("fresh")} fresh curated answers `
+        + "since the regime began. "
+      : "repeats, off-list answers and fresh curated answers. ")
+    + "<b>Blended</b> combines the three in the proportions the regime has shown"
+    + (v[`${prefix}mixture`] ? ` (${v[`${prefix}mixture`]}, in that order)` : "")
+    + ", which is what a game drawn now would face.<br><br>" + rowsMean + "<br><br>"
     + provenance("replay");
   const { columns, rows } = parseTable(v[key]);
+  // blended is the summary of the other three, so it wears the ink color
   const series = columns.slice(1).map((name, i) => ({
-    name, color: ARM_COLORS[i], cells: rows.map((r) => parsePm(r[i + 1])),
+    name, color: name === "blended" ? "var(--ink)" : ARM_COLORS[i],
+    cells: rows.map((r) => parsePm(r[i + 1])),
   }));
   legend($("replay-legend"), series);
-  forestChart($("replay-chart"), rows.map((r) => r[0].replace(/[`*]/g, "")), series);
+  forestChart($("replay-chart"), rows.map((r) => r[0].replace(/[`*]/g, "")), series,
+               `guesses per game against ${base}; left is fewer`);
 }
 
 // one band per row, one error bar per series inside it, on a shared x axis
-function forestChart(node, labels, series) {
+function forestChart(node, labels, series, xLabel) {
   node.innerHTML = "";
-  const W = 900, band = 16 * series.length + 16;
+  const W = node.clientWidth || 900, band = 16 * series.length + 16;
   const M = { top: 8, right: 18, bottom: 34, left: 210 };
   const H = M.top + band * labels.length + M.bottom;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, node);
@@ -655,7 +810,7 @@ function forestChart(node, labels, series) {
   el("line", { x1: X(0), x2: X(0), y1: M.top, y2: bottom,
                stroke: "var(--axis)", "stroke-width": 1.5 }, svg);
   el("text", { x: (M.left + W - M.right) / 2, y: H - 2, "text-anchor": "middle",
-               class: "label" }, svg).textContent = "guesses per game against the baseline";
+               class: "label" }, svg).textContent = xLabel;
 
   labels.forEach((label, r) => {
     const y0 = M.top + r * band;
@@ -701,16 +856,16 @@ function drawFits() {
   $("fits-note").innerHTML = "<code>f(n)</code> estimates the guesses to finish from "
     + "a bucket of effective size n, 2 to the power of its entropy. Buckets of one "
     + "or two candidates are valued exactly, so the curve's left end is never "
-    + `consulted. Every prior is fitted on its own, in ${forms.join(" and ")}; `
-    + fits.map((f) => `${f.label} on ${f.fitted_at}`).join(", ") + ".";
-  legend($("fits-legend"), fits.map((f) => ({ name: f.label, color: f.color })));
+    + `consulted. Every prior is fitted on its own, in ${forms.join(" and ")}.`;
+  legend($("fits-legend"), fits.map((f) => ({
+    name: `${f.label} (fitted ${f.fitted_at})`, color: f.color })));
   const series = fits.map((f) => ({
     name: f.label, color: f.color,
     points: f.n.map((n, i) => ({ x: n, y: f.f[i] })),
   }));
   const top = fits[0].n[fits[0].n.length - 1];
   lineChart($("fits-chart"), {
-    series, log: true,
+    series, log: true, endLabels: true, right: 130, height: 320,
     xTicks: [1, 10, 100, 1000, 10000, top], xFmt: (v) => v.toLocaleString(),
     xLabel: "effective size n, log scale", yLabel: "guesses to finish",
     yFmt: (v) => v.toFixed(1),
@@ -718,37 +873,75 @@ function drawFits() {
       tipRow(s.color, s.name, s.points.find((p) => p.x === x).y.toFixed(3))).join(""),
   });
 
-  // the seed and round 1 sit far above the rest, so the chart starts at round 2
+  // the same curves less the shipped prior's, which is the `both` fit
+  const shipped = fits.find((f) => f.label === "both");
+  if (shipped) {
+    const diffs = fits.filter((f) => f !== shipped).map((f) => ({
+      name: f.label, color: f.color,
+      points: f.n.map((n, i) => ({ x: n, y: f.f[i] - shipped.f[i] })),
+    }));
+    lineChart($("fits-diff"), {
+      series: diffs, log: true, zero: true, endLabels: true, right: 130, height: 260,
+      xTicks: [1, 10, 100, 1000, 10000, top], xFmt: (v) => v.toLocaleString(),
+      xLabel: "effective size n, log scale", yLabel: "guesses, minus shipped",
+      yFmt: (v) => signed(v, 2),
+      tip: (x) => `<div><b>n = ${x.toLocaleString()}</b></div>` + diffs.map((s) =>
+        tipRow(s.color, s.name, signed(s.points.find((p) => p.x === x).y, 3))).join(""),
+    });
+  }
+
+  // one panel per prior on a shared axis, from round 1; the entropy seed is
+  // left off, and a point above the axis sits on its edge as a triangle
   const gaps = fits.map((f) => {
     const best = Math.min(...f.rounds.map((r) => r[1]));
-    return f.rounds.map(([label, mean], i) => ({ x: i, y: mean - best, mean, label }));
+    return f.rounds.map(([label, mean], i) => ({
+      x: i, y: mean - best, mean, label, clipLabel: `+${(mean - best).toFixed(3)}`,
+    }));
   });
-  const early = gaps.flatMap((g) => g.slice(0, 2).map((p) => p.y));
-  $("rounds-note").textContent = "Each round plays the same sampled games under the "
-    + "policy the last round fitted. The entropy seed and round 1 are left off; they "
-    + `sit ${Math.min(...early).toFixed(3)} to ${Math.max(...early).toFixed(3)} above `
-    + "each prior's best round.";
-  const rounds = fits.map((f, i) => ({
-    name: f.label, color: f.color, markers: true, points: gaps[i].slice(2),
-  }));
+  const seeds = gaps.map((g) => g[0].y);
+  const later = gaps.flatMap((g) => g.slice(2).map((p) => p.y));
+  const cap = Math.max(...later) * 1.3;
   const most = Math.max(...gaps.map((g) => g.length)) - 1;
-  lineChart($("rounds-chart"), {
-    series: rounds, yFloor: 0, zero: true, height: 240,
-    xTicks: Array.from({ length: most - 1 }, (_, i) => i + 2), xFmt: (v) => `round ${v}`,
-    yLabel: "above the best round", yFmt: (v) => `+${v.toFixed(3)}`,
-    tip: (x) => `<div><b>round ${x}</b></div>` + rounds.map((s) => {
-      const p = s.points.find((q) => q.x === x);
-      return p ? tipRow(s.color, s.name, `${p.mean.toFixed(4)} (+${p.y.toFixed(4)})`) : "";
-    }).join(""),
+  $("rounds-note").textContent = "Each round plays the same sampled games under the "
+    + "policy the round before it fitted. The best round is ringed. The entropy seed "
+    + `is left off; it sits ${Math.min(...seeds).toFixed(2)} to `
+    + `${Math.max(...seeds).toFixed(2)} above each prior's best round.`;
+  const grid = $("rounds-chart");
+  grid.className = "panels";
+  grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(250px, 1fr))";
+  grid.innerHTML = "";
+  const charts = fits.map((f) => {
+    const box = document.createElement("div");
+    box.innerHTML = `<h3>${f.label}</h3>`;
+    const chart = document.createElement("div");
+    chart.className = "chart";
+    box.appendChild(chart);
+    grid.appendChild(box);
+    return chart;
+  });
+  fits.forEach((f, i) => {
+    const s = { name: f.label, color: f.color, markers: true, ring: (p) => p.y === 0,
+                points: gaps[i].slice(1) };
+    lineChart(charts[i], {
+      series: [s], yMin: 0, yMax: cap, height: 170, xMin: 1, xMax: most,
+      xTicks: Array.from({ length: most }, (_, k) => k + 1), xFmt: (v) => String(v),
+      xLabel: "round", yFmt: (v) => `+${v.toFixed(3)}`,
+      tip: (x) => {
+        const p = s.points.find((q) => q.x === x);
+        return `<div><b>${f.label}, round ${x}</b></div>`
+          + tipRow(f.color, "mean", p.mean.toFixed(4))
+          + tipRow(f.color, "above the best", `+${p.y.toFixed(4)}`);
+      },
+    });
   });
 }
 
 // ------------------------------------------------------------ head to head
 
 // grouped vertical bars from a zero baseline, negatives below it
-function barChart(node, { categories, series, fmt, yLabel, height = 240 }) {
+function barChart(node, { categories, series, fmt, yLabel, height = 240, labels = false }) {
   node.innerHTML = "";
-  const W = 900, H = height, M = { top: 12, right: 18, bottom: 30, left: 58 };
+  const W = node.clientWidth || 900, H = height, M = { top: 12, right: 18, bottom: 30, left: 58 };
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, node);
   const tip = document.createElement("div");
   tip.className = "tip";
@@ -782,15 +975,24 @@ function barChart(node, { categories, series, fmt, yLabel, height = 240 }) {
     series.forEach((s, i) => {
       const v = s.values[c];
       const top = Math.min(Y(v), Y(0)), h = Math.max(1, Math.abs(Y(v) - Y(0)));
+      // `colors` gives each bar its own color, where the sign carries meaning
       el("rect", { x: x0 + i * (bar + 2), y: top, width: bar, height: h, rx: 3,
-                   fill: s.color }, svg);
+                   fill: s.colors?.[c] || s.color }, svg);
+      // `labels` prints the value of a bar too short to read, at its end
+      if (labels && h < 14) {
+        const below = v < 0;
+        el("text", { x: x0 + i * (bar + 2) + bar / 2, y: below ? Y(v) + 14 : Y(v) - 5,
+                     "text-anchor": "middle", class: "label" }, svg)
+          .textContent = fmt(v, true);
+      }
     });
     const hit = el("rect", { x: M.left + c * slot, y: M.top, width: slot,
                              height: H - M.top - M.bottom, fill: "transparent" }, svg);
     hit.addEventListener("pointermove", () => {
       const box = svg.getBoundingClientRect();
       tip.innerHTML = `<div><b>${name}</b></div>` + series.map((s) =>
-        tipRow(s.color, s.name, fmt(s.values[c], true))).join("");
+        tipRow(s.colors?.[c] || s.color, s.describe?.(s.values[c]) || s.name,
+               fmt(s.values[c], true))).join("");
       tip.hidden = false;
       const left = (M.left + (c + 1) * slot) * box.width / W;
       const flip = left > box.width * 0.6;
@@ -819,22 +1021,51 @@ function drawHeadToHead() {
   controls.innerHTML = "";
   segmented(controls, options, state.h2h, (key) => { state.h2h = key; drawHeadToHead(); });
   $("h2h-note").innerHTML = "Every word as the answer, weighted by the default prior: "
-    + "the share of games each solver finishes in each number of guesses. "
+    + "the share of games each solver finishes in each number of guesses, on a log "
+    + "scale so the rare rows show; each gridline is ten times the one below. "
     + provenance("head_to_head");
   const { columns, rows } = parseTable(v[state.h2h]);
   const names = columns.slice(1).map((c) => c.replace(/`/g, ""));
   const series = names.map((name, i) => ({
     name, color: ARM_COLORS[i], values: rows.map((r) => parseNum(r[i + 1])),
   }));
-  legend($("h2h-legend"), series);
+  legend($("h2h-legend"), series.map((s) => ({ ...s, kind: "dot" })));
   const categories = rows.map((r) => r[0]);
-  const share = (x, exact) => `${x.toFixed(exact ? 4 : 0)}%`;
-  barChart($("h2h-chart"), { categories, series, fmt: share, yLabel: "share of games" });
+  // the two solvers side by side in each column
+  const offset = (i) => (i - (series.length - 1) / 2) * 0.16;
+  const dots = series.map((s, i) => ({
+    name: s.name, color: s.color, line: false, markers: true, r: 6.5,
+    points: s.values.map((y, c) => ({ x: c + offset(i), y })),
+  }));
+  // a thin line joining each pair, so the direction of each difference shows
+  const pairs = categories.map((_, c) => ({
+    name: "pair", color: "var(--axis)", hover: false,
+    points: series.map((s, i) => ({ x: c + offset(i), y: s.values[c] })),
+  }));
+  lineChart($("h2h-chart"), {
+    series: [...pairs, ...dots], yLog: true, height: 260, xMin: -0.5, xMax: categories.length - 0.5,
+    xTicks: categories.map((_, c) => c), xFmt: (c) => categories[c],
+    xLabel: "guesses", yLabel: "share of games",
+    yFmt: (y) => `${y >= 1 ? y.toFixed(0) : y >= 0.1 ? y.toFixed(1) : y.toPrecision(1)}%`,
+    tip: (x) => {
+      const c = Math.round(x);
+      return `<div><b>${categories[c]}</b></div>` + series.map((s) =>
+        tipRow(s.color, s.name, `${s.values[c]}%`)).join("")
+        + `<div>ratio ${(series[0].values[c] / series[1].values[c]).toFixed(2)}</div>`;
+    },
+  });
+  // the share finished within k guesses, so ahead always means better
+  const within = categories.slice(0, -1);
+  const cumulative = (s) => within.map((_, c) =>
+    s.values.slice(0, c + 1).reduce((a, b) => a + b, 0));
+  const ahead = cumulative(series[0]).map((x, c) => x - cumulative(series[1])[c]);
   barChart($("h2h-diff"), {
-    categories, height: 200, yLabel: "points",
-    series: [{ name: `${names[0]} − ${names[1]}`, color: "var(--s1)",
-               values: rows.map((_, c) => series[0].values[c] - series[1].values[c]) }],
-    fmt: (x, exact) => `${x < 0 ? "−" : "+"}${Math.abs(x).toFixed(exact ? 4 : 1)}`,
+    categories: within.map((k) => `within ${k}`), height: 220, yLabel: "points",
+    labels: true,
+    series: [{ name: `${names[0]} − ${names[1]}`, values: ahead,
+               describe: (x) => `${names[0]} ${x >= 0 ? "ahead" : "behind"}`,
+               colors: ahead.map((x) => (x >= 0 ? "var(--good)" : "var(--bad)")) }],
+    fmt: (x, exact) => `${x < 0 ? "−" : "+"}${Math.abs(x).toFixed(exact ? 2 : 1)}`,
   });
 }
 
@@ -863,14 +1094,42 @@ function columnPanels(node, text) {
   for (const [chart, vals, i] of panels) {
     // drawn at the panel's own width, so the text stays at its set size
     const W = Math.round(chart.getBoundingClientRect().width) || 420;
-    const row = 26, M = { top: 6, right: 70, bottom: 8, left: 170 };
+    const row = 26, M = { top: 6, right: 18, bottom: 24, left: 170 };
     const H = M.top + row * rows.length + M.bottom;
     const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, chart);
+    const tip = document.createElement("div");
+    tip.className = "tip";
+    tip.hidden = true;
+    chart.appendChild(tip);
     const known = vals.filter((x) => x != null);
     let lo = Math.min(...known), hi = Math.max(...known);
+    // a share or a count starts at zero; anything else is zoomed to its own
+    // range, and the heading says how narrow that range is
+    const share = rows.some((r) => r[i + 1].includes("%"));
+    if (known.every((x) => x >= 0) && (share || known.every(Number.isInteger))) {
+      lo = 0;
+    } else {
+      const span = hi - lo;
+      const digits = Math.max(0, -Math.floor(Math.log10(span || 1)) + 1);
+      chart.previousElementSibling.insertAdjacentHTML("beforeend",
+        ` <span class="zoom">zoomed: ${lo.toFixed(digits)} to ${hi.toFixed(digits)}, `
+        + `a spread of ${span.toFixed(digits)}</span>`);
+    }
     if (lo === hi) { lo -= 1; hi += 1; }
     const pad = (hi - lo) * 0.06;
     const X = (x) => M.left + (x - lo + pad) / (hi - lo + 2 * pad) * (W - M.left - M.right);
+    // the x axis the dots are placed on, with a few round ticks
+    const base = M.top + row * rows.length;
+    el("line", { x1: M.left, x2: W - M.right, y1: base, y2: base,
+                 stroke: "var(--axis)", "stroke-width": 1 }, svg);
+    const step = niceStep((hi - lo) / 3);
+    const decimals = Math.max(0, -Math.floor(Math.log10(step)));
+    for (let t = Math.ceil(lo / step) * step; t <= hi + step / 1e6; t += step) {
+      el("line", { x1: X(t), x2: X(t), y1: base, y2: base + 4,
+                   stroke: "var(--axis)", "stroke-width": 1 }, svg);
+      el("text", { x: X(t), y: base + 16, "text-anchor": "middle" }, svg)
+        .textContent = t.toFixed(decimals) + (share ? "%" : "");
+    }
     rows.forEach((r, k) => {
       const y = M.top + row * k + row / 2;
       el("line", { x1: M.left, x2: W - M.right, y1: y, y2: y,
@@ -882,11 +1141,24 @@ function columnPanels(node, text) {
       el("title", {}, name).textContent = labels[k];
       const x = vals[k];
       if (x == null) return;
-      el("circle", { cx: X(x), cy: y, r: bold[k] ? 6 : 4.5,
-                     fill: bold[k] ? "var(--s2)" : "var(--s1)",
-                     stroke: "var(--surface)", "stroke-width": 2 }, svg);
-      el("text", { x: W - M.right + 8, y: y + 4, class: "label" }, svg)
-        .textContent = r[i + 1].replace(/\*\*/g, "");
+      el("circle", { cx: X(x), cy: y, r: bold[k] ? 6 : 4.5, fill: "var(--s1)",
+                     stroke: bold[k] ? "var(--ink)" : "var(--surface)", "stroke-width": 2 }, svg);
+      // the exact value is in a tooltip over the row
+      const hit = el("rect", { x: 0, y: y - row / 2, width: W, height: row,
+                               fill: "transparent" }, svg);
+      hit.addEventListener("pointermove", () => {
+        tip.innerHTML = `<div><b>${labels[k]}</b></div>`
+          + tipRow("var(--s1)", columns[i + 1].replace(/[`*]/g, ""),
+                   r[i + 1].replace(/\*\*/g, ""));
+        tip.hidden = false;
+        const box = svg.getBoundingClientRect();
+        const px = X(x) * box.width / W;
+        const flip = px > box.width * 0.6;
+        tip.style.left = flip ? "" : `${px + 12}px`;
+        tip.style.right = flip ? `${box.width - px + 12}px` : "";
+        tip.style.top = `${(y + row / 2) * box.height / H}px`;
+      });
+      hit.addEventListener("pointerleave", () => { tip.hidden = true; });
     });
   }
 }
@@ -903,26 +1175,121 @@ function tablePanels(script, options, ids, note) {
     state[script] = key;
     tablePanels(script, options, ids, note);
   });
-  columnPanels($(ids.panels), v[state[script]]);
+  // an option's third entry draws its table some other way than as panels
+  const [, , draw] = shown.find(([key]) => key === state[script]);
+  const node = $(ids.panels);
+  node.className = draw ? "" : "panels";
+  (draw || columnPanels)(node, v[state[script]]);
+}
+
+// one table as a trade-off: each row a point at (x column, y column), joined
+// in the table's order, the default ringed and every point named
+function tradeoff(xName, yName) {
+  return (node, text) => {
+    node.innerHTML = '<div class="chart"></div>';
+    const { columns, rows } = parseTable(text);
+    const xi = columns.indexOf(xName), yi = columns.indexOf(yName);
+    const head = columns[0].replace(/`/g, "");
+    const points = rows.map((r) => ({
+      x: parseNum(r[xi]), y: parseNum(r[yi]), row: r,
+      name: r[0].replace(/[`*]/g, "").replace(" (default)", ""),
+      bold: r.some((c) => c.includes("**")),
+    }));
+    const s = { name: head, color: "var(--s1)", markers: true, r: 5,
+                ring: (p) => p.bold, points };
+    lineChart(node.firstChild, {
+      series: [s], height: 300, right: 40,
+      xTicks: ticksBetween(Math.min(...points.map((p) => p.x)),
+                           Math.max(...points.map((p) => p.x)), 5),
+      xFmt: (x) => `${x.toFixed(3)}%`, xLabel: xName, yLabel: yName,
+      yFmt: (y) => y.toFixed(4),
+      tip: (x) => {
+        const p = points.find((q) => q.x === x);
+        return `<div><b>${head} ${p.row[0].replace(/[`*]/g, "")}</b></div>`
+          + columns.slice(1).map((c, i) => tipRow("var(--s1)", c, p.row[i + 1].replace(/\*\*/g, "")))
+            .join("");
+      },
+    });
+  };
+}
+
+// one table as stacked bars: a bar per row, a segment per column
+function stacked(node, text) {
+  node.innerHTML = '<div class="legend"></div><div class="chart"></div>';
+  const { columns, rows } = parseTable(text);
+  const names = columns.slice(1).map((c) => c.replace(/`/g, ""));
+  const colors = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
+  legend(node.firstChild, names.map((name, i) => ({ name, color: colors[i] })));
+  const chart = node.lastChild;
+  const W = chart.clientWidth || 900, H = 260, M = { top: 12, right: 18, bottom: 36, left: 58 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img" }, chart);
+  const tip = document.createElement("div");
+  tip.className = "tip";
+  tip.hidden = true;
+  chart.appendChild(tip);
+  const counts = rows.map((r) => names.map((_, i) => parseNum(r[i + 1]) || 0));
+  const top = Math.max(...counts.map((c) => c.reduce((a, b) => a + b, 0)));
+  const Y = (v) => H - M.bottom - v / top * (H - M.top - M.bottom);
+  const step = niceStep(top / 4);
+  for (let v = 0; v <= top; v += step) {
+    el("line", { x1: M.left, x2: W - M.right, y1: Y(v), y2: Y(v),
+                 stroke: "var(--grid)", "stroke-width": 1 }, svg);
+    el("text", { x: M.left - 8, y: Y(v) + 4, "text-anchor": "end" }, svg)
+      .textContent = v.toLocaleString();
+  }
+  const slot = (W - M.left - M.right) / rows.length, bar = Math.min(56, slot * 0.6);
+  rows.forEach((r, k) => {
+    const x = M.left + k * slot + (slot - bar) / 2;
+    let acc = 0;
+    counts[k].forEach((n, i) => {
+      if (!n) return;
+      // a 2px gap of the surface color between segments
+      el("rect", { x, y: Y(acc + n), width: bar, height: Math.max(1, Y(acc) - Y(acc + n) - 2),
+                   fill: colors[i] }, svg);
+      acc += n;
+    });
+    el("text", { x: x + bar / 2, y: H - M.bottom + 16, "text-anchor": "middle",
+                 class: "label" }, svg).textContent = r[0].replace(/[`*]/g, "");
+    const hit = el("rect", { x: M.left + k * slot, y: M.top, width: slot,
+                             height: H - M.top - M.bottom, fill: "transparent" }, svg);
+    hit.addEventListener("pointermove", () => {
+      const box = svg.getBoundingClientRect();
+      tip.innerHTML = `<div><b>${columns[0].replace(/`/g, "")} ${r[0]}</b></div>`
+        + names.map((name, i) => tipRow(colors[i], name, r[i + 1])).join("");
+      tip.hidden = false;
+      const px = (M.left + (k + 1) * slot) * box.width / W;
+      const flip = px > box.width * 0.6;
+      tip.style.left = flip ? "" : `${px}px`;
+      tip.style.right = flip ? `${box.width - (M.left + k * slot) * box.width / W}px` : "";
+      tip.style.top = `${M.top * box.height / H}px`;
+    });
+    hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+  });
+  el("text", { x: (M.left + W - M.right) / 2, y: H - 2, "text-anchor": "middle",
+               class: "label" }, svg).textContent = columns[0].replace(/`/g, "");
 }
 
 function drawLoss() {
   tablePanels("loss_penalty", [
-    ["penalty.table", "the loss penalty"], ["reach.table", "the search's reach"],
+    ["penalty.table", "the loss penalty", tradeoff("loss probability", "mean (solved)")],
+    ["reach.table", "the search's reach", tradeoff("loss probability", "mean (loss = 7)")],
     ["search.table", "how much is searched"], ["policies.table", "the policies"],
   ], { controls: "loss-controls", panels: "loss-panels", note: "loss-note" },
-  "Every word as the answer, weighted by the default prior. The default setting "
-    + "is the orange dot; each panel has its own axis.");
+  "Every word as the answer, weighted by the default prior. The default setting is "
+    + "ringed. The first two views plot each setting's loss probability against its "
+    + "mean, joined in order, so down and to the left is better on both; the other "
+    + "two give each column a panel on its own axis.");
 }
 
 function drawRegret() {
   tablePanels("exact_decisions", [
     ["blended.table", "positions from real games"], ["shipped.table", "under the shipped prior"],
-    ["who.table", "who decides each turn"],
+    ["who.table", "who decides each turn", stacked],
   ], { controls: "regret-controls", panels: "regret-panels", note: "regret-note" },
   "Positions the exact search takes over, grouped by candidates left: how often "
-    + "the estimator would have picked differently, and what that costs in guesses. "
-    + "Each panel has its own axis.");
+    + "the estimator would have picked differently, and what that costs in guesses, "
+    + "each column a panel on its own axis. The third view counts, for each number of "
+    + "turns left, which part of the solver picks the guess.");
 }
 
 // ------------------------------------------------------------------- tables
@@ -975,6 +1342,20 @@ async function boot() {
   $("lede").textContent = `${rows.length} answers, through #${last[0]} on ${last[1]}. `
     + "Each chart is the results file its script last wrote; reload after a rerun.";
   state.window = DATA.defaults.recent;
+  // a link to every section, named by its heading
+  $("toc").innerHTML = [...document.querySelectorAll("section")].map((s) =>
+    `<a href="#${s.id}">${s.querySelector("h2").innerHTML}</a>`).join("");
+  drawCharts();
+  drawTables();
+  // the charts are drawn at their containers' widths, so a resize redraws them
+  let pending = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(pending);
+    pending = setTimeout(drawCharts, 150);
+  });
+}
+
+function drawCharts() {
   drawRates();
   drawBasin();
   drawRepeats();
@@ -985,7 +1366,6 @@ async function boot() {
   drawLoss();
   drawRegret();
   drawLag();
-  drawTables();
 }
 
 boot().catch((error) => {
