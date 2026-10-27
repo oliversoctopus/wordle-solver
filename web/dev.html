@@ -102,6 +102,11 @@
   select { font: inherit; font-size: 13px; padding: 2px 6px; color: var(--ink);
            background: var(--surface); border: 1px solid var(--axis); border-radius: 6px; }
   code { font-size: 12px; }
+  .note details { margin-top: 4px; }
+  .note summary { cursor: pointer; color: var(--muted); font-size: 12px; width: fit-content; }
+  .note summary:hover { color: var(--ink-2); }
+  .note details[open] { padding: 6px 10px; border-left: 2px solid var(--axis); }
+  .note details[open] summary { margin-bottom: 4px; }
   .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
             gap: 6px 22px; }
   .panels h3 { margin-top: 8px; }
@@ -120,7 +125,7 @@
 
   <section id="rates">
     <h2>Answer rates over time</h2>
-    <p class="note">Each point is a share of the last 25, 50 or 100 answers, the window, ending at that puzzle: how many were off the curated list, and how many repeated an earlier answer. The off-list share counts only the answers that were not repeats, because the prior decides in that order, first whether the answer is a repeat and then, if not, whether it is off-list. The shaded band is ±1 standard error, and it is wide because a window holds few such answers. The dashed line is the probability the prior uses now. The dotted line is the edge of the basin <code>analysis/prior_basin.py</code> found: settings from the bottom of its sweep up to that edge all play about as well as the shipped one, and past it the solver starts to need more guesses. The lines start once a full window has been played. The strip below has one mark per answer since the regime began, colored by kind.</p>
+    <div class="note" id="rates-note"></div>
     <div class="controls" id="rates-controls"></div>
     <div class="legend" id="rates-legend"></div>
     <div class="chart" id="rates-chart"></div>
@@ -129,21 +134,21 @@
 
   <section id="repeats">
     <h2>Where the repeats come from</h2>
-    <p class="note" id="repeats-note"></p>
+    <div class="note" id="repeats-note"></div>
     <div class="legend" id="repeats-legend"></div>
     <div class="chart" id="repeats-chart"></div>
   </section>
 
   <section id="pool">
     <h2>The curated list running out</h2>
-    <p class="note" id="pool-note"></p>
+    <div class="note" id="pool-note"></div>
     <div class="legend" id="pool-legend"></div>
     <div class="chart" id="pool-chart"></div>
   </section>
 
   <section id="replay">
     <h2>What each prior and shape is worth on real answers</h2>
-    <p class="note" id="replay-note"></p>
+    <div class="note" id="replay-note"></div>
     <div class="controls" id="replay-controls"></div>
     <div class="legend" id="replay-legend"></div>
     <div class="chart" id="replay-chart"></div>
@@ -151,19 +156,19 @@
 
   <section id="fits">
     <h2>The fitted <code>f(n)</code></h2>
-    <p class="note" id="fits-note"></p>
+    <div class="note" id="fits-note"></div>
     <div class="legend" id="fits-legend"></div>
     <div class="chart" id="fits-chart"></div>
     <h3>Each prior's <code>f(n)</code> minus the shipped prior's</h3>
     <div class="chart" id="fits-diff"></div>
     <h3>Mean guesses per policy-iteration round, against each prior's best round</h3>
-    <p class="note" id="rounds-note"></p>
+    <div class="note" id="rounds-note"></div>
     <div class="chart" id="rounds-chart"></div>
   </section>
 
   <section id="h2h">
     <h2>Head to head</h2>
-    <p class="note" id="h2h-note"></p>
+    <div class="note" id="h2h-note"></div>
     <div class="controls" id="h2h-controls"></div>
     <div class="legend" id="h2h-legend"></div>
     <div class="chart" id="h2h-chart"></div>
@@ -174,21 +179,21 @@
 
   <section id="loss">
     <h2>The loss penalty and the exact search</h2>
-    <p class="note" id="loss-note"></p>
+    <div class="note" id="loss-note"></div>
     <div class="controls" id="loss-controls"></div>
     <div class="panels" id="loss-panels"></div>
   </section>
 
   <section id="regret">
     <h2>The estimator against the exact search</h2>
-    <p class="note" id="regret-note"></p>
+    <div class="note" id="regret-note"></div>
     <div class="controls" id="regret-controls"></div>
     <div class="panels" id="regret-panels"></div>
   </section>
 
   <section id="basin">
     <h2>The prior's basin</h2>
-    <p class="note" id="basin-note"></p>
+    <div class="note" id="basin-note"></div>
     <div class="controls" id="basin-controls"></div>
     <div class="legend" id="basin-legend"></div>
     <div class="chart" id="basin-chart"></div>
@@ -199,7 +204,7 @@
 
   <section id="lag">
     <h2>A stale answer record</h2>
-    <p class="note" id="lag-note"></p>
+    <div class="note" id="lag-note"></div>
     <div class="pair">
       <div><h3>Guesses against a record rebuilt daily</h3><div class="chart" id="lag-chart"></div></div>
       <div><h3>Share of the prior's mass moved</h3><div class="chart" id="mass-chart"></div></div>

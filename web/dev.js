@@ -71,6 +71,19 @@ function missing(node, script) {
   node.innerHTML = `<div class="missing">Not recorded yet: rerun <code>analysis/${script}.py</code>.</div>`;
 }
 
+// a note: one short line, and the full explanation collapsed under it; a
+// redraw keeps the explanation open if it was
+const opened = new Set();
+function note(id, short, long) {
+  const node = $(id);
+  node.innerHTML = `${short}<details><summary>How to read this</summary>${long}</details>`;
+  const details = node.querySelector("details");
+  details.open = opened.has(id);
+  details.addEventListener("toggle", () => {
+    if (details.open) opened.add(id); else opened.delete(id);
+  });
+}
+
 function segmented(parent, options, current, onPick) {
   const group = document.createElement("div");
   group.className = "seg";
@@ -329,6 +342,19 @@ function drawRates() {
   const { rows, regime_start: start } = DATA.record;
   const { repeat_prob: repeatProb, noncurated_prob: offProb } = DATA.defaults;
   const w = state.window;
+  note("rates-note", "The share of the last 25, 50 or 100 answers that were off-list "
+    + "or repeats. Dashed: the prior's default. Dotted: the edge of the basin, past "
+    + "which the solver needs more guesses.",
+  "Each point is a share of the window ending at that puzzle: how many answers were "
+    + "off the curated list, and how many repeated an earlier answer. The off-list "
+    + "share counts only the answers that were not repeats, because the prior decides "
+    + "in that order, first whether the answer is a repeat and then, if not, whether "
+    + "it is off-list. The shaded band is ±1 standard error, wide because a window "
+    + "holds few such answers. The dotted edge comes from "
+    + "<code>analysis/prior_basin.py</code>: settings from the bottom of its sweep up "
+    + "to it all play about as well as the shipped one. The lines start once a full "
+    + "window has been played. The strip below has one mark per answer since the "
+    + "regime began, colored by kind.");
   const controls = $("rates-controls");
   controls.innerHTML = "";
   segmented(controls, [25, 50, DATA.defaults.recent].map((n) => [n, `last ${n}`]),
@@ -437,12 +463,25 @@ function drawStrip(rows) {
 
 function drawBasin() {
   const v = values("prior_basin");
-  $("basin-note").innerHTML = "Extra guesses per game against the shipped setting, "
-    + "with <code>f</code> held at the shipped fit, ±1 standard error. "
-    + "Lower is better. The shaded range is the basin, the settings "
-    + "<code>prior_basin.py</code> scores within its <code>FLAT</code> bound of the "
-    + "shipped one over the whole regime, and the dotted line is the rate the record "
-    + "shows. " + provenance("prior_basin");
+  note("basin-note", "Extra guesses per game at each setting, against the shipped one, "
+    + "on real puzzles. Lower is better. Shaded: the basin. Dotted: the rate the "
+    + "record shows.",
+  "This asks how much the prior's two probabilities matter. One of them is swept "
+    + "across a range of settings while everything else "
+    + "stays shipped, including <code>f</code>, which is held at the shipped prior's "
+    + "fit. At each setting the solver replays every real puzzle since the regime "
+    + "began, and each point is how many more guesses per game it needs than at the "
+    + "shipped setting, on the same puzzles, with ±1 standard error. Lower is better, "
+    + "and the shipped setting is zero by construction. Settings far from the shipped "
+    + "one read a little worse than a refit would leave them, because they borrow an "
+    + "<code>f</code> fitted for another prior.<br><br>"
+    + "The shaded range is the basin: the settings whose cost over the whole regime "
+    + "stays within <code>prior_basin.py</code>'s <code>FLAT</code> bound of the "
+    + "shipped one. The dotted line is the rate the answer record actually shows. "
+    + "<b>Last 100</b> scores the same runs on the latest puzzles only, and <b>by "
+    + "answer type</b> splits each point into repeats, off-list and fresh answers, "
+    + "which can move in opposite directions as a setting changes. "
+    + provenance("prior_basin"));
   const controls = $("basin-controls");
   controls.innerHTML = "";
   const redraw = (key, value) => { state[key] = value; drawBasin(); };
@@ -525,10 +564,20 @@ function drawBasin() {
 
 function drawLag() {
   const v = values("refit_lag");
-  $("lag-note").innerHTML = "The shipped prior replayed over the regime with the "
-    + "answer record truncated by each lag, paired against a record rebuilt every "
-    + "day, ±1 standard error. Positive means the stale record costs guesses. "
-    + provenance("refit_lag");
+  note("lag-note", "Extra guesses per game when the answer record is k days behind, and "
+    + "how much of the prior that moves.",
+  "This asks what it costs to update the answer record late. "
+    + "With a lag of k days, the solver plays each regime puzzle with a record that "
+    + "is missing its last k answers, so it still treats those k words as unused and "
+    + "gives them a fresh word's weight. Nothing is refitted. Each point on the left "
+    + "is the average extra guesses per game against a record updated every day, on "
+    + "the same puzzles, with ±1 standard error; positive means the stale record "
+    + "costs guesses. The tooltip says how many games changed at all.<br><br>"
+    + "On the right is how far the lag moves the prior: the share of its probability "
+    + "that sits on different words, averaged over the puzzles. The dashed line is a "
+    + "yardstick, how much flattening the repeat shape moves it. Below, refitting "
+    + "every k days averages the lags from 0 to k − 1, since the record is that "
+    + "stale for one day each. " + provenance("refit_lag"));
   const lags = v["series.lags"], cycle = v["series.cycle"];
   if (!lags) {
     for (const id of ["lag-chart", "mass-chart", "cycle-chart"]) missing($(id), "refit_lag");
@@ -608,8 +657,11 @@ function drawRepeats() {
   const cap = Math.ceil(1.5 * sources[Math.floor(0.9 * (sources.length - 1))] / 50) * 50;
   for (const e of events) e.clipLabel = `#${e.y}`;
   const clipped = events.filter((e) => e.y > cap).length;
-  $("repeats-note").innerHTML = `Each dot is one of the ${events.length} repeats: `
-    + "across, the puzzle it fell on; up, the puzzle that first used the word. Two "
+  note("repeats-note", "Each dot is a repeat: when it fell against when the word was "
+    + "first used. Steep line: a fixed replay lag. Flat line: a fixed window. Fan: the "
+    + "trend the dots show.",
+  `There are ${events.length} repeats: across, the puzzle each fell on; up, the `
+    + "puzzle that first used the word. Two "
     + "stories would explain where the editor takes repeats from. If she recycles "
     + "words a fixed time after they were first used, the source moves forward one "
     + "puzzle for every puzzle that passes, and the dots climb along the steep line "
@@ -622,7 +674,7 @@ function drawRepeats() {
     + "that story."
     + (clipped ? ` The ${clipped} repeats that came from later than #${cap} sit on the `
       + "top edge as triangles, labeled with where they came from; the fit includes them."
-      : "");
+      : ""));
   legend($("repeats-legend"), [
     { name: "a repeat", color: "var(--s1)", kind: "dot" },
     ...(fit ? [{ name: "the trend the dots show, ±1 standard error", color: "var(--ink)" }] : []),
@@ -678,10 +730,14 @@ function drawPool() {
     series.push({ name: "projected", color: "var(--s1)", dash: true, hover: false,
                   points: [{ x: last.x, y: last.y }, { x: last.x + days, y: 0 }] });
   }
-  $("pool-note").innerHTML = `${last.y.toLocaleString()} of the ${total.toLocaleString()} `
-    + `curated words are still unused after #${last.x}. `
-    + (rate ? `At the last two years' ${rate.toFixed(0)} fresh curated answers a year, `
-      + `from <code>analysis/regime.py</code>, the list runs out around ${ends}.` : "");
+  note("pool-note", `Curated words never yet an answer: ${last.y.toLocaleString()} left `
+    + "after #" + last.x + (rate ? `, projected to run out around ${ends}.` : "."),
+  `The curated list is the ${total.toLocaleString()} words the solver treats as the `
+    + "editor's likely answers. The line falls by one each time a curated word is used "
+    + "for the first time; repeats and off-list answers leave it alone. "
+    + (rate ? "The dashed line carries it forward at the rate curated words were used "
+      + `for the first time over the last two years, ${rate.toFixed(0)} a year, from `
+      + "<code>analysis/regime.py</code>, and assumes that rate holds." : ""));
   legend($("pool-legend"), [
     { name: "curated words never yet an answer", color: "var(--s1)" },
     ...(rate ? [{ name: "projected at the last two years' rate", color: "var(--s1)", kind: "dash" }] : []),
@@ -756,7 +812,9 @@ function drawReplay() {
   // the arm sizes and the mixture are recorded under the table's own prefix
   const prefix = key.slice(0, key.length - "arm_table".length);
   const count = (name) => v[`${prefix}arms.${name}`];
-  $("replay-note").innerHTML = "This replays real answers. Each one is played twice "
+  note("replay-note", `Extra guesses per game on real answers, each row against ${base}, `
+    + "split by kind of answer. Left is fewer.",
+  "This replays real answers. Each one is played twice "
     + "with the answer record as it stood the day before, once under a row's setting "
     + `and once under the baseline, ${base}, and each dot is the average difference `
     + "in guesses per game, with ±1 standard error. The answers come in three kinds, "
@@ -769,7 +827,7 @@ function drawReplay() {
     + "<b>Blended</b> combines the three in the proportions the regime has shown"
     + (v[`${prefix}mixture`] ? ` (${v[`${prefix}mixture`]}, in that order)` : "")
     + ", which is what a game drawn now would face.<br><br>" + rowsMean + "<br><br>"
-    + provenance("replay");
+    + provenance("replay"));
   const { columns, rows } = parseTable(v[key]);
   // blended is the summary of the other three, so it wears the ink color
   const series = columns.slice(1).map((name, i) => ({
@@ -853,10 +911,19 @@ function drawFits() {
   const fits = DATA.fits.map((fit, i) => ({ ...fit, color: FIT_COLORS[i] }));
   if (!fits.length) return;
   const forms = [...new Set(fits.map((f) => f.form))];
-  $("fits-note").innerHTML = "<code>f(n)</code> estimates the guesses to finish from "
-    + "a bucket of effective size n, 2 to the power of its entropy. Buckets of one "
-    + "or two candidates are valued exactly, so the curve's left end is never "
-    + `consulted. Every prior is fitted on its own, in ${forms.join(" and ")}.`;
+  note("fits-note", "The estimated guesses to finish from a group of n equally likely "
+    + "candidates, one curve per prior. Below: each curve minus the shipped prior's.",
+  "To score a guess, the solver splits the remaining "
+    + "candidates by the feedback the guess would get, and needs a value for each of "
+    + "those groups: how many more guesses it takes to finish from there. "
+    + "<code>f(n)</code> is that estimate, as a curve in n, the group's effective size, "
+    + "2 to the power of its entropy, which is the plain count when every candidate is "
+    + "equally likely. Groups of one or two candidates are valued exactly, so the "
+    + "curve's left end is never used. Each prior gets its own curve, fitted to "
+    + "games played under it, in " + forms.join(" and ") + ". A lower curve means "
+    + "that prior expects to finish a group of the same effective size in fewer "
+    + "guesses. The second chart subtracts "
+    + "the shipped prior's curve, so the differences the first chart compresses show.");
   legend($("fits-legend"), fits.map((f) => ({
     name: `${f.label} (fitted ${f.fitted_at})`, color: f.color })));
   const series = fits.map((f) => ({
@@ -902,10 +969,18 @@ function drawFits() {
   const later = gaps.flatMap((g) => g.slice(2).map((p) => p.y));
   const cap = Math.max(...later) * 1.3;
   const most = Math.max(...gaps.map((g) => g.length)) - 1;
-  $("rounds-note").textContent = "Each round plays the same sampled games under the "
-    + "policy the round before it fitted. The best round is ringed. The entropy seed "
-    + `is left off; it sits ${Math.min(...seeds).toFixed(2)} to `
-    + `${Math.max(...seeds).toFixed(2)} above each prior's best round.`;
+  note("rounds-note", "Each round's mean guesses above the prior's best round. The "
+    + "ringed round's curve is the one that ships.",
+  "f is fitted by policy iteration. The first round, "
+    + "the seed, plays 2,000 sampled games by greedy entropy and records how many "
+    + "guesses each position really took; a curve is fitted to that; the next round "
+    + "plays the same 2,000 games using the new curve, and so on. Each panel is one "
+    + "prior, and each point is a round's mean guesses above that prior's best round, "
+    + "so the best round sits at zero, ringed. The loop does not settle on its best "
+    + "round, so it keeps the curve from the best round, and that is the curve that "
+    + `ships. The seed is left off; it sits ${Math.min(...seeds).toFixed(2)} to `
+    + `${Math.max(...seeds).toFixed(2)} above the best round. All panels share one `
+    + "axis, and a point above it sits on its edge as a labeled triangle.");
   const grid = $("rounds-chart");
   grid.className = "panels";
   grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(250px, 1fr))";
@@ -1020,10 +1095,20 @@ function drawHeadToHead() {
   const controls = $("h2h-controls");
   controls.innerHTML = "";
   segmented(controls, options, state.h2h, (key) => { state.h2h = key; drawHeadToHead(); });
-  $("h2h-note").innerHTML = "Every word as the answer, weighted by the default prior: "
-    + "the share of games each solver finishes in each number of guesses, on a log "
-    + "scale so the rare rows show; each gridline is ten times the one below. "
-    + provenance("head_to_head");
+  note("h2h-note", "Share of games finished in each number of guesses, on a log scale. "
+    + "Below: finished within k guesses, shipped minus the other.",
+  "Both solvers play every one of the 12,947 words as the "
+    + "answer, and each game counts by how likely the default prior thinks that word "
+    + "is, so these are exact shares with no sampling error. The other solver is "
+    + "either <code>IG + 2·p_win</code>, which scores a guess by the information it "
+    + "gains plus two bits for the chance it is the answer and needs no fitted curve, "
+    + "or greedy entropy, which takes the guess that splits the candidates most "
+    + "evenly.<br><br>The top chart is the share of games each finishes in 2, 3, 4, 5 "
+    + "or 6 guesses, or loses, on a log scale so the rare rows show; each gridline is "
+    + "ten times the one below. The bottom chart adds those shares up, the share "
+    + "finished within k guesses, and subtracts the other solver's from the shipped "
+    + "one's, in percentage points: green where the shipped solver has finished more "
+    + "games by then, red where it has finished fewer. " + provenance("head_to_head"));
   const { columns, rows } = parseTable(v[state.h2h]);
   const names = columns.slice(1).map((c) => c.replace(/`/g, ""));
   const series = names.map((name, i) => ({
@@ -1037,13 +1122,8 @@ function drawHeadToHead() {
     name: s.name, color: s.color, line: false, markers: true, r: 6.5,
     points: s.values.map((y, c) => ({ x: c + offset(i), y })),
   }));
-  // a thin line joining each pair, so the direction of each difference shows
-  const pairs = categories.map((_, c) => ({
-    name: "pair", color: "var(--axis)", hover: false,
-    points: series.map((s, i) => ({ x: c + offset(i), y: s.values[c] })),
-  }));
   lineChart($("h2h-chart"), {
-    series: [...pairs, ...dots], yLog: true, height: 260, xMin: -0.5, xMax: categories.length - 0.5,
+    series: dots, yLog: true, height: 260, xMin: -0.5, xMax: categories.length - 0.5,
     xTicks: categories.map((_, c) => c), xFmt: (c) => categories[c],
     xLabel: "guesses", yLabel: "share of games",
     yFmt: (y) => `${y >= 1 ? y.toFixed(0) : y >= 0.1 ? y.toFixed(1) : y.toPrecision(1)}%`,
@@ -1163,17 +1243,17 @@ function columnPanels(node, text) {
   }
 }
 
-function tablePanels(script, options, ids, note) {
+function tablePanels(script, options, ids, short, long) {
   const v = values(script);
   const shown = options.filter(([key]) => v[key]);
   const controls = $(ids.controls);
   controls.innerHTML = "";
-  $(ids.note).innerHTML = `${note} ${provenance(script)}`;
+  note(ids.note, short, `${long} ${provenance(script)}`);
   if (!shown.length) return missing($(ids.panels), script);
   if (!shown.some(([key]) => key === state[script])) state[script] = shown[0][0];
   segmented(controls, shown, state[script], (key) => {
     state[script] = key;
-    tablePanels(script, options, ids, note);
+    tablePanels(script, options, ids, short, long);
   });
   // an option's third entry draws its table some other way than as panels
   const [, , draw] = shown.find(([key]) => key === state[script]);
@@ -1275,21 +1355,49 @@ function drawLoss() {
     ["reach.table", "the search's reach", tradeoff("loss probability", "mean (loss = 7)")],
     ["search.table", "how much is searched"], ["policies.table", "the policies"],
   ], { controls: "loss-controls", panels: "loss-panels", note: "loss-note" },
-  "Every word as the answer, weighted by the default prior. The default setting is "
-    + "ringed. The first two views plot each setting's loss probability against its "
-    + "mean, joined in order, so down and to the left is better on both; the other "
-    + "two give each column a panel on its own axis.");
+  "Each point is a setting: loss rate against mean guesses. Down and left is better; "
+    + "the default is ringed.",
+  "A loss is a game not solved in six. <code>--loss-penalty</code> sets how heavily "
+    + "the endgame weighs a loss: at 1 it is risk neutral, a loss costing the same as "
+    + "a seventh guess, and higher settings make the solver spend turns on insurance "
+    + "against unlikely answers, losing less at some cost in mean guesses. "
+    + "<code>--exact-max</code> is the largest set of candidates the exact search will "
+    + "take on in place of the estimate.<br><br>"
+    + "<b>The loss penalty</b> and <b>the search's reach</b> play every word as the "
+    + "answer under each of the four prior combinations and average them equally. "
+    + "Each point is one setting, at its loss probability across and its mean "
+    + "guesses up, joined in order of the setting, so down and to the left is better "
+    + "on both; the curve is the trade between them. <b>Mean (solved)</b> averages "
+    + "the games solved, and <b>mean (loss = 7)</b> counts each loss as seven "
+    + "guesses. <b>How much is searched</b> and <b>the policies</b> play every word "
+    + "under the default prior, and give each column a panel on its own axis. The "
+    + "default setting is ringed throughout.");
 }
 
 function drawRegret() {
   tablePanels("exact_decisions", [
-    ["blended.table", "positions from real games"], ["shipped.table", "under the shipped prior"],
+    ["blended.table", "the four priors together"], ["shipped.table", "the shipped prior alone"],
     ["who.table", "who decides each turn", stacked],
   ], { controls: "regret-controls", panels: "regret-panels", note: "regret-note" },
-  "Positions the exact search takes over, grouped by candidates left: how often "
-    + "the estimator would have picked differently, and what that costs in guesses, "
-    + "each column a panel on its own axis. The third view counts, for each number of "
-    + "turns left, which part of the solver picks the guess.");
+  "Where the exact search decides, how often the estimator would have picked "
+    + "differently, and what that costs.",
+  "With three or more turns left and few enough candidates, the exact search picks "
+    + "the guess and its value is the true one. That makes these positions the one "
+    + "place the estimate can be checked against the truth: the question is which "
+    + "guess the estimator would have picked there instead. The positions come from "
+    + "simulated games, weighted by how often play reaches them, and are grouped by "
+    + "how many candidates are left.<br><br>"
+    + "<b>Positions</b> is how many were scored. <b>Estimator differs</b> is how often "
+    + "the estimator's pick is not the search's. <b>Estimator regret</b> is how many "
+    + "guesses per position that costs on average, measured with the true values. "
+    + "<b>Of which ties</b> is how often a different pick is a different word of "
+    + "exactly the same value, which costs nothing. Each column is a panel on its own "
+    + "axis. The first view pools positions from games under each of the four prior "
+    + "combinations; the second uses the shipped prior alone. <b>Who decides each "
+    + "turn</b> counts every decision in a batch of simulated games by the number of "
+    + "turns left, split by which part of the solver made it: <code>f</code>, the "
+    + "exact search, the closed form that solves one or two turns or candidates "
+    + "outright, or a single candidate left to guess.");
 }
 
 // ------------------------------------------------------------------- tables
