@@ -57,8 +57,13 @@ for n in (18, len(events)):
         common.record("theil_sen.intercept", intercept)
 
 print()
-print("  0.0 = static window, 1.0 = fixed replay lag; an interval covering both")
-print("  settles nothing, which is the state this question has stayed in.")
+print("  0.0 = static window, 1.0 = fixed replay lag")
+
+# the least-squares slope again, without the sources past the first 300
+inside = [(t, f) for t, _, f in events if common.puzzle_no(sol[f], f) <= 300]
+kept = common.slope_se([t for t, _ in inside], [f for _, f in inside])
+print(f"  least squares without the far-off sources: {kept[0]:+.2f} +- {kept[1]:.2f}")
+common.record("drift_inside", common.neg(f"{kept[0]:+.2f} ± {kept[1]:.2f}"))
 
 common.header("how long a word waits before it comes back")
 gaps = np.array([(t - f) / 365.0 for t, _, f in events])
