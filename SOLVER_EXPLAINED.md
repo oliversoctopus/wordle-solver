@@ -158,7 +158,7 @@ From here on, the size of a position means its effective size. The same measure 
 
 ### 5.1 The repeat group: a smoothed histogram
 
-There are <!--n drift.events-->28 repeats in Wordle's history so far. They are not drawn evenly from the used words. <!--n drift.from_first_300-->26 of them come from the first three hundred puzzles, with a median around #<!--n drift.median_source .0f-->120. Two sit outside that window: <!--s drift.outliers-->`sandy` (#1227), `smile` (#831)<!--/s-->. The editor appears to be replaying the beginning of the run.
+There are <!--n drift.events-->28 repeats in Wordle's history so far. They are not drawn evenly from the used words. <!--n drift.from_first_300-->26 of them come from the first three hundred puzzles, with a median around #<!--n drift.median_source .0f-->120. Two sit outside that window: <!--s drift.outliers-->`sandy` (#1227), `smile` (#831)<!--/s-->. The editor appears to draw repeats from the beginning of the run.
 
 Two in <!--n drift.events-->28 is too high an outlier rate to write off everything past that window. So the shape is a **Laplace-smoothed histogram**. Bin the used words by the puzzle where they first appeared, two hundred wide, and give bin `b` the weight
 
@@ -166,7 +166,7 @@ $$w_b = \frac{r_b + \alpha}{n_b}, \qquad \alpha = 0.5$$
 
 where `r_b` is the number of repeats that came from that bin and `n_b` the number of used words in it. Each bin's share is spread evenly over its members. The `α` keeps a bin that has never produced a repeat from being written off. It is why `sandy` does not break the model, and why no word's weight reaches zero. `cigar` ends up with nearly seven times the flat repeat weight, and the late words fall below it.
 
-The bins are fixed. A sliding window over the recent past sounds more natural, but it needs a boundary, and a boundary is a parameter that <!--n drift.events-->28 events cannot both set and be predicted by.
+The bins are fixed. A sliding window over the recent past sounds more natural, but it needs a boundary, and a boundary is a parameter that <!--n drift.events-->28 events cannot both set and be predicted by. Fixed bins also assume the source isn't moving forward. If the editor recycled words a fixed time after their first use, the source would advance one puzzle for every puzzle played. The record says otherwise: across all <!--n drift.events-->28 repeats the source moves <!--n drift.theil_sen +.2f-->+0.10 puzzles per puzzle, and the 95% interval, <!--n drift.theil_sen.lo95 +.2f-->−0.64 to <!--n drift.theil_sen.hi95 +.2f-->+0.73, rules out the one-for-one rate. README *The repeat prior's shape* has the details.
 
 **Prequential scoring** settles it. Predict each repeat using only the repeats before it, so no parameter sees the event it is graded on. Scored that way, the histogram beats a flat spread by about **<!--n repeat_shapes.gain +.2f-->+1.24 ± <!--n repeat_shapes.gain_se .2f-->0.18 nats per event**. The `±` is a standard error, the spread the estimate would show if the same <!--n repeat_shapes.events-->28 events were drawn again. The gap is <!--n repeat_shapes.sigma .1f-->6.8 times its own uncertainty.
 
