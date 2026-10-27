@@ -641,8 +641,20 @@ function drawRepeats() {
   const x0 = events[0].x, x1 = events[events.length - 1].x;
   const flat = [x0, x1].map((x) => ({ x, y: source }));
   const steep = [x0, x1].map((x) => ({ x, y: x - lag }));
-  // `drift.py`'s least-squares slope over the same events, quoted in the note
-  const fit = parsePm(values("drift").drift || "");
+  // `drift.py`'s Theil-Sen line, its band pivoting at the median repeat
+  const d = values("drift");
+  const fit = d.theil_sen != null && d["theil_sen.intercept"] != null;
+  const pivot = median(events.map((e) => e.x));
+  const at = pivot * (fit ? d.theil_sen : 0) + (fit ? d["theil_sen.intercept"] : 0);
+  const trend = [x0, x1].map((x) => {
+    const a = at + (fit ? d["theil_sen.lo"] : 0) * (x - pivot);
+    const b = at + (fit ? d["theil_sen.hi"] : 0) * (x - pivot);
+    return { x, y: at + (fit ? d.theil_sen : 0) * (x - pivot),
+             lo: Math.min(a, b), hi: Math.max(a, b) };
+  });
+  // the median source over each repeat and its four neighbors on either side
+  const running = events.map((e, i) => ({
+    x: e.x, y: median(events.slice(Math.max(0, i - 4), i + 5).map((f) => f.y)) }));
   // a few far-off sources would squash the band the points sit in, so the
   // axis stops at half again the 90th percentile and they sit on its edge
   const sources = events.map((e) => e.y).sort((a, b) => a - b);
@@ -651,7 +663,8 @@ function drawRepeats() {
   const clipped = events.filter((e) => e.y > cap).length;
   note("repeats-note", "Each dot is a repeat: across is the puzzle it fell on, up is "
     + "the puzzle that first used the word. The two dashed lines are what two "
-    + "different habits of the editor would produce.",
+    + "different habits of the editor would produce; the solid lines are what the "
+    + "dots do.",
   `There are ${events.length} repeats: across, the puzzle each fell on; up, the `
     + "puzzle that first used the word. Two "
     + "stories would explain where the editor takes repeats from. If she recycles "
@@ -662,19 +675,36 @@ function drawRepeats() {
     + `(slope 0). The flat line sits at the median source, #${source}; the steep `
     + `line trails each puzzle by the median lag, ${lag} puzzles. Both are medians, `
     + "which the far-off sources barely move."
-    + (fit ? " The least-squares slope from <code>analysis/drift.py</code> is "
-      + `${signed(fit[0], 2)} ± ${fit[1].toFixed(2)} source puzzles per puzzle.` : "")
+    + (fit ? "<br><br>The black line and its fan are the trend, a Theil–Sen line from "
+      + "<code>analysis/drift.py</code>: the median of the slopes between every pair of "
+      + `repeats, ${signed(d.theil_sen, 2)} source puzzles per puzzle. The fan is its `
+      + `68% bootstrap interval, ${signed(d["theil_sen.lo"], 2)} to `
+      + `${signed(d["theil_sen.hi"], 2)}; the 95% interval is `
+      + `${signed(d["theil_sen.lo95"], 2)} to ${signed(d["theil_sen.hi95"], 2)}. `
+      + `Each repeat is in ${events.length - 1} of the `
+      + `${events.length * (events.length - 1) / 2} pairs, so a few far-off ones `
+      + "barely move the median." : "")
+    + " The thin line is a running median: the median source over each repeat and "
+    + "the four on either side of it, which follows the dots without assuming a "
+    + "straight line."
     + (clipped ? ` The ${clipped} repeats that came from later than #${cap} sit on the `
       + "top edge as triangles, labeled with where they came from." : ""));
   legend($("repeats-legend"), [
     { name: "a repeat", color: "var(--s1)", kind: "dot" },
     { name: "a fixed window (slope 0)", color: "var(--s3)", kind: "dash" },
     { name: "a fixed replay lag (slope 1)", color: "var(--s2)", kind: "dash" },
+    ...(fit ? [{ name: "the trend (Theil–Sen), 68% band", color: "var(--ink)" }] : []),
+    { name: "running median of 9", color: "var(--s5)" },
   ]);
   const guides = [
     { name: "fixed window", color: "var(--s3)", dash: true, hover: false, points: flat },
     { name: "replay lag", color: "var(--s2)", dash: true, hover: false, points: steep },
+    { name: "running median", color: "var(--s5)", hover: false, points: running },
   ];
+  if (fit) {
+    guides.push({ name: "trend", color: "var(--ink)", band: true, bandOpacity: 0.08,
+                  hover: false, points: trend });
+  }
   lineChart($("repeats-chart"), {
     series: [...guides,
              { name: "repeat", color: "var(--s1)", line: false, markers: true, points: events }],
@@ -686,6 +716,7 @@ function drawRepeats() {
       const e = events.find((ev) => ev.x === x);
       return `<div><b>${e.word}</b></div><div>#${e.x}, ${e.date}</div>`
         + `<div>first #${e.y}, ${e.fromDate}</div>`
+        + `<div>running median #${running.find((p) => p.x === x).y}</div>`
         + `<div>${((e.x - e.y) / 365).toFixed(2)} years later</div>`;
     },
   });

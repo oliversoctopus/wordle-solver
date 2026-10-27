@@ -36,6 +36,26 @@ for n in (18, len(events)):
     common.record(tag + "drift", common.neg(f"{per_puzzle[0]:+.2f} \u00b1 {per_puzzle[1]:.2f}"))
     common.record(tag + "drift_se", float(per_puzzle[1]))
 
+common.header("the same drift, robust to outliers (Theil-Sen)")
+for n in (18, len(events)):
+    ev = events[:n]
+    # positions counted from 1, as the editor's /dev page counts them
+    when = np.array([t + 1 for t, _, _ in ev], dtype=float)
+    src = np.array([f + 1 for _, _, f in ev], dtype=float)
+    slope, intercept = common.theil_sen(when, src)
+    bands = common.theil_sen_interval(when, src)
+    (lo, hi), (lo95, hi95) = bands[68], bands[95]
+    print(f"  {n:8d} {slope:+9.2f}   68% {lo:+.2f} to {hi:+.2f}   "
+          f"95% {lo95:+.2f} to {hi95:+.2f}")
+    tag = "first18." if n == 18 else ""
+    common.record(tag + "theil_sen", float(slope))
+    common.record(tag + "theil_sen.lo", lo)
+    common.record(tag + "theil_sen.hi", hi)
+    common.record(tag + "theil_sen.lo95", lo95)
+    common.record(tag + "theil_sen.hi95", hi95)
+    if not tag:
+        common.record("theil_sen.intercept", intercept)
+
 print()
 print("  0.0 = static window, 1.0 = fixed replay lag; an interval covering both")
 print("  settles nothing, which is the state this question has stayed in.")

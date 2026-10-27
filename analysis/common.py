@@ -306,6 +306,31 @@ def slope_se(x, y):
     return slope, se
 
 
+def theil_sen(x, y):
+    """The median of the slopes between every pair of points with distinct x,
+    and the intercept that puts the median residual at zero."""
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    i, j = np.triu_indices(len(x), 1)
+    keep = x[j] != x[i]
+    slope = float(np.median((y[j] - y[i])[keep] / (x[j] - x[i])[keep]))
+    return slope, float(np.median(y - slope * x))
+
+
+def theil_sen_interval(x, y, levels=(68, 95), draws=4000, seed=0):
+    """Bootstrap percentile intervals for the Theil-Sen slope, one per level."""
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    rng = np.random.default_rng(seed)
+    slopes = []
+    for _ in range(draws):
+        pick = rng.integers(0, len(x), len(x))
+        if np.unique(x[pick]).size > 1:
+            slopes.append(theil_sen(x[pick], y[pick])[0])
+    return {level: tuple(float(v) for v in np.percentile(
+        slopes, [50 - level / 2, 50 + level / 2])) for level in levels}
+
+
 def header(title):
     print("=" * 74)
     print(title)
