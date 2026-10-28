@@ -805,6 +805,13 @@ const ARM_TABLES = [
    + "to word frequency, and keeps everything else shipped. A dot right of zero means "
    + "word frequency needs more guesses than the shipped shape on that kind of answer.",
    "the curation shape used", { "frequency": "word frequency" }],
+  ["policies.arm_table", "the reference policies", "the shipped solver",
+   "Every row plays under the shipped prior and swaps only how the guess is chosen. "
+   + "<b>greedy entropy</b> picks the guess that splits the candidates most evenly; "
+   + "<b>IG + 2·p_win</b> adds a bonus for the chance of guessing the answer outright. "
+   + "Neither uses the fitted estimator <code>f</code>. A dot right of zero means the "
+   + "policy needs more guesses than the shipped solver on that kind of answer.",
+   "the policy played", {}],
 ];
 const ARM_COLORS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
 

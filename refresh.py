@@ -25,6 +25,7 @@ LIVE = [
     ("replay", [], False),
     ("replay", ["--all-priors"], False),
     ("replay", ["--shapes"], False),
+    ("replay", ["--policies"], False),
     ("results_tables", [], True),
     ("head_to_head", [], True),
     ("head_to_head", ["--baseline"], True),

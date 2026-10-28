@@ -5,7 +5,7 @@ with the prior rebuilt from earlier puzzles each day; and the three-arm table,
 repeats, off-list and the regime's fresh curated answers, blended at the
 regime's mixture.  The default arms are the two curation shapes; `--shapes`
 runs the four sharpened combinations against uniform, `--all-priors` the four
-prior combinations.  Backs README *The curation prior's shape*, *What the two
+prior combinations, `--policies` the two reference policies.  Backs README *The curation prior's shape*, *What the two
 shapes are worth together* and *What each prior is worth on real answers*.
 """
 
@@ -17,7 +17,7 @@ import numpy as np
 
 import common
 from priors import PriorConfig
-from solver import WordleSolver
+from solver import DERIVED_WIN_BONUS, ENTROPY, WordleSolver
 from wordle_data import load_data
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -28,6 +28,9 @@ mode.add_argument("--all-priors", action="store_true",
 mode.add_argument("--shapes", action="store_true",
                   help="the four sharpened shape combinations against uniform "
                        "shapes, both priors on throughout")
+mode.add_argument("--policies", action="store_true",
+                  help="greedy entropy and IG + 2*p_win against the shipped "
+                       "solver, all three under the shipped prior")
 parser.add_argument("--dump", metavar="PATH",
                     help="write every arm's per-game guess counts here, so a "
                          "contrast nobody thought to print can be computed "
@@ -69,6 +72,13 @@ elif args.shapes:
             ("`binned` + `frequency`", RIVAL),
             (TOGETHER, SHIPPED)]
     SUBTITLE = "the four shape combinations"
+elif args.policies:
+    # the same prior in every arm; an arm is a config and the solver's mode
+    BASE = ("shipped", SHIPPED)
+    ARMS = [("greedy entropy", (SHIPPED, dict(mode=ENTROPY))),
+            (f"IG + {DERIVED_WIN_BONUS:g}·p_win",
+             (SHIPPED, dict(mode=ENTROPY, win_bonus=DERIVED_WIN_BONUS)))]
+    SUBTITLE = "the reference policies against the shipped solver"
 else:
     BASE = ("wordlebot (shipped)", SHIPPED)
     ARMS = [("frequency", RIVAL)]
@@ -78,12 +88,15 @@ EVERY = ARMS + [BASE]
 WIDTH = max(len(label) for label, _ in EVERY)
 
 # what the documents quote is recorded under the mode's own prefix
-TAG = "priors." if args.all_priors else "shapes." if args.shapes else ""
+TAG = ("priors." if args.all_priors else "shapes." if args.shapes
+       else "policies." if args.policies else "")
 KEYS = {"frequency": "frequency", CURATION_ALONE: "curation_alone",
         REPEAT_ALONE: "repeat_alone", "`binned` + `frequency`": "binned_frequency",
         TOGETHER: "together", "none": "none", "curation only": "curation_only",
         "repeat only": "repeat_only", "wordlebot (shipped)": "shipped",
-        "uniform shapes": "uniform", "both": "both"}
+        "uniform shapes": "uniform", "both": "both", "shipped": "shipped",
+        "greedy entropy": "entropy",
+        f"IG + {DERIVED_WIN_BONUS:g}·p_win": "ig"}
 neg = common.neg
 
 
@@ -108,7 +121,8 @@ TWIDTH = max(WIDTH, CWIDTH) if args.all_priors else WIDTH
 
 
 def guesses(config, t, answer):
-    solver = WordleSolver(data=common.as_of(data, t), config=config)
+    config, kwargs = config if isinstance(config, tuple) else (config, {})
+    solver = WordleSolver(data=common.as_of(data, t), config=config, **kwargs)
     out = solver.play(data.word2ind[answer])
     return len(out[0] if isinstance(out, tuple) else out)
 
@@ -294,8 +308,8 @@ for label, _ in ARMS:
     arm_table.append((label, *(pm(c[0], c[1]) for c in rows[label]),
                       pm(blend, blend_se)))
 rec("arm_table", common.md_table(
-    ["shapes" if args.shapes else "priors", "repeat", "off-list", "fresh",
-     "blended"], arm_table))
+    ["shapes" if args.shapes else "policy" if args.policies else "priors",
+     "repeat", "off-list", "fresh", "blended"], arm_table))
 
 # the mixture is counted off these same puzzles and the blend treats it as exact;
 # widen each row by the multinomial term and see whether it moves

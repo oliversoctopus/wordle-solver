@@ -37,6 +37,7 @@ python analysis/ablations.py        the same questions in wall clock -- needs an
 python analysis/replay.py           the shapes in guesses (slow)
 python analysis/replay.py --shapes       the four shape combinations against uniform shapes
 python analysis/replay.py --all-priors   each prior on real answers
+python analysis/replay.py --policies     greedy entropy and the reference on real answers
 python analysis/prior_basin.py      how much of the prior's setting reaches the board, and the off-list default (slow)
 python analysis/fresh_arm.py        why the fresh arm and the real fresh answers disagree
 python analysis/refit_lag.py        the cost of a stale answer record
