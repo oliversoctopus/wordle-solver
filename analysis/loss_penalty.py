@@ -147,6 +147,8 @@ def policies():
     common.record("policies.shared_lost", int((entropy & default).sum()))
     never = np.array([w not in curated for w in data.all_words])
     common.record("policies.default_lost_uncurated", int((default & never).sum()))
+    common.record("policies.default_lost_uncurated_mass",
+                  100 * weights[default & never].sum() / weights[default].sum())
 
     curated_idx = np.array([i for i, word in enumerate(data.all_words)
                             if word in curated])

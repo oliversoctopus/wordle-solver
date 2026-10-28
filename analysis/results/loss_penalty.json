@@ -16,7 +16,7 @@
             }
         },
         "loss_penalty.py --policies": {
-            "at": "2026-10-27 21:22",
+            "at": "2026-10-27 22:06",
             "solutions": 1955,
             "through": "2026-10-25",
             "fits": {
@@ -188,6 +188,7 @@
         "policies.benchmark_clean.entropy": 97.9706963357843,
         "policies.default_lost": 185,
         "policies.default_lost_uncurated": 181,
+        "policies.default_lost_uncurated_mass": 89.35902098780565,
         "policies.entropy_lost": 74,
         "policies.loss_ratio": 2.778212060721513,
         "policies.shared_lost": 20,
