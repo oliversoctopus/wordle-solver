@@ -280,20 +280,29 @@ def effective_support(weight):
     return 2.0 ** -(p * np.log2(np.maximum(p, 1e-300))).sum()
 
 
-def rank_correlation(x, y):
-    """Spearman's rho, plus a normal-approximation two-sided p."""
-    from math import erf, sqrt
-
+def rank_correlation(x, y, draws=20000, seed=0):
+    """Spearman's rho with tied values sharing their mean rank, plus a
+    two-sided permutation p over ``draws`` shuffles of ``y``."""
     def ranks(a):
-        order = np.asarray(a).argsort()
+        a = np.asarray(a, dtype=float)
+        order = a.argsort(kind="stable")
         out = np.empty(len(a), dtype=float)
         out[order] = np.arange(1, len(a) + 1)
+        for value in np.unique(a):
+            tied = a == value
+            out[tied] = out[tied].mean()
         return out
 
-    rho = np.corrcoef(ranks(x), ranks(y))[0, 1]
-    n = len(x)
-    t = rho * np.sqrt((n - 2) / max(1e-12, 1 - rho ** 2))
-    return rho, 2 * (1 - 0.5 * (1 + erf(abs(t) / sqrt(2))))
+    rx, ry = ranks(x), ranks(y)
+    rx, ry = rx - rx.mean(), ry - ry.mean()
+    scale = np.sqrt((rx ** 2).sum() * (ry ** 2).sum())
+    if scale == 0:
+        return float("nan"), float("nan")
+    rho = float(rx @ ry / scale)
+    rng = np.random.default_rng(seed)
+    shuffled = np.array([rx @ rng.permutation(ry) for _ in range(draws)]) / scale
+    p = float((1 + (np.abs(shuffled) >= abs(rho) - 1e-12).sum()) / (draws + 1))
+    return rho, p
 
 
 def slope_se(x, y):

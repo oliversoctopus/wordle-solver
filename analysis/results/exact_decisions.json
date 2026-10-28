@@ -1,54 +1,54 @@
 {
     "runs": {
         "exact_decisions.py": {
-            "at": "2026-10-04 15:10",
-            "solutions": 1933,
-            "through": "2026-10-03",
+            "at": "2026-10-27 21:21",
+            "solutions": 1955,
+            "through": "2026-10-25",
             "fits": {
                 "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
+                "repeat1_curation0_r-binned": "spline 2026-10-26 16:06:09",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
                 "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
                 "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-26 16:06:27",
                 "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         },
         "exact_decisions.py --who-decides": {
-            "at": "2026-10-04 15:11",
-            "solutions": 1933,
-            "through": "2026-10-03",
+            "at": "2026-10-27 21:21",
+            "solutions": 1955,
+            "through": "2026-10-25",
             "fits": {
                 "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "spline 2026-10-04 12:34:59",
+                "repeat1_curation0_r-binned": "spline 2026-10-26 16:06:09",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
                 "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
                 "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-04 12:45:00",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-26 16:06:27",
                 "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
     "values": {
-        "blended.differ": 31.853397990706434,
+        "blended.differ": 32.716459715339894,
         "blended.positions": 600,
-        "blended.regret": 0.004752151441853482,
-        "blended.rho": 0.7995748253848199,
-        "blended.search_regret": 0.0002102797351664793,
-        "blended.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 125 | 34.2% | 0.0000 | all of them |\n| 5–10 | 205 | 30.8% | 0.0018 | 28.7% |\n| 11–60 | 270 | 31.7% | 0.0080 | 7.1% |",
-        "measured": "2026-10-04",
-        "shipped.differ": 5.0228310502283104,
+        "blended.regret": 0.004357751684986622,
+        "blended.rho": 0.7767660218963283,
+        "blended.search_regret": 0.00018429466536125063,
+        "blended.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 131 | 36.8% | 0.0000 | all of them |\n| 5–10 | 200 | 36.6% | 0.0017 | 33.9% |\n| 11–60 | 269 | 29.1% | 0.0074 | 7.7% |",
+        "measured": "2026-10-27",
+        "shipped.differ": 6.220095693779904,
         "shipped.positions": 150,
-        "shipped.regret": 0.00011653645929903276,
-        "shipped.rho": 0.7988100179881,
-        "shipped.search_regret": 7.080638468081548e-06,
-        "shipped.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 22 | 0.0% | 0.0000 | all of them |\n| 5–10 | 61 | 2.4% | 0.0000 | all of them |\n| 11–60 | 67 | 8.2% | 0.0002 | 0.9% |",
-        "who.f_at_four": 50,
+        "shipped.regret": 0.0010851271170526835,
+        "shipped.rho": 0.7603015803972742,
+        "shipped.search_regret": 3.7273194905892675e-05,
+        "shipped.table": "| candidates | positions | estimator differs | estimator regret | of which ties |\n| --- | --- | --- | --- | --- |\n| 3–4 | 25 | 0.0% | 0.0000 | all of them |\n| 5–10 | 55 | 6.8% | 0.0000 | 5.5% |\n| 11–60 | 70 | 7.7% | 0.0021 | 1.0% |",
+        "who.f_at_four": 56,
         "who.f_late": 0,
         "who.games": 1600,
-        "who.late": 1167,
-        "who.table": "| turns left | `f` | exact search | closed form | one candidate |\n| --- | --- | --- | --- | --- |\n| 6 | 1,600 | 0 | 0 | 0 |\n| 5 | 1,309 | 280 | 2 | 9 |\n| 4 | 50 | 1,159 | 136 | 181 |\n| 3 | 0 | 290 | 144 | 485 |\n| 2 | 0 | 32 | 23 | 160 |\n| 1 | 0 | 1 | 0 | 32 |"
+        "who.late": 1149,
+        "who.table": "| turns left | `f` | exact search | closed form | one candidate |\n| --- | --- | --- | --- | --- |\n| 6 | 1,600 | 0 | 0 | 0 |\n| 5 | 1,329 | 260 | 1 | 10 |\n| 4 | 56 | 1,160 | 132 | 195 |\n| 3 | 0 | 292 | 146 | 469 |\n| 2 | 0 | 30 | 22 | 159 |\n| 1 | 0 | 0 | 0 | 31 |"
     }
 }

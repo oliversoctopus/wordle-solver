@@ -17,8 +17,8 @@ from priors import PriorConfig
 from solver import EXPECTED, WordleSolver
 from wordle_data import MAX_GUESSES, load_data
 
-# the same four combinations `loss_penalty.py` blends its lines over, so the
-# continuation cost lands on the population the crossovers are computed on
+# the same four combinations `loss_penalty.py` blends its tables over, so the
+# continuation cost lands on the same population
 TOGGLE_CONFIGS = [PriorConfig(repeat=r, curation=c)
                   for r in (False, True) for c in (False, True)]
 

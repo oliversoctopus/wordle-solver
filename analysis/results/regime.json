@@ -1,7 +1,7 @@
 {
     "runs": {
         "regime.py": {
-            "at": "2026-10-26 16:07",
+            "at": "2026-10-27 21:24",
             "solutions": 1955,
             "through": "2026-10-25",
             "fits": {
@@ -41,7 +41,7 @@
         "first_half.offlist_se": 2.4434952140292476,
         "first_half.puzzles": 133,
         "first_half.repeat": 11.278195488721805,
-        "fresh_per_year": 319.5,
+        "fresh_per_year": 271.69172932330827,
         "implied.both.offlist": 30.0,
         "implied.both.repeat": 9.999999999999998,
         "implied.curation_only.offlist": 66.09767731242042,
@@ -66,7 +66,7 @@
         "last_date": "2026-10-25",
         "last_no": 1955,
         "letter_e": 40.85337231487841,
-        "measured": "2026-10-26",
+        "measured": "2026-10-27",
         "mixture": "10.5% / 15.0% / 74.4%",
         "mixture.fresh": 74.43609022556392,
         "mixture.offlist": 15.037593984962406,
@@ -104,6 +104,6 @@
         "weight.fresh": 0.0013907284768211923,
         "weight.offlist_listed": 0.0002883878310783472,
         "weight.used": 5.189413596263621e-05,
-        "years_left": 1.4178403755868545
+        "years_left": 1.6673308426733084
     }
 }

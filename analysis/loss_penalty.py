@@ -378,53 +378,6 @@ def bound():
         common.record("bound.three_turn_at5", by_penalty[DEFAULT_LOSS_PENALTY][1])
 
 
-def crossovers(grid, settings):
-    """Which penalty is best, as a function of what a loss is really worth.
-
-    Scoring a loss at 7 is the objective `--loss-penalty 1` already optimizes,
-    so ranking policies by it can only ever favor risk neutrality.  Naming the
-    price of a loss instead makes each policy a line in that price, and the
-    choice falls out of where the lines cross.
-    """
-    common.header("Which penalty, for what a loss is worth")
-    lines = {s: (row["intercept"], row["loss_prob"])
-             for s in settings
-             for row in [blend([grid[s, c.slug] for c in configs])]}
-
-    print("  crossovers, in guesses per loss:")
-    edges = []
-    for low, high in zip(settings, settings[1:]):
-        (i_low, p_low), (i_high, p_high) = lines[low], lines[high]
-        if p_low <= p_high:  # the higher penalty loses no less often: never worth it
-            print(f"    penalty {low:>4} is never displaced by {high}")
-            continue
-        print(f"    penalty {low:>4} gives way to {high:<5} at L = "
-              f"{(i_high - i_low) / (p_low - p_high):6.2f}")
-        edges.append((low, high, (i_high - i_low) / (p_low - p_high)))
-        common.record(f"crossover.{low:g}_{high:g}",
-                      float((i_high - i_low) / (p_low - p_high)))
-    rows_out = []
-    for k, (low, high, at) in enumerate(edges):
-        if k == 0:
-            rows_out.append((f"under {at:.1f}", str(low)))
-        else:
-            rows_out.append((f"{edges[k - 1][2]:.1f} \u2013 {at:.1f}", str(low)))
-        if k == len(edges) - 1:
-            rows_out.append((f"over {at:.1f}", str(high)))
-    rows_out = [tuple(f"**{c}**" for c in r) if r[1] == f"{DEFAULT_LOSS_PENALTY:g}"
-                else r for r in rows_out]
-    common.record("crossover.table", common.md_table(
-        ["a loss is worth", "best penalty"], rows_out))
-
-    print("\n  best penalty by what a loss costs, and by how much:")
-    for price in (7, 8, 9, 10, 12, 15, 20, 25, 40):
-        scores = {s: i + price * p for s, (i, p) in lines.items()}
-        ranked = sorted(scores, key=scores.get)
-        margin = scores[ranked[1]] - scores[ranked[0]] if len(ranked) > 1 else 0.0
-        print(f"    L = {price:>3}: penalty {ranked[0]:>4}   "
-              f"(ahead of {ranked[1]} by {margin:.5f} guesses)")
-
-
 def words_of(mask):
     return [data.all_words[i] for i in np.where(mask)[0]]
 
@@ -534,14 +487,10 @@ elif args.search:
 elif args.policies:
     policies()
 else:
-    penalty_grid = sweep(
+    sweep(
         f"The penalty, at exact-max {args.at_reach}", args.penalties,
         lambda config, penalty: outcomes(config, penalty, args.at_reach),
         DEFAULT_LOSS_PENALTY)
-
-    if len(args.penalties) > 1:
-        print()
-        crossovers(penalty_grid, sorted(args.penalties))
 
     if not args.skip_reach:
         print()

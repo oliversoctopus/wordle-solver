@@ -15,6 +15,7 @@ import numpy as np
 import common
 
 BIN_WIDTH = 200
+WIDTHS = (50, 100, 150, 200, 250, 300, 400, 600)
 # uniform-mixture weight for the window models: with a hard cutoff instead, a
 # single repeat landing outside the window swamps everything
 WINDOW_OUTSIDE = 0.01
@@ -158,6 +159,25 @@ def main():
     rec("sigma", float(m / se))
     rec("wins", int((d > 0).sum()))
     rec("window_behind", float(b05.sum() - max(wins)))
+
+    # the bin width is the histogram's one knob, swept like the windows'
+    global BIN_WIDTH
+    shipped, totals = BIN_WIDTH, {}
+    for width in WIDTHS:
+        BIN_WIDTH = width
+        totals[width] = score(binned(0.5), events, words).sum()
+    BIN_WIDTH = shipped
+    print("\nbinned, a = 0.5, by bin width:")
+    for width, total in totals.items():
+        print(f"  {width:4d} {total:9.1f}   {total - max(wins):+6.1f} vs best window")
+    leads = [totals[w] - max(wins) for w in WIDTHS]
+    rec("widths", len(WIDTHS))
+    rec("width.best", max(totals, key=totals.get))
+    rec("width.lead_min", float(min(leads)))
+    rec("width.lead_max", float(max(leads)))
+    rec("width.worst", float(min(totals.values())))
+    rec("width.lo", min(WIDTHS))
+    rec("width.hi", max(WIDTHS))
 
     def cell(total, bold=False):
         text = f"{neg(f'{total:.1f}')}"

@@ -39,15 +39,21 @@ def w_answer_like(pool):
     return np.exp(FREQ_TEMPERATURE * (score - score.max()))
 
 
-def w_wordlebot(pool):
-    listed = np.array([wordlebot.get(w, 0.0) for w in pool])
-    inside = listed > 0.0
-    out = np.zeros(len(pool))
-    if inside.any():
-        out[inside] = (1 - OFFLIST_HEDGE) * listed[inside] / listed[inside].sum()
-    if (~inside).any():
-        out[~inside] = OFFLIST_HEDGE / int((~inside).sum())
-    return out
+def hedged(listing):
+    """WordleBot's shape over ``listing``, with the hedge spread off it."""
+    def weights(pool):
+        listed = np.array([listing.get(w, 0.0) for w in pool])
+        inside = listed > 0.0
+        out = np.zeros(len(pool))
+        if inside.any():
+            out[inside] = (1 - OFFLIST_HEDGE) * listed[inside] / listed[inside].sum()
+        if (~inside).any():
+            out[~inside] = OFFLIST_HEDGE / int((~inside).sum())
+        return out
+    return weights
+
+
+w_wordlebot = hedged(wordlebot)
 
 
 def score(weight_fn, wanted):
@@ -99,9 +105,10 @@ common.record("n_misses", len(missed))
 common.record("listed_offlist", sum(1 for w in noncurated if wordlebot.get(w, 0.0) > 0))
 common.record("wordlebot_words", len(wordlebot))
 
-print()
-print("  Restricting to post-snapshot events barely moves WordleBot, so it is")
-print("  not winning by having quietly absorbed the events it is scored on.")
+# the live list was scraped after every event; the snapshot predates `post`
+frozen = score(hedged(snapshot), set(post)).mean()
+print(f"  {'WordleBot as of the snapshot':36s} {'':>12s} {frozen:15.2f}")
+common.record("snapshot.post", float(frozen))
 
 common.header(f"does the {common.SNAPSHOT_DATE} list predict what came after it?")
 print("  A list that absorbed answers after they were used would look just as")

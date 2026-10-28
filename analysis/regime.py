@@ -7,7 +7,6 @@ need each other -- SOLVER_EXPLAINED *Do the two priors need each other?* --
 it needs the weights but no solver, so it stays a seconds-long script.
 """
 
-import datetime
 
 import numpy as np
 
@@ -88,17 +87,15 @@ used = {w for w in words if w in curated}
 first_date = {}
 for r in sol:
     first_date.setdefault(r["solution"], r["print_date"])
-last = datetime.date.fromisoformat(sol[-1]["print_date"])
-window = last - datetime.timedelta(days=730)
-fresh = sum(1 for r in sol
+# consumed at the regime's rate, one puzzle a day
+fresh = sum(1 for r in sol[start:]
             if r["solution"] in curated
-            and datetime.date.fromisoformat(r["print_date"]) > window
             and first_date[r["solution"]] == r["print_date"])
-rate = fresh / 2.0
+rate = fresh / (N - start) * 365
 remaining = len(curated) - len(used)
 print(f"curated used            {len(used)} of {len(curated)}")
 print(f"still unused            {remaining}")
-print(f"fresh consumed / year   {rate:.0f}   (over the last two years)")
+print(f"fresh consumed / year   {rate:.0f}   (since the regime began)")
 print(f"years of pool left      {remaining/rate:.1f}")
 print(f"distinct words used     {len(seen)}   <- the repeat group's size")
 common.record("curated_used", len(used))

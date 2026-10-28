@@ -1,7 +1,7 @@
 {
     "runs": {
         "repeat_shapes.py": {
-            "at": "2026-10-26 16:07",
+            "at": "2026-10-27 21:26",
             "solutions": 1955,
             "through": "2026-10-25",
             "fits": {
@@ -16,18 +16,18 @@
             }
         },
         "repeat_shapes.py --events 18": {
-            "at": "2026-09-21 00:58",
-            "solutions": 1919,
-            "through": "2026-09-19",
+            "at": "2026-10-27 21:27",
+            "solutions": 1955,
+            "through": "2026-10-25",
             "fits": {
-                "repeat0_curation0": "invonly 2026-09-18 01:52:07",
+                "repeat0_curation0": "spline 2026-09-20 21:34:57",
                 "repeat0_curation1_c-wordlebot": "spline 2026-09-20 21:44:02",
-                "repeat1_curation0_r-binned": "anchored2 2026-09-18 01:58:37",
+                "repeat1_curation0_r-binned": "spline 2026-10-26 16:06:09",
                 "repeat1_curation1": "spline 2026-09-21 00:22:11",
-                "repeat1_curation1_c-wordlebot": "cubic 2026-09-21 00:55:08",
-                "repeat1_curation1_r-binned": "cubic 2026-09-21 00:58:02",
-                "repeat1_curation1_r-binned_c-frequency": "spline 2026-09-20 21:50:55",
-                "repeat1_curation1_r-binned_c-wordlebot": "sqrt 2026-09-21 00:49:27"
+                "repeat1_curation1_c-wordlebot": "spline 2026-10-04 12:50:11",
+                "repeat1_curation1_r-binned": "spline 2026-10-04 12:37:14",
+                "repeat1_curation1_r-binned_c-frequency": "spline 2026-10-26 16:06:27",
+                "repeat1_curation1_r-binned_c-wordlebot": "spline 2026-10-04 12:43:48"
             }
         }
     },
@@ -60,6 +60,13 @@
         "first18.table": "| model | logL over 18 events | vs. uniform |\n| --- | --- | --- |\n| uniform over used (current) | −134.5 | — |\n| binned, width 200, α = 0.5 | **−116.1** | **+18.4** |\n| binned, width 200, α = 1.0 | −118.4 | +16.2 |\n| best of 16 window variants (last K ∈ 3/5/8/all, ±25…±200) | −125.6 | +8.9 |",
         "first18.uniform": -134.5341347945112,
         "first18.uniform.vs": 0.0,
+        "first18.width.best": 200,
+        "first18.width.hi": 600,
+        "first18.width.lead_max": 9.487089641451291,
+        "first18.width.lead_min": -0.2993635528104335,
+        "first18.width.lo": 50,
+        "first18.width.worst": -125.89439697556821,
+        "first18.widths": 8,
         "first18.window_behind": 9.487089641451291,
         "first18.window_best": -125.59503342275778,
         "first18.window_best.vs": 8.939101371753424,
@@ -70,11 +77,18 @@
         "gain_se": 0.18293168274159421,
         "inflation": 24.29239847758671,
         "insample": 1.5456675768099932,
-        "measured": "2026-10-26",
+        "measured": "2026-10-27",
         "sigma": 6.798022518294266,
         "table": "| model | logL over 28 events | vs. uniform |\n| --- | --- | --- |\n| uniform over used (current) | −209.9 | — |\n| binned, width 200, α = 0.5 | **−175.1** | **+34.8** |\n| binned, width 200, α = 1.0 | −178.6 | +31.4 |\n| best of 16 window variants (last K ∈ 3/5/8/all, ±25…±200) | −185.4 | +24.5 |",
         "uniform": -209.93891396833587,
         "uniform.vs": 0.0,
+        "width.best": 200,
+        "width.hi": 600,
+        "width.lead_max": 10.305967592080407,
+        "width.lead_min": -6.0059387268694024,
+        "width.lo": 50,
+        "width.worst": -191.43075672685467,
+        "widths": 8,
         "window_behind": 10.305967592080407,
         "window_best": -185.42481799998527,
         "window_best.vs": 24.514095968350603,

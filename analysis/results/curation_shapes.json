@@ -1,7 +1,7 @@
 {
     "runs": {
         "curation_shapes.py": {
-            "at": "2026-10-26 16:07",
+            "at": "2026-10-27 21:24",
             "solutions": 1955,
             "through": "2026-10-25",
             "fits": {
@@ -31,10 +31,11 @@
         "hedge.net": 0.5386060280592437,
         "in_snapshot": 63,
         "listed_offlist": 892,
-        "measured": "2026-10-26",
+        "measured": "2026-10-27",
         "misses": "`loris`, `kefir`, `capon`, `holey`",
         "n_misses": 4,
         "post": 67,
+        "snapshot.post": -6.598002709887093,
         "table": "| shape | nats per event | effective support |\n| --- | --- | --- |\n| uniform | −9.27 | 10,638 |\n| answer-like frequency (§5.3) | −8.03 | 4,857 |\n| **WordleBot, 5% hedge** | **−6.44** | **911** |",
         "uniform.nats": -9.268890390984467,
         "uniform.post": -9.268701951288746,

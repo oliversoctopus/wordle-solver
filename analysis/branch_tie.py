@@ -152,5 +152,9 @@ print(f"    better on {int((deltas < 0).sum())}, worse on {int((deltas > 0).sum(
       f"level on {int((deltas == 0).sum())}")
 print(f"    one guess total across every tolerance, on "
       f"{sum(totals_agree)} of {len(totals_agree)} priors")
+common.record("decades", round(np.log10(max(args.tolerances)
+                                        / min(args.tolerances))))
+common.record("priors", len(totals_agree))
+common.record("one_total", sum(totals_agree))
 print("  a sign that differs between priors is tie-break churn; one that agrees "
       "across all of them would be a cost, and is the thing to watch for here")

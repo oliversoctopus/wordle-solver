@@ -109,9 +109,9 @@ if penalties:
           f"{np.mean(penalties):+.5f} guesses on average, {max(penalties):+.5f} at worst")
     print(f"and the fitting loop takes {loops[wide] / loops[narrow]:.1f}x as long "
           f"({loops[wide]:.1f} s against {loops[narrow]:.1f} s)")
-    # what the search-fitted f is worth: negative where the narrow fit does better
-    common.record("search_fit.mean", float(np.mean(penalties)))
-    common.record("search_fit.worst", float(min(penalties)))
+    # what the search-fitted f changes the mean by: positive where it does worse
+    common.record("search_fit.mean", -float(np.mean(penalties)))
+    common.record("search_fit.worst", -float(min(penalties)))
     common.record("search_fit.identical", int(sum(abs(p) < 1e-9 for p in penalties)))
     common.record("search_fit.priors", len(penalties))
     common.record("search_fit.loop_ratio", float(loops[wide] / loops[narrow]))

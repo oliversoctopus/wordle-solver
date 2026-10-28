@@ -1,7 +1,7 @@
 {
     "runs": {
         "id_eras.py": {
-            "at": "2026-10-26 16:07",
+            "at": "2026-10-27 21:22",
             "solutions": 1955,
             "through": "2026-10-25",
             "fits": {
@@ -23,13 +23,15 @@
         "curated": 2309,
         "dropped": 18,
         "era1_first_uses": 193,
+        "era1_offlist": 15,
         "era2_first_uses": 5,
         "era2_lo": 2398,
+        "era2_offlist": 25,
         "exact_positions": 284,
         "forward": "`gecko` and `shine`",
         "forward_positions": "2266 and 2265",
         "last_curated_id": 2287,
-        "measured": "2026-10-26",
+        "measured": "2026-10-27",
         "purge": 20,
         "requeued": "`hasty` and `unlit`",
         "run1.gap": "2319 and 2320",
@@ -46,6 +48,8 @@
         "run2.words": 8,
         "skip_first": 285,
         "skip_last": 526,
-        "skipped": 22
+        "skipped": 22,
+        "tail_hi": 5261,
+        "tail_lo": 4616
     }
 }

@@ -71,6 +71,7 @@ for config in configs:
     common.record(key + "cost", cost)
     common.record(key + "free_solved", (1 - free_loss) * 100)
     common.record(key + "hard_solved", (1 - hard_loss) * 100)
+    common.record(key + "loss_ratio", hard_loss / free_loss)
     cells = (label, f"{free_mean:.4f}", f"{hard_mean:.4f}",
              common.neg(f"{cost:+.4f}"),
              f"{(1 - free_loss) * 100:.2f}% \u2192 {(1 - hard_loss) * 100:.2f}%")

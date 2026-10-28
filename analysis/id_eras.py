@@ -181,6 +181,8 @@ print(f"  past the sorted stretch the order breaks again, which is the next "
 for i, w in tail:
     kind = "curated" if w in curated_set else "off-list"
     print(f"    {i:5d}  {w}  ({kind})")
+common.record("tail_lo", tail[0][0])
+common.record("tail_hi", tail[-1][0])
 print("  curated and off-list share that range, so an era-2 id no longer says")
 print("  which list a word came from.")
 
@@ -208,6 +210,8 @@ for kind in ("repeat", "curated, first use", "off-list"):
           f"{table.get((kind, 'era-2'), 0):7d}")
 common.record("era1_first_uses", table.get(("curated, first use", "era-1"), 0))
 common.record("era2_first_uses", table.get(("curated, first use", "era-2"), 0))
+common.record("era1_offlist", table.get(("off-list", "era-1"), 0))
+common.record("era2_offlist", table.get(("off-list", "era-2"), 0))
 
 # a repeat has no era-1 slot left to use; the rest of era 2 had one and did not
 taken = {row["id"] for row in sol}

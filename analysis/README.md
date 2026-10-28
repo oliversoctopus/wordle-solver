@@ -144,7 +144,8 @@ Nothing warns about a stale fit either way. The estimator cache is keyed on the 
 | --- | --- |
 | `lookahead.py`, `lookahead_accuracy.py` | <!--s lookahead.measured-->2026-10-04<!--/s--> |
 | `exact_decisions.py`, `opening.py` | <!--s opening.measured-->2026-10-04<!--/s--> |
-| `loss_penalty.py`, `loss_cost.py`, `branch_cap.py` | <!--s loss_penalty.measured-->2026-10-04<!--/s--> |
+| `loss_penalty.py`, `loss_cost.py`, `branch_cap.py` | <!--s loss_penalty.measured-->2026-10-27<!--/s--> |
+| `branch_tie.py` | <!--s branch_tie.measured-->2026-10-27<!--/s--> |
 | `fit_rounds.py`, `rust_fit.py`, `pattern_offsets.py` | <!--s fit_rounds.measured-->2026-10-04<!--/s--> |
 | `form_default.py --shapes`, after `compare --forms all` | <!--s form_default.measured-->2026-10-04<!--/s--> |
 | `external_benchmark.py` | <!--s external_benchmark.measured-->2026-10-04<!--/s--> |
@@ -184,7 +185,7 @@ A chart whose table or series is missing names the script to rerun. `/dev` impor
 
 `hard_mode.py`, `loss_penalty.py`, `results_tables.py` and `form_default.py` do not draw answers and report a standard error. The solver is deterministic, so a game's outcome is a pure function of the answer, and playing all 12,947 words once with the prior as weights computes the mean and the loss probability. There is no sampling distribution left to put an interval around, and `common.every_answer` is the one implementation they share.
 
-It matters most where the effect is small. The loss penalty is worth about <!--n loss_penalty.penalty.first_to_default.mean +.4f-->+0.0006 guesses, while a 20,000-game sample carries an error near <!--u-->0.009, more than ten times larger, and only pairing made those figures readable. Removing the noise also moved conclusions. <!--u-->Under the flat prior the nine forms of `f` span 0.0013 guesses, where a 3,000-answer holdout showed 0.0110<!--/u-->, and most of that spread was noise.
+It matters most where the effect is small. The loss penalty is worth about <!--n loss_penalty.penalty.first_to_default.mean +.4f-->+0.0004 guesses, while a 20,000-game sample carries an error near <!--u-->0.009, more than ten times larger, and only pairing made those figures readable. Removing the noise also moved conclusions. <!--u-->Under the flat prior the nine forms of `f` span 0.0013 guesses, where a 3,000-answer holdout showed 0.0110<!--/u-->, and most of that spread was noise.
 
 Three things change shape in the output. A loss rate becomes the exact prior mass on the words that lose, which is not the fraction of words that lose. "Which games changed" becomes a list of words. A block sd or a holdout seed stops existing, so a ranking is a fact about the prior and cannot move on a rerun, which makes a small gap harder to dismiss.
 
@@ -216,7 +217,7 @@ Three claims about the fit rest on implementations that were not kept, and none 
 
 Smaller figures with the same status:
 
-* the search refit moving the curve by under <!--u-->0.03 guesses at an RMSE of <!--u-->0.63, and the search regret of <!--u-->0.0000 at penalty 1
+* the search refit moving the curve by under <!--u-->0.03 guesses at an RMSE of <!--u-->0.63, and the search regret of <!--u-->0.000002 at penalty 1, from one position
 * the penalty settings within <!--u-->0.0002 guesses of each other across the price of a loss, and `tatty` carrying <!--u-->75% of its family against a <!--u-->0.4% case
 * the r = <!--u-->0.98 of the four-term answer-likeness model, and the four feature weights `answer_like.py` fits outside this directory
 * the tenth of a guess by which the census once read kinder to the sharpened repeat shape than the real answers did, under fits since replaced (README *What the two shapes are worth together*, SOLVER_EXPLAINED §14.1)

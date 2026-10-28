@@ -749,11 +749,11 @@ function drawPool() {
     + "editor's likely answers. The line falls by one each time a curated word is used "
     + "for the first time; repeats and off-list answers leave it alone. "
     + (rate ? "The dashed line carries it forward at the rate curated words were used "
-      + `for the first time over the last two years, ${rate.toFixed(0)} a year, from `
+      + `for the first time since the regime began, ${rate.toFixed(0)} a year, from `
       + "<code>analysis/regime.py</code>, and assumes that rate holds." : ""));
   legend($("pool-legend"), [
     { name: "curated words never yet an answer", color: "var(--s1)" },
-    ...(rate ? [{ name: "projected at the last two years' rate", color: "var(--s1)", kind: "dash" }] : []),
+    ...(rate ? [{ name: "projected at the regime's rate", color: "var(--s1)", kind: "dash" }] : []),
   ]);
   lineChart($("pool-chart"), {
     series, yFloor: 0, height: 240,
@@ -1433,8 +1433,8 @@ function drawLoss() {
   const panels = (node, text) => columnPanels(node, text, LOSS_PANELS);
   tablePanels("loss_penalty", [
     ["penalty.table", "the loss penalty",
-     tradeoff("loss probability", "mean (solved)", "share of games lost",
-              "mean guesses, solved games")],
+     tradeoff("loss probability", "mean (loss = 7)", "share of games lost",
+              "mean guesses, a loss counted as 7")],
     ["reach.table", "the search's reach",
      tradeoff("loss probability", "mean (loss = 7)", "share of games lost",
               "mean guesses, a loss counted as 7")],
@@ -1444,16 +1444,15 @@ function drawLoss() {
     + "its settings change. In the first two views each point is one setting, and "
     + "down and to the left is better on both; the default is ringed.",
   "A loss is a game not solved in six. <code>--loss-penalty</code> sets how heavily "
-    + "the endgame weighs a loss: at 1 it is risk neutral, a loss costing the same as "
-    + "a seventh guess, and higher settings make the solver spend turns on insurance "
+    + "the endgame weighs a loss: at 1 a loss counts the same as a seventh guess, "
+    + "and higher settings make the solver spend turns on insurance "
     + "against unlikely answers, losing less at some cost in mean guesses. "
     + "<code>--exact-max</code> is the largest set of candidates the exact search will "
     + "take on in place of the estimate.<br><br>"
     + "<b>The loss penalty</b> and <b>the search's reach</b> play every word as the "
     + "answer under each of the four prior combinations and average them equally. "
     + "Each point is one setting, at its share of games lost across and its mean "
-    + "guesses up. <b>Mean guesses, solved games</b> averages the games solved, and "
-    + "<b>a loss counted as 7</b> counts each loss as seven guesses. <b>How much is "
+    + "guesses up, with each loss counted as seven guesses. <b>How much is "
     + "searched</b> and <b>the policies</b> play every word under the default prior; "
     + "each row is a way of playing, and each panel is one measure of it on its own "
     + "axis. The default setting is ringed throughout.");
