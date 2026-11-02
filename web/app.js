@@ -556,7 +556,16 @@ function findWords() {
   });
 }
 
+// a Zipf frequency is log10 of uses per billion words
+function perMillion(word) {
+  if (!word.freq) return "unseen";
+  const rate = 10 ** (word.freq - 3);
+  return `${rate >= 10 ? Math.round(rate).toLocaleString() : rate.toPrecision(2)} per million`;
+}
+
 const FIND_VALUE = {
+  played: perMillion,
+  freq: perMillion,
   left: (word) => `${word.left.toLocaleString()} left`,
   bits: (word) => `${word.bits.toFixed(2)} bits`,
   weight: (word) => `${(word.weight * 100).toFixed(3)}%`,
@@ -581,7 +590,7 @@ function renderFinderPanel() {
     ? `${found.total.toLocaleString()} words give ${found.pattern} against ${answer}; the best ${found.shown} by this order are listed.`
     : `${found.total.toLocaleString()} word${found.total === 1 ? "" : "s"} give ${found.pattern} against ${answer}.`;
 
-  const value = FIND_VALUE[found.sort] || FIND_VALUE.left;
+  const value = FIND_VALUE[found.sort] || FIND_VALUE.played;
   for (const entry of found.words) {
     const item = document.createElement("li");
     const word = document.createElement("span");
@@ -592,7 +601,7 @@ function renderFinderPanel() {
     score.textContent = value(entry);
     item.append(word, score);
     item.title = `${entry.left.toLocaleString()} words left · ${entry.bits.toFixed(2)} bits · `
-      + `${(entry.weight * 100).toFixed(3)}% chance of being the answer`;
+      + `${(entry.weight * 100).toFixed(3)}% chance of being the answer · ${perMillion(entry)}`;
     list.appendChild(item);
   }
 }

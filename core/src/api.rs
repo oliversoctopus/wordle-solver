@@ -82,7 +82,7 @@ fn status() -> String {
         .strings("forms", names)
         .strings("modes", ["entropy", "expected"])
         .int("max_guesses", MAX_GUESSES as i64)
-        .strings("sorts", ["left", "bits", "weight", "alpha"])
+        .strings("sorts", FIND_SORTS)
         .str("record_through", record_through);
     object.end();
     out
@@ -1051,19 +1051,29 @@ fn letter_odds(loaded: &state::Loaded, game: &state::Game) -> Result<Vec<(usize,
 /// Words the finder lists, best first by its sort.
 const MAX_LISTED_MATCHES: usize = 120;
 
+/// The finder's orders, the default first.
+const FIND_SORTS: [&str; 6] = ["played", "freq", "bits", "weight", "alpha", "left"];
+
+/// WordleBot weights closer than this in log rank as a tie for `played`.
+const PLAYED_TIE_TOL: f64 = 1e-9;
+
 /// Which words could have produced this pattern against this answer.
 ///
-/// Each match is measured three ways: `left` is how many words would still be
+/// Each match is measured four ways: `left` is how many words would still be
 /// possible after it, `bits` is what the guess reveals on average over every
-/// answer, and `weight` is the prior's chance that the guess is the answer.
+/// answer, `weight` is the prior's chance that the guess is the answer, and
+/// `freq` is its Zipf frequency in English. `played` orders by WordleBot's
+/// weight on the word and breaks its ties by `freq`.
 fn find(body: &Value) -> Result<String, String> {
     let loaded = state::loaded().ok_or("The word lists have not loaded yet")?;
     let config = parse_config(body);
-    let sort = match body.get("sort").and_then(|v| v.as_str()).unwrap_or("left") {
-        name @ ("left" | "bits" | "weight" | "alpha") => name.to_string(),
-        other => {
+    let asked = body.get("sort").and_then(|v| v.as_str()).unwrap_or(FIND_SORTS[0]);
+    let sort = match FIND_SORTS.iter().find(|&&name| name == asked) {
+        Some(name) => name.to_string(),
+        None => {
             return Err(format!(
-                "Sort must be one of left, bits, weight, alpha: {other}"
+                "Sort must be one of {}: {asked}",
+                FIND_SORTS.join(", ")
             ))
         }
     };
@@ -1116,9 +1126,29 @@ fn find(body: &Value) -> Result<String, String> {
         measured.push((guess, bits, left));
     }
 
+    let freq = &loaded.word_freq;
+    let by_freq = |a: usize, b: usize| {
+        freq[matches[b]]
+            .partial_cmp(&freq[matches[a]])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    };
+
     let mut order: Vec<usize> = (0..matches.len()).collect();
     // stable throughout, so ties stay in word-list order as the Python's do
     match sort.as_str() {
+        "played" => {
+            let key = |i: usize| {
+                let word = words.word(matches[i]);
+                let weight = loaded.tables.wordlebot.get(word).copied().unwrap_or(0.0);
+                if weight > 0.0 {
+                    (weight.ln() / PLAYED_TIE_TOL).round() as i64
+                } else {
+                    i64::MIN
+                }
+            };
+            order.sort_by(|&a, &b| key(b).cmp(&key(a)).then_with(|| by_freq(a, b)));
+        }
+        "freq" => order.sort_by(|&a, &b| by_freq(a, b)),
         "left" => order.sort_by_key(|&i| measured[i].2),
         "bits" => order.sort_by(|&a, &b| {
             measured[b]
@@ -1154,7 +1184,8 @@ fn find(body: &Value) -> Result<String, String> {
                     .str("word", words.word(guess))
                     .int("left", left as i64)
                     .num("bits", bits)
-                    .num("weight", weights[guess]);
+                    .num("weight", weights[guess])
+                    .num("freq", freq[guess]);
                 entry.end();
             }
             out.push(']');

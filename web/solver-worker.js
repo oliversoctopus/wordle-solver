@@ -23,6 +23,7 @@ const DATA_FILES = {
   solutions: "data/solutions.json",
   answer_like: "data/answer_like.json",
   wordlebot: "data/wordlebot_weights.json",
+  word_freq: "data/word_freq.json",
 };
 
 function writeString(text) {

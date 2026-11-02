@@ -282,10 +282,12 @@
       <p class="sub" id="find-sub"></p>
       <label class="field find-sort" for="opt-sort"><span class="switch-name">Order by</span>
         <select id="opt-sort">
-          <option value="left">Fewest words left</option>
+          <option value="played">Likeliest to have been played</option>
+          <option value="freq">Most common in English</option>
           <option value="bits">Most information</option>
           <option value="weight">Likeliest to be an answer</option>
           <option value="alpha">Alphabetical</option>
+          <option value="left">Luckiest against this answer</option>
         </select>
       </label>
       <ol id="found" class="rows static"></ol>
@@ -294,16 +296,20 @@
     <details class="card foldable" id="find-help">
       <summary><h2>What the numbers are</h2><span class="chev" aria-hidden="true"></span></summary>
       <div class="foldable-body fact-why">
-        <p><b>Words left</b> is how many words would still be possible if you had
-          played that guess and seen that pattern &mdash; the answer among them.
-          Fewest first is the guess that would have told you the most about this
-          particular answer.</p>
+        <p><b>Per million</b> is how often the word appears in English text,
+          from the wordfreq word counts. The default order ranks by WordleBot's
+          weight on each word, and among words it weighs the same, by this.</p>
         <p><b>Bits</b> is what the guess reveals on average over every answer it
-          could have faced, not just this one. It does not depend on the pattern,
-          so it ranks the words as openings rather than as hindsight.</p>
+          could have faced. It does not depend on the pattern, so it ranks the
+          words as openings.</p>
         <p><b>Chance</b> is the prior's own probability that the guess is itself
-          the answer, so it moves with the two prior switches. So does the bits
-          column; the pattern match itself does not.</p>
+          the answer.</p>
+        <p><b>Words left</b> is how many words would still be possible if you had
+          played that guess and seen that pattern, the answer among them. It needs
+          the answer, which the person guessing did not have, so it ranks the words
+          by how lucky they were.</p>
+        <p>Chance and bits move with the two prior switches; the pattern match
+          itself does not.</p>
       </div>
     </details>
   </aside>

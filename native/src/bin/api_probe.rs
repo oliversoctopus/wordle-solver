@@ -28,6 +28,7 @@ fn init_body(root: &str) -> Result<String, Box<dyn std::error::Error>> {
         .str("solutions", &read("data/solutions.json")?)
         .str("answer_like", &read("data/answer_like.json")?)
         .str("wordlebot", &read("data/wordlebot_weights.json")?)
+        .str("word_freq", &read("data/word_freq.json")?)
         .int("mask_last", 0);
 
     // the two files build_site writes, if they have been built

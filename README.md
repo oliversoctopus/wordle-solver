@@ -50,13 +50,14 @@ python wordle_solver.py benchmark --no-curation-prior --mode entropy
 | `data/`, `data/derived/` | the word lists and answer record; everything `feedback_table.py` regenerates |
 | `feedback_table.py` | one-off: builds `feedback_table.npy` and the index maps from the word lists |
 | `answer_like.py` | one-off: builds `answer_like.json`, the score behind `--curation-shape frequency` |
+| `word_freq.py` | one-off: builds `word_freq.json`, each word's English frequency, for the finder |
 | `solutions.py` | brings `solutions.json` up to date from the NYT, one request per day since the last |
 | `word_lists.py` | one-off: refetches `wordles.json` and `nonwordles.json` upstream |
 | `wordlebot.py` | one-off: rescrapes WordleBot's weights, live and from the 2023 snapshot |
 | `analysis/` | the measurement scripts behind every number in the prior sections below |
 | `refresh.py` | the routine refresh in one command: new answers, the refit, the live scripts, the documents and the tests |
 
-`answer_like.py`, `feedback_table.py`, `solutions.py`, `word_lists.py` and `wordlebot.py` report how they would change the file they build, and write nothing without `--write`.
+`answer_like.py`, `feedback_table.py`, `solutions.py`, `word_freq.py`, `word_lists.py` and `wordlebot.py` report how they would change the file they build, and write nothing without `--write`.
 
 ## Results
 
@@ -846,13 +847,16 @@ The prior doing the weighting is the one the answer was drawn from, not the one 
 
 **Find** is the page's own, and it runs backwards from everything else here. The answer is known and the guess is the unknown. Type an answer, color the pattern that a guess came back as, and you get every word in the list that would have produced that pattern against that answer. It is the question to ask of somebody else's share grid. Neither row describes the other, so there is no ghost word and nothing is grayed out, and a gray tile in the pattern is a color and not an empty tile waiting for a letter.
 
-The match itself is exact and immediate, since the answer is one column of the feedback table and finding the words is a comparison over it instead of a scoring pass. The three numbers each word carries take more work:
+The match itself is exact and immediate, since the answer is one column of the feedback table and finding the words is a comparison over it instead of a scoring pass. The four numbers each word carries take more work, and the list can be ordered by any of them:
 
-* **Words left** is how many candidates would survive that guess given this pattern, so it ranks the words with hindsight. Smallest first is what would have told you the most about this particular answer.
-* **Bits** is expected information gain, averaged over every answer the guess could have faced. It does not depend on the pattern at all, so it ranks the words as openings instead.
+* **Frequency** is how often the word appears in English, the Zipf frequency `wordfreq` gives, shown per million words. `word_freq.py` writes it to `data/word_freq.json`.
+* **Bits** is expected information gain, averaged over every answer the guess could have faced. It does not depend on the pattern at all, so it ranks the words as openings.
 * **Chance** is the prior's own probability that the guess is itself the answer.
+* **Words left** is how many candidates would survive that guess given this pattern. It depends on the answer, which the person guessing did not know, so it ranks the words by luck and is listed last.
 
-The last two move with the prior switches. Nothing else on the page reaches the finder, so the mode, the shape of f and hard mode are hidden while it is showing. The finder never asks for a guess, needs no fitted `f`, and works under any prior.
+The default order, *Likeliest to have been played*, ranks by WordleBot's weight on each word and breaks its ties by frequency. Most of WordleBot's words carry the full weight of 1, so among them the order is frequency, and the words it weighs lower or leaves out follow. The priors are left out of this order. The repeat prior marks down every past answer, and the curation prior gives each off-list word a larger share than a curated one, and both describe the editor's choices, not the player's.
+
+Bits and chance move with the prior switches. Nothing else on the page reaches the finder, so the mode, the shape of f and hard mode are hidden while it is showing. The finder never asks for a guess, needs no fitted `f`, and works under any prior.
 
 | key | solve | play | find |
 | --- | --- | --- | --- |

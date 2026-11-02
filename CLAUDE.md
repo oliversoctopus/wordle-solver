@@ -62,7 +62,7 @@ python editor.py                  site text on :8001/editor, charts on /dev
 
 `data/` holds the curated inputs and the answer record; `data/derived/` holds what `feedback_table.py` regenerates. Every path comes from `wordle_data.py`.
 
-* `answer_like.py`, `feedback_table.py`, `solutions.py`, `word_lists.py` and `wordlebot.py` write nothing without `--write`. Each reproduces the shipped copy, except that `solutions.json` is its own cache and `wordlebot_weights.json` follows the live site.
+* `answer_like.py`, `feedback_table.py`, `solutions.py`, `word_freq.py`, `word_lists.py` and `wordlebot.py` write nothing without `--write`. Each reproduces the shipped copy but `solutions.json`, its own cache, and `wordlebot_weights.json`, which follows the live site.
 * `word_lists.py --write` invalidates `feedback_table.npy`. `wordlebot.py --snapshot-only` refreshes the frozen 2023 copy alone.
 * `answer_like.py` needs `wordfreq` and reproduces its file only with its exact feature set, language list and ridge.
 

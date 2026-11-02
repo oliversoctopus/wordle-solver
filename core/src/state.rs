@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 use crate::estimator::{get_form, Form};
+use crate::data::parse_table;
 use crate::json;
 use crate::priors::{build_weights, PriorConfig, ShapeTables};
 use crate::solver::Memos;
@@ -31,6 +32,8 @@ pub struct Loaded {
     /// Precomputed answers for the opening position, per settings key. The
     /// browser cannot afford to score 12,947 guesses against 12,947 candidates.
     pub openings: HashMap<String, json::Value>,
+    /// Each word's Zipf frequency in English, by word index; zero if unseen.
+    pub word_freq: Vec<f64>,
     weights: Mutex<HashMap<String, Vec<f64>>>,
     /// Positions already worked out, per settings key, least recent first.
     memos: Mutex<Vec<(String, Memos)>>,
@@ -209,6 +212,11 @@ pub fn init(body: &json::Value) -> Result<(), String> {
     let tables = ShapeTables::from_json(text("answer_like")?, text("wordlebot")?)
         .map_err(|error| error.to_string())?;
 
+    let freq_table = parse_table(text("word_freq")?).map_err(|error| error.to_string())?;
+    let word_freq = (0..data.words.len())
+        .map(|i| freq_table.get(data.words.word(i)).copied().unwrap_or(0.0))
+        .collect();
+
     let numbers = |value: Option<&json::Value>| -> Option<Vec<f64>> {
         Some(
             value?
@@ -261,6 +269,7 @@ pub fn init(body: &json::Value) -> Result<(), String> {
         tables,
         fits,
         openings,
+        word_freq,
         weights: Mutex::new(HashMap::new()),
         memos: Mutex::new(Vec::new()),
         games: Mutex::new(Games::default()),
