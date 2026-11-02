@@ -1044,9 +1044,9 @@ function renderPanel() {
     tag.className = "tag" + (rec.exact ? " exact" : "");
     tag.textContent = rec.exact ? "Exact" : (state.mode === "entropy" ? "Greedy" : "Estimated");
 
+    // the note never consults the answer box: the solver's pick does not know it
     let note = "";
-    if (state.answer && rec.word === state.answer) note = "This is the answer.";
-    else if (state.candidates_left === 1) note = "The only word left.";
+    if (state.candidates_left === 1) note = "The only word left.";
     else if (!rec.possible) note = "Cannot be the answer itself. It is played purely to split what is left.";
     else if (state.guesses_left === 1) note = `Last guess: a ${(rec.win_probability * 100).toFixed(1)}% chance of being right.`;
     else if (rec.win_probability > 0) note = `A ${(rec.win_probability * 100).toFixed(1)}% chance of being the answer outright.`;
