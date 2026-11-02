@@ -309,13 +309,29 @@ main {
 #hint, .message { margin: 0; font-size: 13px; color: var(--ink-dim); text-align: center;
                   min-height: 20px; }
 
+.status { position: relative; align-self: stretch; }
+.status:has(.message:not([hidden])) #hint { visibility: hidden; }
+
+/* floats over the hint line, so showing it moves nothing below */
 .message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: 90%;
+  z-index: 5;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 1.2s ease-in;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   color: #fff;
   background: var(--gray);
   padding: 8px 14px;
   border-radius: var(--radius);
 }
 
+.message.fading { opacity: 0; }
 .message.good { background: var(--green); }
 .message.bad { background: #c0392b; }
 

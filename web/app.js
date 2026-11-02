@@ -354,6 +354,16 @@ function clearMessage() {
   $("message").hidden = true;
 }
 
+// a click on the message fades it out, then hides it; `say` cancels the fade
+function fadeMessage() {
+  const node = $("message");
+  if (node.hidden) return;
+  node.classList.add("fading");
+  node.addEventListener("transitionend", () => {
+    if (node.classList.contains("fading")) clearMessage();
+  }, { once: true });
+}
+
 /* --------------------------------------------------------------- drawing */
 
 function makeTile() {
@@ -1458,6 +1468,7 @@ function wire() {
   onClick("copy-share", copyShare);
   onClick("find", findWords);
   onClick("finder-clear", clearPattern);
+  $("message").addEventListener("click", fadeMessage);
 
   // every one of these changes what the solver is asked, not where you are: the
   // board re-runs over its rows, the game keeps its answer, the finder re-sorts
