@@ -1,7 +1,7 @@
 {
     "runs": {
         "site_size.py": {
-            "at": "2026-10-26 16:37",
+            "at": "2026-11-02 16:59",
             "solutions": 1955,
             "through": "2026-10-25",
             "fits": {
@@ -17,18 +17,18 @@
         }
     },
     "values": {
-        "data_kb": 782.493,
-        "measured": "2026-10-26",
-        "openings": 180,
+        "data_kb": 950.768,
+        "measured": "2026-11-02",
+        "openings": 200,
         "solutions_kb": 306.661,
         "solutions_wire_kb": 16.435,
-        "total_mb": 1.5937139999999999,
+        "total_mb": 1.81116,
         "turn2.per_prior": 202.0,
         "turn2.priors": 4,
         "turn2.rankings": 808,
-        "turn2.wire_kb": 29.31,
-        "wasm_kb": 468.43,
-        "wasm_wire_kb": 124.641,
-        "wire_kb": 282.327
+        "turn2.wire_kb": 29.117,
+        "wasm_kb": 508.211,
+        "wasm_wire_kb": 129.702,
+        "wire_kb": 321.298
     }
 }

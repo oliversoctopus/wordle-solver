@@ -1010,6 +1010,74 @@ function renderLocal() {
   $("play-out").disabled = busy || !state || state.over || !suggestion();
   // it clears whatever row has something in it, played or still being typed
   $("undo").disabled = busy || !rows.some((row) => rowFilled(row) > 0);
+  scoreTyped();
+}
+
+/* ------------------------------------------------------- a typed word's score */
+
+/* The word typed into the next row, scored as the pick is. It starts only
+   when idle and never holds the board; a stale reply is dropped. */
+let typedScore = null;   // { key, reply } for the request last sent
+
+/** The full word in the row after the solver's rows, if that is the only edit. */
+function typedWord() {
+  if (!state || state.over) return "";
+  const r = state.rows.length;
+  const dirty = dirtyRows();
+  if (r >= rows.length || dirty.size !== 1 || !dirty.has(r)) return "";
+  if (rowFilled(rows[r]) !== 5) return "";
+  const word = rowWord(rows[r]);
+  return word === suggestion() ? "" : word;
+}
+
+function scoreTyped() {
+  const word = typedWord();
+  if (!word) {
+    typedScore = null;
+    renderTypedScore();
+    return;
+  }
+  const body = { ...boardBody(state.rows), word };
+  const key = JSON.stringify(body);
+  if (busy || (typedScore && typedScore.key === key)) return;
+  typedScore = { key, reply: null };
+  renderTypedScore();
+  api("/api/score", body)
+    .catch((err) => ({ error: err.message }))
+    .then((reply) => {
+      if (!typedScore || typedScore.key !== key) return;
+      typedScore.reply = reply;
+      renderTypedScore();
+    });
+}
+
+function renderTypedScore() {
+  const node = $("typed-score");
+  const reply = typedScore && typedScore.reply;
+  const rec = state && state.recommendation;
+  if (!reply || !rec) {
+    node.hidden = true;
+    return;
+  }
+  node.hidden = false;
+  if (reply.error) {
+    node.textContent = reply.error;
+    return;
+  }
+  // lower is better in guesses, higher in bits
+  const gap = reply.score - rec.score;
+  const worse = state.mode === "entropy" ? gap < 0 : gap > 0;
+  const word = reply.word.toUpperCase();
+  let text = `${word}: ${fmtScore(reply.score)} ${reply.score_label}`;
+  text += Math.abs(gap) < 5e-5
+    ? `, level with ${rec.word.toUpperCase()}.`
+    : `, ${fmtScore(Math.abs(gap))} ${worse ? "worse" : "better"} than ${rec.word.toUpperCase()}.`;
+  if (reply.win_probability > 0) {
+    text += ` A ${(reply.win_probability * 100).toFixed(1)}% chance of being the answer.`;
+  } else {
+    text += " It cannot be the answer.";
+  }
+  node.textContent = text;
 }
 
 /* ----------------------------------------------------------------- panel */

@@ -9,6 +9,7 @@ use crate::game::MAX_GUESSES;
 use crate::json::{self, Object, Value};
 use crate::priors::PriorConfig;
 use crate::solver::{Mode, Solver};
+use crate::source::Live;
 
 use crate::state;
 use crate::sum::{pairwise, pairwise_of};
@@ -35,6 +36,7 @@ pub fn handle(path: &str, body: &str) -> String {
         "/api/board" => board(&parsed, false),
         "/api/draw" => draw(&parsed),
         "/api/find" => find(&parsed),
+        "/api/score" => score(&parsed),
         "/api/game/new" => game_new(&parsed),
         "/api/game/guess" => game_guess(&parsed),
         "/api/game/hint" => game_hint(&parsed),
@@ -169,37 +171,43 @@ fn board(body: &Value, fresh: bool) -> Result<String, String> {
     let loaded = state::loaded().ok_or("The word lists have not loaded yet")?;
     let settings = parse_settings(body)?;
     let answer = parse_answer(body, loaded)?;
-
-    let mut rows: Vec<(usize, u8)> = Vec::new();
-    if !fresh {
-        let raw = body
-            .get("rows")
-            .and_then(|v| v.as_array())
-            .ok_or("Malformed board")?;
-        if raw.len() > MAX_GUESSES {
-            return Err(format!("A board is at most {MAX_GUESSES} rows"));
-        }
-        for (index, row) in raw.iter().enumerate() {
-            let word = row
-                .get("word")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .trim()
-                .to_lowercase();
-            let guess = loaded.data.words.index_of(&word).ok_or_else(|| {
-                if word.is_empty() {
-                    format!("Row {}: needs a five letter word", index + 1)
-                } else {
-                    format!("Row {}: '{word}' is not in the word list", index + 1)
-                }
-            })?;
-            let pattern = parse_pattern(row.get("pattern"))
-                .map_err(|why| format!("Row {}: {why}", index + 1))?;
-            rows.push((guess, pattern));
-        }
-    }
-
+    let rows = if fresh {
+        Vec::new()
+    } else {
+        parse_rows(body, loaded)?
+    };
     build_state(loaded, &settings, &rows, answer)
+}
+
+/// The board's rows as `(guess, pattern)`, as the page sent them.
+fn parse_rows(body: &Value, loaded: &state::Loaded) -> Result<Vec<(usize, u8)>, String> {
+    let raw = body
+        .get("rows")
+        .and_then(|v| v.as_array())
+        .ok_or("Malformed board")?;
+    if raw.len() > MAX_GUESSES {
+        return Err(format!("A board is at most {MAX_GUESSES} rows"));
+    }
+    let mut rows = Vec::with_capacity(raw.len());
+    for (index, row) in raw.iter().enumerate() {
+        let word = row
+            .get("word")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim()
+            .to_lowercase();
+        let guess = loaded.data.words.index_of(&word).ok_or_else(|| {
+            if word.is_empty() {
+                format!("Row {}: needs a five letter word", index + 1)
+            } else {
+                format!("Row {}: '{word}' is not in the word list", index + 1)
+            }
+        })?;
+        let pattern = parse_pattern(row.get("pattern"))
+            .map_err(|why| format!("Row {}: {why}", index + 1))?;
+        rows.push((guess, pattern));
+    }
+    Ok(rows)
 }
 
 /// The answer the board is being played against: set, it colors every row
@@ -264,6 +272,15 @@ fn parse_pattern(value: Option<&Value>) -> Result<u8, String> {
     Ok(tiles.iter().fold(0u8, |acc, &tile| acc * 3 + tile))
 }
 
+/// What the key below names the fit in play by, the *Whatever is cached*
+/// choice. It can differ from the archived fit of the same form.
+pub const CACHED_FIT: &str = "cached";
+
+/// The fit part of a settings key: the form the menu named, or `CACHED_FIT`.
+pub fn fit_key(form: Option<&str>) -> &str {
+    form.unwrap_or(CACHED_FIT)
+}
+
 /// The key `openings.json` is indexed by; `build_site` writes it with this.
 ///
 /// Entropy never consults the form, so its ten entries per prior are one
@@ -293,10 +310,12 @@ fn precomputed_ranking(
     settings: &Settings,
     rows: &[(usize, u8)],
 ) -> Option<Vec<(usize, f64)>> {
-    let form = loaded
-        .form_name(&settings.config, settings.form.as_deref())
-        .ok()?;
-    let opening = settings_key(&settings.config, settings.mode, settings.hard, &form);
+    let opening = settings_key(
+        &settings.config,
+        settings.mode,
+        settings.hard,
+        fit_key(settings.form.as_deref()),
+    );
 
     let key = match rows {
         [] => opening,
@@ -326,35 +345,27 @@ fn precomputed_ranking(
     }
 }
 
-fn build_state(
+/// The rows with each pattern recolored from the answer, when one is set.
+fn truthful_rows(
     loaded: &state::Loaded,
-    settings: &Settings,
     rows: &[(usize, u8)],
     answer: Option<usize>,
-) -> Result<String, String> {
-    // against a known answer the rows' patterns are the true ones, whatever
-    // the page sent
-    let truthful: Vec<(usize, u8)>;
-    let rows = match answer {
-        Some(answer) => {
-            truthful = rows
-                .iter()
-                .map(|&(guess, _)| (guess, loaded.data.words.score(guess, answer)))
-                .collect();
-            &truthful[..]
-        }
-        None => rows,
-    };
-    let weights = loaded.weights_for(&settings.config)?;
-    let (form, params) = fit_for_mode(loaded, settings)?;
+) -> Vec<(usize, u8)> {
+    match answer {
+        Some(answer) => rows
+            .iter()
+            .map(|&(guess, _)| (guess, loaded.data.words.score(guess, answer)))
+            .collect(),
+        None => rows.to_vec(),
+    }
+}
 
-    let solver_form = form.clone();
-    let solver_params = params.clone();
-    let source = loaded.source();
-    let mut solver = Solver::new(&source, &weights, params, form, settings.mode)
-        .with_hard(settings.hard)
-        .with_loss_penalty(crate::solver::DEFAULT_LOSS_PENALTY);
-
+/// The words still possible after these rows, or which row rules them all out.
+fn remaining(
+    loaded: &state::Loaded,
+    solver: &Solver<'_, Live<'_>>,
+    rows: &[(usize, u8)],
+) -> Result<Vec<usize>, String> {
     let mut candidates: Vec<usize> = (0..loaded.data.n_words()).collect();
     for (index, &(guess, pattern)) in rows.iter().enumerate() {
         if pattern == WIN_PATTERN && index != rows.len() - 1 {
@@ -371,6 +382,94 @@ fn build_state(
             ));
         }
     }
+    Ok(candidates)
+}
+
+/// One word's score on this board, taken as the board's own pick is taken.
+///
+/// The body is a board request plus `word`. The reply carries the score, the
+/// scale it is on, whether it is exact, and the chance the word is the answer.
+fn score(body: &Value) -> Result<String, String> {
+    let loaded = state::loaded().ok_or("The word lists have not loaded yet")?;
+    let settings = parse_settings(body)?;
+    let answer = parse_answer(body, loaded)?;
+    let rows = truthful_rows(loaded, &parse_rows(body, loaded)?, answer);
+    let word = body
+        .get("word")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim()
+        .to_lowercase();
+    let guess = loaded
+        .data
+        .words
+        .index_of(&word)
+        .ok_or_else(|| format!("'{word}' is not in the word list"))?;
+
+    let weights = loaded.weights_for(&settings.config)?;
+    let (form, params) = fit_for_mode(loaded, &settings)?;
+    let source = loaded.source();
+    let mut solver = Solver::new(&source, &weights, params, form, settings.mode)
+        .with_hard(settings.hard)
+        .with_loss_penalty(crate::solver::DEFAULT_LOSS_PENALTY);
+    let candidates = remaining(loaded, &solver, &rows)?;
+
+    let solved = rows.last().map(|&(_, p)| p == WIN_PATTERN).unwrap_or(false);
+    if solved || rows.len() >= MAX_GUESSES {
+        return Err("The game is over".to_string());
+    }
+    let possible = candidates.contains(&guess);
+    if settings.hard && !possible {
+        return Err(format!("Hard mode: '{word}' cannot be the answer here"));
+    }
+
+    let held = settings_key(
+        &settings.config,
+        settings.mode,
+        settings.hard,
+        fit_key(settings.form.as_deref()),
+    );
+    let mut memos = loaded.take_memos(&held);
+    solver.swap_memos(&mut memos);
+    let (value, exact) =
+        solver.score_guess(&candidates, guess, Some(MAX_GUESSES - rows.len()));
+    let win_probability = solver.win_probability(&candidates, guess);
+    solver.swap_memos(&mut memos);
+    loaded.keep_memos(held, memos);
+
+    let mut out = String::new();
+    let mut object = Object::new(&mut out);
+    object
+        .str("word", &word)
+        .num("score", value)
+        .str("score_label", score_label(settings.mode))
+        .bool("exact", exact)
+        .bool("possible", possible)
+        .num("win_probability", win_probability)
+        .int("elapsed_ms", 0);
+    object.end();
+    Ok(out)
+}
+
+fn build_state(
+    loaded: &state::Loaded,
+    settings: &Settings,
+    rows: &[(usize, u8)],
+    answer: Option<usize>,
+) -> Result<String, String> {
+    let truthful = truthful_rows(loaded, rows, answer);
+    let rows = &truthful[..];
+    let weights = loaded.weights_for(&settings.config)?;
+    let (form, params) = fit_for_mode(loaded, settings)?;
+
+    let solver_form = form.clone();
+    let solver_params = params.clone();
+    let source = loaded.source();
+    let mut solver = Solver::new(&source, &weights, params, form, settings.mode)
+        .with_hard(settings.hard)
+        .with_loss_penalty(crate::solver::DEFAULT_LOSS_PENALTY);
+
+    let candidates = remaining(loaded, &solver, rows)?;
 
     let turn = rows.len() + 1;
     let solved = rows.last().map(|&(_, p)| p == WIN_PATTERN).unwrap_or(false);
@@ -456,7 +555,7 @@ fn build_state(
         &settings.config,
         settings.mode,
         settings.hard,
-        &loaded.form_name(&settings.config, settings.form.as_deref())?,
+        fit_key(settings.form.as_deref()),
     );
     let mut memos = loaded.take_memos(&held);
     solver.swap_memos(&mut memos);
@@ -848,7 +947,7 @@ fn game_hint(body: &Value) -> Result<String, String> {
         &settings.config,
         settings.mode,
         settings.hard,
-        &loaded.form_name(&settings.config, settings.form.as_deref())?,
+        fit_key(settings.form.as_deref()),
     );
     let mut memos = loaded.take_memos(&held);
     solver.swap_memos(&mut memos);

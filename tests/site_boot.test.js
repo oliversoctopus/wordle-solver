@@ -130,10 +130,8 @@ async function main() {
                         `${hard ? "hard" : "free"}`;
           check(`a fresh board serves its baked opening: ${label}`, () => {
             assert.ok(!reply.error, reply.error);
-            const form = reply.estimator ? reply.estimator.form : null;
-            const prefix = `${slug(repeat, curation)}|${mode}|${hard ? "hard" : "free"}|`;
-            const key = form ? prefix + form :
-              Object.keys(openings).find((k) => k.startsWith(prefix));
+            // form null is *Whatever is cached*, baked from the fit in play
+            const key = `${slug(repeat, curation)}|${mode}|${hard ? "hard" : "free"}|cached`;
             assert.ok(openings[key], `no opening under ${key}`);
             const words = [reply.recommendation, ...reply.alternatives]
               .map((guess) => guess.word);
@@ -144,6 +142,43 @@ async function main() {
     }
   }
   console.log(`\n${boards} boards over the page's switches`);
+
+  // every word a board lists scores the same through /api/score, along games
+  // against drawn answers that leave the baked openings after turn one
+  let scored = 0;
+  let exact = 0;
+  for (const mode of status.modes) {
+    for (const hard of [false, true]) {
+      const settings = { repeat: true, curation: true, mode, hard, form: null, top: 5 };
+      const misses = [];
+      for (const seed of [0.13, 0.47, 0.81]) {
+        const { word: answer } = await ask("/api/draw", { ...settings, seed });
+        const rows = [];
+        for (let turn = 0; turn < 6; turn += 1) {
+          const board = await ask("/api/board", { ...settings, answer, rows });
+          if (board.error || board.over) break;
+          const listed = [board.recommendation, ...board.alternatives];
+          for (const guess of listed) {
+            const reply = await ask("/api/score", { ...settings, answer, rows,
+                                                    word: guess.word });
+            scored += 1;
+            if (reply.exact) exact += 1;
+            if (reply.error || Math.abs(reply.score - guess.score) > 1e-9) {
+              misses.push(`${rows.map((r) => r.word).join(",")}>${guess.word}: ` +
+                          `${guess.score} listed, ${reply.error || reply.score} scored`);
+            }
+          }
+          // a runner-up on the first turn, so the rest is played live
+          const next = turn === 0 ? listed[listed.length - 1] : listed[0];
+          rows.push({ word: next.word, pattern: "NNNNN" });
+        }
+      }
+      check(`a listed word scores as listed: ${mode}, ${hard ? "hard" : "free"}`, () => {
+        assert.deepStrictEqual(misses, []);
+      });
+    }
+  }
+  console.log(`${scored} listed words scored again, ${exact} of them exactly`);
   console.log(failures ? `${failures} failures` : "all passed");
   return failures ? 1 : 0;
 }

@@ -79,7 +79,7 @@ impl Loaded {
         Ok((shape, params.clone()))
     }
 
-    /// The name of the fit `form` selects, the key the openings are stored under.
+    /// The name of the form `form` selects, as the estimator panel shows it.
     pub fn form_name(&self, config: &PriorConfig, form: Option<&str>) -> Result<String, String> {
         match form {
             Some(name) => Ok(name.to_string()),

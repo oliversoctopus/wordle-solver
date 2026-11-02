@@ -526,6 +526,23 @@ impl<'a, S: Source> Solver<'a, S> {
         kept.into_iter().map(|(g, s, _)| (g, s)).collect()
     }
 
+    /// `(score, exact)` for one guess, taken the way `top_guesses` takes the
+    /// scores it ranks, so a word in its list scores here as it scored there.
+    pub fn score_guess(
+        &mut self,
+        candidates: &[usize],
+        guess: usize,
+        guesses_left: Option<usize>,
+    ) -> (f64, bool) {
+        if self.solved_exactly(candidates, guesses_left) {
+            let turns = guesses_left.unwrap_or(MAX_TURNS);
+            if let Ok(value) = self.exact.value_of(candidates, turns, guess) {
+                return (value, true);
+            }
+        }
+        (self.score_one(guess, candidates), false)
+    }
+
     /// The prior probability that `guess` is itself the answer, here.
     pub fn win_probability(&self, candidates: &[usize], guess: usize) -> f64 {
         let total = pairwise_of(candidates.len(), |i| self.weights[candidates[i]]);

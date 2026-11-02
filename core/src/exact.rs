@@ -171,6 +171,66 @@ impl<'a, S: Source> ExactEndgame<'a, S> {
         }
     }
 
+    /// The value of playing `guess` here and then playing on as `solve` would,
+    /// on the same scale as `top`'s scores. Takes `top`'s shortcuts where it
+    /// does, so the word `top` ranks first gets the score `top` gave it.
+    pub fn value_of(
+        &mut self,
+        candidates: &[usize],
+        turns_left: usize,
+        guess: usize,
+    ) -> Result<f64, BudgetExceeded> {
+        self.searches += 1;
+        self.nodes = 0;
+        let turns = turns_left.min(MAX_TURNS);
+        let m = candidates.len();
+        assert!(m > 0, "no candidates left; the feedback given is inconsistent");
+        let (total, _, _) = self.shape(candidates);
+        let own = if candidates.contains(&guess) {
+            self.weights[guess] / total
+        } else {
+            0.0
+        };
+
+        if m == 1 && own > 0.0 {
+            return Ok(1.0);
+        }
+        if turns <= 1 {
+            return Ok(1.0 + (1.0 - own) * self.loss_penalty);
+        }
+        if m == 2 && own > 0.0 {
+            return Ok(two_candidates(own));
+        }
+        match self.columns(candidates, turns) {
+            Some(held) => self.value_inner(&held, None, candidates, total, turns, guess),
+            None => self.value_inner(self.source, self.fused, candidates, total, turns, guess),
+        }
+    }
+
+    fn value_inner<F: Source>(
+        &mut self,
+        fb: &F,
+        tt: Option<&Transposed>,
+        candidates: &[usize],
+        total: f64,
+        turns: usize,
+        guess: usize,
+    ) -> Result<f64, BudgetExceeded> {
+        if turns == 2 {
+            let weights = self.slice_weights(candidates);
+            let pool = [guess];
+            return Ok(fused::two_turn_scores(
+                fb,
+                tt,
+                candidates,
+                &weights,
+                self.loss_penalty,
+                Some(&pool),
+            )[0]);
+        }
+        self.evaluate(fb, tt, guess, candidates, total, turns, f64::INFINITY)
+    }
+
     /// The table to answer this search's scans from, if it will pay for itself.
     /// A search that recurses rescans the pool once per node; one that returns
     /// from a closed form scans once and would only be paying to tabulate.

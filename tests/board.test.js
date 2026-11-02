@@ -118,6 +118,9 @@ async function fetchStub(url, init) {
     payload = boardState(body.rows.map((row) => ({
       word: row.word, pattern: patternString(row.pattern),
     })), body.answer);
+  } else if (url === "/api/score") {
+    payload = { word: body.word, score: 2, score_label: "expected guesses to finish",
+                exact: false, possible: true, win_probability: 0.01 };
   } else if (url === "/api/draw") {
     payload = { word: ANSWERS[drawnSoFar++ % ANSWERS.length] };
   } else throw new Error("unexpected url " + url);
@@ -141,6 +144,8 @@ globalThis.probe = {
   answerBox: document.getElementById("solve-answer"),
   drawAnswer: typeof drawAnswer === "function" ? drawAnswer : () => {},
   playOut: typeof playOut === "function" ? playOut : () => {},
+  typedWord: typeof typedWord === "function" ? typedWord : () => "",
+  typedScore: document.getElementById("typed-score"),
 };
 `;
 
@@ -251,6 +256,16 @@ const PROPERTIES = {
     const got = drawn();
     if (JSON.stringify(got) !== JSON.stringify(want)) {
       return `drawn ${JSON.stringify(got)}, solver holds ${JSON.stringify(want)}`;
+    }
+  },
+
+  "a word's score on show is for the word typed in the next row"() {
+    const node = probe.typedScore;
+    if (node.hidden) return;
+    const word = probe.typedWord();
+    if (!word) return `a score is shown with no word typed: ${node.textContent}`;
+    if (!node.textContent.startsWith(word.toUpperCase() + ":")) {
+      return `${word} typed, the score reads ${node.textContent}`;
     }
   },
 

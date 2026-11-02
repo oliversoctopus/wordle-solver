@@ -62,7 +62,7 @@ python editor.py                  site text on :8001/editor, charts on /dev
 
 `data/` holds the curated inputs and the answer record; `data/derived/` holds what `feedback_table.py` regenerates. Every path comes from `wordle_data.py`.
 
-* `answer_like.py`, `feedback_table.py`, `solutions.py`, `word_freq.py`, `word_lists.py` and `wordlebot.py` write nothing without `--write`. Each reproduces the shipped copy but `solutions.json`, its own cache, and `wordlebot_weights.json`, which follows the live site.
+* `answer_like.py`, `feedback_table.py`, `solutions.py`, `word_freq.py`, `word_lists.py` and `wordlebot.py` write nothing without `--write`. Each reproduces the shipped copy but `solutions.json`, its own cache, and `wordlebot_weights.json`, following the live site.
 * `word_lists.py --write` invalidates `feedback_table.npy`. `wordlebot.py --snapshot-only` refreshes the frozen 2023 copy alone.
 * `answer_like.py` needs `wordfreq` and reproduces its file only with its exact feature set, language list and ridge.
 
@@ -73,7 +73,7 @@ Three views, solve, play and find, over one board and one set of switches. READM
 * The page sends the whole board on every submit, never a delta.
 * The settings ride along with every request as one `Settings` value; nothing about them lives on the session. Do not add a setting remembered at `/api/new` time.
 * Taking a word off submits the shorter board itself. A board reached by removing words is indistinguishable from the same board played straight.
-* One request is in flight at a time; a second is held, never dropped.
+* One board request is in flight at a time; a second is held, never dropped.
 * A pattern crosses the wire as `"NYGNN"` or `[0, 1, 2, 0, 0]`; every reader takes both.
 * The editor scans string literals in `index.html`, `app.js`, `core/src/api.rs` and `core/src/state.rs`.
 * `wording_history.json` records past wording. Never rewrite it.

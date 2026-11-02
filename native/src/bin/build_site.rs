@@ -12,7 +12,7 @@ use std::env;
 use std::fs;
 use std::process::ExitCode;
 
-use wordle_core::api::settings_key;
+use wordle_core::api::{settings_key, CACHED_FIT};
 use wordle_core::estimator::{forms, load_fit, load_form_fit, Form};
 use wordle_core::feedback::{pattern_text, N_PATTERNS, WIN_PATTERN};
 use wordle_core::json::{write_f64, write_string};
@@ -25,8 +25,8 @@ use wordle_core::WordleData;
 const TOP: usize = 5;
 
 
-/// One ranking into `openings.json`. Only the active form's line is printed:
-/// there are 180 keys and the other 160 say the same handful of words.
+/// One ranking into `openings.json`. Only the fit in play has its line
+/// printed; the rest say the same handful of words.
 fn write_ranking(
     out: &mut String,
     first: &mut bool,
@@ -120,8 +120,23 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
 
         let weights = build_weights(&data, &config, &tables)?;
         for hard in [false, true] {
-            // expected mode consults f, so each form is its own ranking; entropy never does,
-            // so one ranking is written under every name the menu can send
+            // each fit is its own ranking: the one in play under CACHED_FIT, each
+            // archived form under its name; entropy's one goes under every name
+            let mut solver = Solver::new(
+                &table,
+                &weights,
+                active_params.clone(),
+                active.clone(),
+                Mode::Expected,
+            )
+            .with_hard(hard);
+            let top = solver.top_guesses(&everything, TOP, Some(6));
+            if !hard {
+                page_openings.push((slug.clone(), top[0].0));
+            }
+            let key = settings_key(&config, Mode::Expected, hard, CACHED_FIT);
+            write_ranking(&mut openings, &mut first_opening, &key, &top, &data, true);
+
             for (form, params) in &archive {
                 let mut solver = Solver::new(
                     &table,
@@ -133,17 +148,7 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
                 .with_hard(hard);
                 let top = solver.top_guesses(&everything, TOP, Some(6));
                 let key = settings_key(&config, Mode::Expected, hard, form.name);
-                if !hard && form.name == active.name {
-                    page_openings.push((slug.clone(), top[0].0));
-                }
-                write_ranking(
-                    &mut openings,
-                    &mut first_opening,
-                    &key,
-                    &top,
-                    &data,
-                    form.name == active.name,
-                );
+                write_ranking(&mut openings, &mut first_opening, &key, &top, &data, false);
             }
 
             let mut solver = Solver::new(
@@ -155,16 +160,10 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
             )
             .with_hard(hard);
             let top = solver.top_guesses(&everything, TOP, Some(6));
-            for (form, _) in &archive {
-                let key = settings_key(&config, Mode::Entropy, hard, form.name);
-                write_ranking(
-                    &mut openings,
-                    &mut first_opening,
-                    &key,
-                    &top,
-                    &data,
-                    form.name == active.name,
-                );
+            let names = std::iter::once(CACHED_FIT).chain(archive.iter().map(|(f, _)| f.name));
+            for (i, name) in names.enumerate() {
+                let key = settings_key(&config, Mode::Entropy, hard, name);
+                write_ranking(&mut openings, &mut first_opening, &key, &top, &data, i == 0);
             }
         }
     }
@@ -182,7 +181,7 @@ fn run(root: &str, out_dir: &str) -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             };
             let (form, params) = load_fit(root, &slug)?;
-            let key = settings_key(&config, Mode::Expected, false, form.name);
+            let key = settings_key(&config, Mode::Expected, false, CACHED_FIT);
             let weights = build_weights(&data, &config, &tables)?;
             // one solver for all the patterns, so what each bucket works out is
             // still in the memo when the next one asks
